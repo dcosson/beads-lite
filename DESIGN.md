@@ -2,14 +2,29 @@
 
 ## Overview
 
-Beads v2 is a complete redesign of the storage layer, replacing the dual SQLite + JSONL sync architecture with a simple filesystem-based approach. The goal is maximum simplicity, speed, and git-native behavior.
+Beads v2 is a complete redesign of the storage layer, replacing the dual SQLite + JSONL sync architecture with a **pluggable storage engine** model. The system defines a clean `Storage` interface that commands program against, with swappable backend implementations.
 
 **Core principles:**
-- The filesystem is the database
+- Storage engine is swappable via interface (filesystem, SQLite, Dolt, etc.)
 - No sync layer, no daemon, no background processes
-- Git handles versioning and merging naturally
 - Commands complete in milliseconds, not seconds
-- Storage engine is swappable via interface
+- Each storage engine optimizes for different use cases
+
+**Storage engine options:**
+
+| Engine | Use Case | Trade-offs |
+|--------|----------|------------|
+| **Filesystem** (default) | Git-native workflows, multi-agent | Human-readable, git-diff-friendly, but no transactions |
+| **SQLite** (planned) | Single-user, offline-first | ACID transactions, but binary file in git |
+| **Dolt** (planned) | SQL + git branching | Best of both worlds, but external dependency |
+
+This document focuses on the **Filesystem storage engine**, which is the default and reference implementation. Other engines implement the same `Storage` interface with engine-specific optimizations.
+
+---
+
+# Filesystem Storage Engine
+
+The following sections describe the **Filesystem storage engine** specifically. Other storage engines (SQLite, Dolt) will have their own implementation details while conforming to the same `Storage` interface.
 
 ## Directory Structure
 
@@ -27,7 +42,7 @@ Beads v2 is a complete redesign of the storage layer, replacing the dual SQLite 
 - `closed/` contains all closed issues
 - Issue status is determined by which directory contains the file
 
-**ID format:** `bd-<8 hex chars>` (e.g., `bd-a1b2c3d4`), generated from random bytes.
+**ID format:** `bd-<4 hex chars>` (e.g., `bd-a1b2`), generated from random bytes. Short IDs prioritize human ergonomics; collisions are handled by retry (see ID Generation).
 
 ## Issue Schema
 
@@ -35,21 +50,23 @@ Each `<id>.json` file contains:
 
 ```json
 {
-  "id": "bd-a1b2c3d4",
+  "id": "bd-a1b2",
   "title": "Implement user authentication",
   "description": "Add login/logout functionality...",
   "status": "open",
   "priority": "high",
   "type": "feature",
-  "parent": "bd-e5f6g7h8",
-  "children": ["bd-i9j0k1l2"],
-  "depends_on": ["bd-m3n4o5p6"],
-  "blocks": ["bd-q7r8s9t0"],
+  "parent": "bd-e5f6",
+  "children": ["bd-i9j0"],
+  "depends_on": ["bd-m3n4"],
+  "dependents": ["bd-q7r8"],
+  "blocks": ["bd-s9t0"],
+  "blocked_by": ["bd-u1v2"],
   "labels": ["auth", "backend"],
   "assignee": "alice",
   "comments": [
     {
-      "id": "c-a1b2c3d4",
+      "id": "c-a1b2",
       "author": "bob",
       "body": "Should we use JWT or sessions?",
       "created_at": "2024-01-15T10:30:00Z"
@@ -60,6 +77,19 @@ Each `<id>.json` file contains:
   "closed_at": null
 }
 ```
+
+**Relationship pairs (doubly-linked):**
+
+| Field | Inverse | Meaning |
+|-------|---------|---------|
+| `parent` | `children` | Hierarchy: this issue is a child of parent |
+| `children` | `parent` | Hierarchy: these issues are children of this one |
+| `depends_on` | `dependents` | This issue depends on those issues completing first |
+| `dependents` | `depends_on` | Those issues depend on this one |
+| `blocks` | `blocked_by` | This issue blocks those issues from starting |
+| `blocked_by` | `blocks` | This issue is blocked by those issues |
+
+All relationships are maintained symmetrically: when A.depends_on includes B, then B.dependents includes A. Updates lock both issues and modify both files atomically.
 
 **Status values:** `open`, `in-progress`, `blocked`, `deferred`, `closed`
 
@@ -76,8 +106,8 @@ Note: The `status` field in JSON and the directory location must agree. The dire
 Each issue has a corresponding `.lock` file used with `flock(2)`:
 
 ```
-open/bd-a1b2c3d4.json   # issue data
-open/bd-a1b2c3d4.lock   # lock file
+open/bd-a1b2.json   # issue data
+open/bd-a1b2.lock   # lock file
 ```
 
 **Lock acquisition:**
@@ -98,15 +128,137 @@ For operations touching multiple issues (e.g., adding a dependency):
 4. Perform all mutations
 5. Release locks in reverse order
 
-Example for `bd dep add A B`:
+Example for `bd dep add A B` (A depends on B):
 ```
-sorted = sort(["bd-a1b2", "bd-c3d4"])  # consistent order
+sorted = sort(["bd-a1b2", "bd-c3d4"])  # consistent order prevents deadlock
 lock(sorted[0])
 lock(sorted[1])
-# update A.depends_on, B.blocks
+# update A.depends_on += B
+# update B.dependents += A
 unlock(sorted[1])
 unlock(sorted[0])
 ```
+
+### Atomicity and Crash Safety
+
+File writes must be atomic to prevent corruption if the process crashes mid-write:
+
+**Write pattern:**
+```go
+func atomicWriteJSON(path string, data interface{}) error {
+    // 1. Write to temporary file in same directory
+    tmp := path + ".tmp." + randomSuffix()
+    f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
+    if err != nil {
+        return err
+    }
+
+    // 2. Write and sync data
+    enc := json.NewEncoder(f)
+    enc.SetIndent("", "  ")
+    if err := enc.Encode(data); err != nil {
+        f.Close()
+        os.Remove(tmp)
+        return err
+    }
+    if err := f.Sync(); err != nil {  // fsync before rename
+        f.Close()
+        os.Remove(tmp)
+        return err
+    }
+    f.Close()
+
+    // 3. Atomic rename (POSIX guarantees this is atomic)
+    return os.Rename(tmp, path)
+}
+```
+
+**Close operation (moving between directories):**
+```go
+func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
+    lock := fs.acquireLock(id)
+    defer lock.Close()
+
+    issue, err := fs.Get(ctx, id)
+    if err != nil {
+        return err
+    }
+
+    issue.Status = StatusClosed
+    issue.ClosedAt = timePtr(time.Now())
+
+    // 1. Write to closed/ first (creates new file)
+    closedPath := fs.issuePath(id, true)
+    if err := atomicWriteJSON(closedPath, issue); err != nil {
+        return err
+    }
+
+    // 2. Remove from open/ (file now exists in closed/)
+    openPath := fs.issuePath(id, false)
+    if err := os.Remove(openPath); err != nil {
+        // Rollback: remove from closed/
+        os.Remove(closedPath)
+        return err
+    }
+
+    return nil
+}
+```
+
+### Stale Lock Considerations
+
+`flock(2)` locks are automatically released when:
+- The file descriptor is closed
+- The process exits (including crashes)
+- The process is killed (SIGKILL)
+
+**NFS Warning:** `flock` does not work reliably over NFS. If `.beads/` is on an NFS mount, use local storage or switch to the SQLite engine which uses database-level locking.
+
+**Orphaned lock files:** Lock files may remain after the lock is released. This is harmless - they're just empty files. `bd doctor` cleans them up periodically.
+
+### ID Generation and Collision Handling
+
+```go
+func generateID() (string, error) {
+    bytes := make([]byte, 2)  // 16 bits = 4 hex chars
+    if _, err := rand.Read(bytes); err != nil {
+        return "", err
+    }
+    return fmt.Sprintf("bd-%x", bytes), nil
+}
+
+func (fs *FilesystemStorage) Create(ctx context.Context, issue *Issue) (string, error) {
+    // Retry loop for collision handling (extremely rare)
+    for attempts := 0; attempts < 3; attempts++ {
+        id, err := generateID()
+        if err != nil {
+            return "", err
+        }
+
+        path := fs.issuePath(id, false)
+
+        // O_EXCL fails if file exists - collision detection
+        f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+        if os.IsExist(err) {
+            continue  // Collision, retry with new ID
+        }
+        if err != nil {
+            return "", err
+        }
+
+        issue.ID = id
+        // ... write issue data ...
+        return id, nil
+    }
+    return "", errors.New("failed to generate unique ID after 3 attempts")
+}
+```
+
+---
+
+# Storage Interface (All Engines)
+
+The following sections apply to **all storage engine implementations**.
 
 ## Storage Interface
 
@@ -127,10 +279,19 @@ type Issue struct {
     Status      Status            `json:"status"`
     Priority    Priority          `json:"priority"`
     Type        IssueType         `json:"type"`
+
+    // Hierarchy (doubly-linked)
     Parent      string            `json:"parent,omitempty"`
     Children    []string          `json:"children,omitempty"`
-    DependsOn   []string          `json:"depends_on,omitempty"`
-    Blocks      []string          `json:"blocks,omitempty"`
+
+    // Dependencies (doubly-linked)
+    DependsOn   []string          `json:"depends_on,omitempty"`   // issues this one waits for
+    Dependents  []string          `json:"dependents,omitempty"`   // issues waiting for this one
+
+    // Blocking (doubly-linked)
+    Blocks      []string          `json:"blocks,omitempty"`       // issues this one blocks
+    BlockedBy   []string          `json:"blocked_by,omitempty"`   // issues blocking this one
+
     Labels      []string          `json:"labels,omitempty"`
     Assignee    string            `json:"assignee,omitempty"`
     Comments    []Comment         `json:"comments,omitempty"`
@@ -216,17 +377,34 @@ type Storage interface {
     Reopen(ctx context.Context, id string) error
 
     // AddDependency creates a dependency relationship (A depends on B)
-    // Updates both A.depends_on and B.blocks atomically
+    // Locks both issues, then updates:
+    //   - A.depends_on += B
+    //   - B.dependents += A
     AddDependency(ctx context.Context, dependentID, dependencyID string) error
 
     // RemoveDependency removes a dependency relationship
+    // Locks both issues and updates both sides
     RemoveDependency(ctx context.Context, dependentID, dependencyID string) error
 
+    // AddBlock creates a blocking relationship (A blocks B)
+    // Locks both issues, then updates:
+    //   - A.blocks += B
+    //   - B.blocked_by += A
+    AddBlock(ctx context.Context, blockerID, blockedID string) error
+
+    // RemoveBlock removes a blocking relationship
+    // Locks both issues and updates both sides
+    RemoveBlock(ctx context.Context, blockerID, blockedID string) error
+
     // SetParent sets the parent of an issue
-    // Updates both child.parent and parent.children atomically
+    // Locks both issues, then updates:
+    //   - child.parent = parent
+    //   - parent.children += child
+    // If child had a previous parent, also locks and updates that issue
     SetParent(ctx context.Context, childID, parentID string) error
 
     // RemoveParent removes the parent relationship
+    // Locks both child and parent, updates both sides
     RemoveParent(ctx context.Context, childID string) error
 
     // AddComment adds a comment to an issue
@@ -379,8 +557,8 @@ Create a new issue.
 ```bash
 bd create "Fix login bug"
 bd create "Add OAuth support" --type feature --priority high
-bd create "Implement caching" --parent bd-a1b2c3d4
-bd create "Write tests" --depends-on bd-e5f6g7h8
+bd create "Implement caching" --parent bd-a1b2
+bd create "Write tests" --depends-on bd-e5f6
 ```
 
 **Flags:**
@@ -399,8 +577,8 @@ bd create "Write tests" --depends-on bd-e5f6g7h8
 Display an issue's details.
 
 ```bash
-bd show bd-a1b2c3d4
-bd show bd-a1b2     # prefix matching OK
+bd show bd-a1b2
+bd show bd-a1       # prefix matching OK
 ```
 
 Shows title, description, status, dependencies, comments, etc.
@@ -459,7 +637,7 @@ bd update bd-a1b2 --description -   # read from stdin
 Close an issue.
 
 ```bash
-bd close bd-a1b2c3d4
+bd close bd-a1b2
 bd close bd-a1b2 bd-c3d4 bd-e5f6   # close multiple
 ```
 
@@ -470,7 +648,7 @@ Moves the issue from `open/` to `closed/`, sets status to "closed", sets closed_
 Reopen a closed issue.
 
 ```bash
-bd reopen bd-a1b2c3d4
+bd reopen bd-a1b2
 ```
 
 Moves the issue from `closed/` to `open/`, sets status to "open", clears closed_at.
@@ -480,8 +658,8 @@ Moves the issue from `closed/` to `open/`, sets status to "open", clears closed_
 Permanently delete an issue.
 
 ```bash
-bd delete bd-a1b2c3d4
-bd delete bd-a1b2 --force   # skip confirmation
+bd delete bd-a1b2
+bd delete bd-a1 --force   # skip confirmation, prefix match
 ```
 
 **Flags:**
@@ -497,9 +675,9 @@ Add a dependency (from depends on to).
 bd dep add bd-a1b2 bd-c3d4   # a1b2 depends on c3d4
 ```
 
-Updates both issues atomically:
+Locks both issues and updates symmetrically:
 - Adds `bd-c3d4` to `bd-a1b2.depends_on`
-- Adds `bd-a1b2` to `bd-c3d4.blocks`
+- Adds `bd-a1b2` to `bd-c3d4.dependents`
 
 #### `bd dep remove <from> <to>`
 
@@ -528,7 +706,10 @@ Set an issue's parent.
 bd parent set bd-a1b2 bd-c3d4   # a1b2 is now a child of c3d4
 ```
 
-Updates both issues atomically.
+Locks all involved issues and updates symmetrically:
+- Sets `bd-a1b2.parent` to `bd-c3d4`
+- Adds `bd-a1b2` to `bd-c3d4.children`
+- If a1b2 had a previous parent, removes a1b2 from that parent's children
 
 #### `bd parent remove <child>`
 
@@ -754,13 +935,68 @@ defaults:
 # ID generation
 id:
   prefix: "bd-"
-  length: 8
+  length: 4
 
 # Actor (used for comments, audit)
 actor: "${USER}"
 ```
 
 Configuration is loaded once at startup and passed to commands.
+
+## Git Merge Conflict Handling
+
+When multiple users or agents edit the same issue on different branches, git merge will produce invalid JSON. This is an inherent trade-off of the filesystem approach.
+
+**Prevention strategies:**
+
+1. **Short-lived branches:** Merge frequently to minimize divergence
+2. **Issue ownership:** Assign issues to avoid concurrent edits
+3. **Append-only patterns:** Comments are append-only, reducing conflicts
+
+**Detection:**
+
+```bash
+# After a merge, run doctor to find corrupted files
+bd doctor
+```
+
+**Resolution:**
+
+```bash
+# bd doctor --fix attempts auto-repair
+bd doctor --fix
+
+# For manual resolution, issues are human-readable JSON
+# Edit the file directly, then verify:
+cat .beads/open/bd-a1b2.json | jq .  # validates JSON
+```
+
+**Recommended .gitattributes:**
+
+```gitattributes
+# Treat issue files as union merge (append both versions)
+# This creates invalid JSON but preserves all data for manual resolution
+.beads/**/*.json merge=union
+```
+
+Alternative: A custom merge driver could be implemented to merge JSON intelligently:
+
+```gitattributes
+.beads/**/*.json merge=beads-json
+```
+
+```bash
+# In .git/config or global config:
+[merge "beads-json"]
+    name = Beads JSON merge driver
+    driver = bd merge-driver %O %A %B %P
+```
+
+The merge driver would:
+1. Parse both versions as JSON
+2. Merge comments arrays (union, dedupe by comment ID)
+3. Take later `updated_at` for scalar conflicts
+4. Mark file for manual review if structural conflicts exist
 
 ## Future Work: Molecules and Formulas
 
@@ -861,7 +1097,9 @@ bd migrate-v2 --switch # switch to v2 as primary
 
 The migration reads from SQLite and writes to the new filesystem format.
 
-## Performance Characteristics
+## Performance Characteristics (Filesystem Engine)
+
+These benchmarks are specific to the **Filesystem storage engine**. Other engines will have different characteristics (e.g., SQLite may be faster for complex queries but slower for git operations).
 
 | Operation | Expected Time | Notes |
 |-----------|---------------|-------|
@@ -882,18 +1120,562 @@ These are rough estimates; actual performance depends on filesystem and disk spe
 
 ## Design Decisions Summary
 
-1. **No index file** - Filesystem is the source of truth. Eliminates sync bugs.
+**Architecture-wide decisions (all engines):**
 
-2. **Flat file structure** - `<id>.json` files, not nested directories. Simpler, git-friendlier.
+1. **Storage interface** - Commands don't know about storage details. Enables swappable backends.
 
-3. **open/ and closed/ directories** - Status visible in filesystem. Easy compaction.
+2. **No daemon** - Every command is stateless. Fast startup, no background processes.
 
-4. **flock-based locking** - Simple, kernel-managed, works across processes.
+3. **Contract tests** - All engines must pass the same interface contract tests.
 
-5. **Sorted lock acquisition** - Prevents deadlocks in multi-issue operations.
+**Filesystem engine decisions:**
 
-6. **Storage interface** - Commands don't know about filesystem details. Enables SQLite backend later.
+4. **No index file** - Filesystem is the source of truth. Eliminates sync bugs.
 
-7. **No daemon** - Every command is stateless. Fast startup, no background processes.
+5. **Flat file structure** - `<id>.json` files, not nested directories. Simpler, git-friendlier.
 
-8. **JSON files** - Human-readable, git-diff-friendly, easy to debug.
+6. **open/ and closed/ directories** - Status visible in filesystem. Easy compaction.
+
+7. **flock-based locking** - Simple, kernel-managed, works across processes.
+
+8. **Sorted lock acquisition** - Prevents deadlocks in multi-issue operations.
+
+9. **JSON files** - Human-readable, git-diff-friendly, easy to debug.
+
+10. **Atomic writes** - Write-to-temp-then-rename pattern prevents corruption on crash.
+
+---
+
+# Testing Strategy
+
+Testing beads requires verifying correctness under concurrent access, crash scenarios, and data integrity over time. This section describes the testing approach for all storage engines.
+
+## Test Categories
+
+### 1. Interface Contract Tests
+
+Every storage engine must pass the same contract test suite:
+
+```go
+// storage/contract_test.go
+package storage_test
+
+// RunContractTests runs all interface contract tests against a storage implementation
+func RunContractTests(t *testing.T, factory func() Storage) {
+    t.Run("Create", func(t *testing.T) { testCreate(t, factory()) })
+    t.Run("Get", func(t *testing.T) { testGet(t, factory()) })
+    t.Run("Update", func(t *testing.T) { testUpdate(t, factory()) })
+    t.Run("Delete", func(t *testing.T) { testDelete(t, factory()) })
+    t.Run("List", func(t *testing.T) { testList(t, factory()) })
+    t.Run("Dependencies", func(t *testing.T) { testDependencies(t, factory()) })
+    t.Run("Hierarchy", func(t *testing.T) { testHierarchy(t, factory()) })
+    t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
+    // ...
+}
+
+// Each storage engine runs the same tests:
+func TestFilesystemStorage(t *testing.T) {
+    RunContractTests(t, func() Storage {
+        dir := t.TempDir()
+        s := filesystem.New(dir)
+        s.Init(context.Background())
+        return s
+    })
+}
+
+func TestSQLiteStorage(t *testing.T) {
+    RunContractTests(t, func() Storage {
+        // ...
+    })
+}
+```
+
+### 2. Concurrent Access Tests
+
+Critical for verifying locking correctness:
+
+```go
+// storage/concurrent_test.go
+
+func TestConcurrentCreates(t *testing.T) {
+    s := setupStorage(t)
+    var wg sync.WaitGroup
+    var ids sync.Map
+    errors := make(chan error, 100)
+
+    // Spawn 100 goroutines creating issues simultaneously
+    for i := 0; i < 100; i++ {
+        wg.Add(1)
+        go func(n int) {
+            defer wg.Done()
+            issue := &Issue{Title: fmt.Sprintf("Issue %d", n)}
+            id, err := s.Create(context.Background(), issue)
+            if err != nil {
+                errors <- err
+                return
+            }
+            // Check for ID collision
+            if _, loaded := ids.LoadOrStore(id, true); loaded {
+                errors <- fmt.Errorf("duplicate ID: %s", id)
+            }
+        }(i)
+    }
+
+    wg.Wait()
+    close(errors)
+
+    for err := range errors {
+        t.Error(err)
+    }
+}
+
+func TestConcurrentUpdatesToSameIssue(t *testing.T) {
+    s := setupStorage(t)
+    id, _ := s.Create(ctx, &Issue{Title: "Original"})
+
+    var wg sync.WaitGroup
+    for i := 0; i < 50; i++ {
+        wg.Add(1)
+        go func(n int) {
+            defer wg.Done()
+            issue, _ := s.Get(ctx, id)
+            issue.Title = fmt.Sprintf("Updated by %d", n)
+            s.Update(ctx, issue)
+        }(i)
+    }
+    wg.Wait()
+
+    // Verify issue is not corrupted
+    final, err := s.Get(ctx, id)
+    require.NoError(t, err)
+    require.NotEmpty(t, final.Title)
+}
+
+func TestConcurrentDependencyAddition(t *testing.T) {
+    // This tests the deadlock prevention (sorted lock acquisition)
+    s := setupStorage(t)
+
+    // Create issues
+    ids := make([]string, 10)
+    for i := range ids {
+        ids[i], _ = s.Create(ctx, &Issue{Title: fmt.Sprintf("Issue %d", i)})
+    }
+
+    var wg sync.WaitGroup
+    // Many goroutines adding dependencies in different orders
+    for i := 0; i < 100; i++ {
+        wg.Add(1)
+        go func() {
+            defer wg.Done()
+            a := ids[rand.Intn(len(ids))]
+            b := ids[rand.Intn(len(ids))]
+            if a != b {
+                s.AddDependency(ctx, a, b)  // Should not deadlock
+            }
+        }()
+    }
+
+    // If this doesn't complete in 5 seconds, we have a deadlock
+    done := make(chan struct{})
+    go func() {
+        wg.Wait()
+        close(done)
+    }()
+
+    select {
+    case <-done:
+        // Success
+    case <-time.After(5 * time.Second):
+        t.Fatal("deadlock detected")
+    }
+}
+```
+
+### 3. Multi-Process Concurrent Access Tests
+
+Goroutine tests verify in-process locking; these verify cross-process locking:
+
+```bash
+#!/bin/bash
+# test/multiprocess_stress.sh
+
+set -e
+
+BEADS_DIR=$(mktemp -d)
+trap "rm -rf $BEADS_DIR" EXIT
+
+bd init --path "$BEADS_DIR"
+
+# Spawn 20 processes doing concurrent creates
+for i in $(seq 1 20); do
+    bd create "Issue $i" --path "$BEADS_DIR" &
+done
+wait
+
+# Verify all 20 were created
+COUNT=$(bd list --path "$BEADS_DIR" --format ids | wc -l)
+if [ "$COUNT" -ne 20 ]; then
+    echo "FAIL: Expected 20 issues, got $COUNT"
+    exit 1
+fi
+
+echo "PASS: Multi-process creates"
+```
+
+```bash
+#!/bin/bash
+# test/multiprocess_update_race.sh
+# Tests that concurrent updates don't corrupt data
+
+set -e
+
+BEADS_DIR=$(mktemp -d)
+trap "rm -rf $BEADS_DIR" EXIT
+
+bd init --path "$BEADS_DIR"
+ID=$(bd create "Test Issue" --path "$BEADS_DIR")
+
+# 50 processes updating the same issue
+for i in $(seq 1 50); do
+    bd update "$ID" --title "Updated by $i" --path "$BEADS_DIR" &
+done
+wait
+
+# Verify issue is still valid JSON and readable
+bd show "$ID" --path "$BEADS_DIR" --json | jq . > /dev/null
+if [ $? -ne 0 ]; then
+    echo "FAIL: Issue corrupted"
+    exit 1
+fi
+
+# Verify no doctor issues
+PROBLEMS=$(bd doctor --path "$BEADS_DIR" 2>&1 | grep -c "problem" || true)
+if [ "$PROBLEMS" -ne 0 ]; then
+    echo "FAIL: Doctor found problems"
+    bd doctor --path "$BEADS_DIR"
+    exit 1
+fi
+
+echo "PASS: Concurrent updates to same issue"
+```
+
+### 4. Data Integrity Tests
+
+Verify data survives create/read/update/delete cycles:
+
+```go
+func TestDataIntegrityRoundTrip(t *testing.T) {
+    s := setupStorage(t)
+
+    // Create issue with all fields populated
+    original := &Issue{
+        Title:       "Test Issue",
+        Description: "A detailed description\nwith newlines\nand unicode: 日本語",
+        Status:      StatusOpen,
+        Priority:    PriorityHigh,
+        Type:        TypeFeature,
+        Labels:      []string{"backend", "urgent"},
+        Assignee:    "alice",
+        Comments: []Comment{
+            {ID: "c-1", Author: "bob", Body: "Comment 1", CreatedAt: time.Now()},
+            {ID: "c-2", Author: "carol", Body: "Comment 2", CreatedAt: time.Now()},
+        },
+    }
+
+    id, err := s.Create(ctx, original)
+    require.NoError(t, err)
+    original.ID = id
+
+    // Read back and compare
+    retrieved, err := s.Get(ctx, id)
+    require.NoError(t, err)
+
+    // Deep equality check (ignoring timestamps set by storage)
+    assert.Equal(t, original.Title, retrieved.Title)
+    assert.Equal(t, original.Description, retrieved.Description)
+    assert.Equal(t, original.Labels, retrieved.Labels)
+    assert.Len(t, retrieved.Comments, 2)
+}
+
+func TestLargeDataSet(t *testing.T) {
+    if testing.Short() {
+        t.Skip("skipping large dataset test in short mode")
+    }
+
+    s := setupStorage(t)
+
+    // Create 1000 issues
+    ids := make([]string, 1000)
+    for i := range ids {
+        id, err := s.Create(ctx, &Issue{
+            Title:       fmt.Sprintf("Issue %d", i),
+            Description: strings.Repeat("x", 1000),  // 1KB each
+        })
+        require.NoError(t, err)
+        ids[i] = id
+    }
+
+    // Verify all readable
+    for _, id := range ids {
+        _, err := s.Get(ctx, id)
+        require.NoError(t, err, "failed to read issue %s", id)
+    }
+
+    // Verify list returns all
+    all, err := s.List(ctx, nil)
+    require.NoError(t, err)
+    assert.Len(t, all, 1000)
+
+    // Run doctor
+    problems, err := s.Doctor(ctx, false)
+    require.NoError(t, err)
+    assert.Empty(t, problems)
+}
+```
+
+### 5. Crash Recovery Tests
+
+Simulate crashes at various points:
+
+```go
+func TestCrashDuringWrite(t *testing.T) {
+    // This test uses a mock filesystem that fails mid-write
+    mockFS := &CrashingFS{
+        crashAfterBytes: 50,  // Crash after writing 50 bytes
+    }
+    s := filesystem.NewWithFS(t.TempDir(), mockFS)
+    s.Init(ctx)
+
+    // This should fail
+    _, err := s.Create(ctx, &Issue{Title: "Test"})
+    require.Error(t, err)
+
+    // Storage should still be in valid state
+    // (no partial files, no corruption)
+    problems, err := s.Doctor(ctx, false)
+    require.NoError(t, err)
+    assert.Empty(t, problems, "crash left storage in inconsistent state")
+}
+
+func TestCrashDuringClose(t *testing.T) {
+    s := setupStorage(t)
+    id, _ := s.Create(ctx, &Issue{Title: "Test"})
+
+    // Simulate: file written to closed/ but not removed from open/
+    // (crash between write and delete)
+    openPath := filepath.Join(s.root, "open", id+".json")
+    closedPath := filepath.Join(s.root, "closed", id+".json")
+
+    data, _ := os.ReadFile(openPath)
+    os.WriteFile(closedPath, data, 0644)
+    // Don't remove openPath - simulating crash
+
+    // Doctor should detect and fix
+    problems, _ := s.Doctor(ctx, false)
+    assert.NotEmpty(t, problems, "should detect duplicate issue")
+
+    _, err := s.Doctor(ctx, true)  // Fix
+    require.NoError(t, err)
+
+    // Now should be clean
+    problems, _ = s.Doctor(ctx, false)
+    assert.Empty(t, problems)
+}
+```
+
+### 6. Git Integration Tests
+
+Test behavior after git operations:
+
+```bash
+#!/bin/bash
+# test/git_merge_conflict.sh
+
+set -e
+
+# Setup two branches that edit the same issue
+REPO=$(mktemp -d)
+cd "$REPO"
+git init
+bd init
+
+ID=$(bd create "Original title")
+git add .beads
+git commit -m "Initial"
+
+# Branch A: change title
+git checkout -b branch-a
+bd update "$ID" --title "Title from A"
+git commit -am "Update from A"
+
+# Branch B: change title differently
+git checkout main
+git checkout -b branch-b
+bd update "$ID" --title "Title from B"
+git commit -am "Update from B"
+
+# Merge should conflict
+git checkout main
+git merge branch-a
+git merge branch-b || true  # Expected to conflict
+
+# bd doctor should detect the problem
+bd doctor 2>&1 | grep -q "invalid JSON\|parse error" || {
+    echo "FAIL: Doctor didn't detect merge conflict corruption"
+    exit 1
+}
+
+echo "PASS: Git merge conflict detected by doctor"
+```
+
+## Test Fixtures and Generators
+
+For complex scenario testing, use generators:
+
+```go
+// testutil/generator.go
+
+type IssueGenerator struct {
+    storage Storage
+    ids     []string
+}
+
+// GenerateTree creates a hierarchy of issues
+func (g *IssueGenerator) GenerateTree(depth, breadth int) error {
+    return g.generateTreeRecursive("", depth, breadth)
+}
+
+func (g *IssueGenerator) generateTreeRecursive(parent string, depth, breadth int) error {
+    if depth == 0 {
+        return nil
+    }
+    for i := 0; i < breadth; i++ {
+        issue := &Issue{
+            Title:  fmt.Sprintf("Level %d Issue %d", depth, i),
+            Parent: parent,
+        }
+        id, err := g.storage.Create(ctx, issue)
+        if err != nil {
+            return err
+        }
+        g.ids = append(g.ids, id)
+        if err := g.generateTreeRecursive(id, depth-1, breadth); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
+// GenerateDependencyChain creates A -> B -> C -> ... chain
+func (g *IssueGenerator) GenerateDependencyChain(length int) ([]string, error) {
+    ids := make([]string, length)
+    for i := 0; i < length; i++ {
+        id, err := g.storage.Create(ctx, &Issue{Title: fmt.Sprintf("Chain %d", i)})
+        if err != nil {
+            return nil, err
+        }
+        ids[i] = id
+        if i > 0 {
+            if err := g.storage.AddDependency(ctx, id, ids[i-1]); err != nil {
+                return nil, err
+            }
+        }
+    }
+    return ids, nil
+}
+
+// GenerateDependencyDAG creates a complex dependency graph
+func (g *IssueGenerator) GenerateDependencyDAG(nodes, edges int) error {
+    // Create nodes
+    ids := make([]string, nodes)
+    for i := range ids {
+        id, _ := g.storage.Create(ctx, &Issue{Title: fmt.Sprintf("Node %d", i)})
+        ids[i] = id
+    }
+
+    // Create random edges (dependencies)
+    for i := 0; i < edges; i++ {
+        a := rand.Intn(nodes)
+        b := rand.Intn(nodes)
+        if a != b && a < b {  // Only forward edges to avoid cycles
+            g.storage.AddDependency(ctx, ids[b], ids[a])
+        }
+    }
+    return nil
+}
+```
+
+## CI Integration
+
+```yaml
+# .github/workflows/test.yml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go test ./... -race -coverprofile=coverage.out
+
+  stress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - run: go test ./... -race -count=10  # Run 10 times to catch races
+
+  multiprocess:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: go build -o bd ./cmd/bd
+      - run: ./test/multiprocess_stress.sh
+      - run: ./test/multiprocess_update_race.sh
+
+  large-dataset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+      - run: go test ./... -run Large -timeout 10m
+```
+
+## Benchmarks
+
+```go
+func BenchmarkCreate(b *testing.B) {
+    s := setupStorage(b)
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        s.Create(ctx, &Issue{Title: "Benchmark"})
+    }
+}
+
+func BenchmarkListOpen1000(b *testing.B) {
+    s := setupStorage(b)
+    for i := 0; i < 1000; i++ {
+        s.Create(ctx, &Issue{Title: fmt.Sprintf("Issue %d", i)})
+    }
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        s.List(ctx, nil)
+    }
+}
+
+func BenchmarkConcurrentReads(b *testing.B) {
+    s := setupStorage(b)
+    id, _ := s.Create(ctx, &Issue{Title: "Test"})
+    b.ResetTimer()
+    b.RunParallel(func(pb *testing.PB) {
+        for pb.Next() {
+            s.Get(ctx, id)
+        }
+    })
+}
+```
