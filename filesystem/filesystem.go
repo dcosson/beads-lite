@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"syscall"
 	"time"
 
@@ -391,6 +392,9 @@ func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
 		return err
 	}
 
+	// Clean up the lock file (it's no longer needed for closed issues)
+	os.Remove(fs.lockPath(id))
+
 	return nil
 }
 
@@ -734,22 +738,312 @@ func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, com
 func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, error) {
 	var problems []string
 
-	// Check for orphaned lock files
-	entries, err := os.ReadDir(filepath.Join(fs.root, "open"))
+	// Load all issues from both directories
+	openIssues := make(map[string]*storage.Issue)
+	closedIssues := make(map[string]*storage.Issue)
+	allIssues := make(map[string]*storage.Issue)
+
+	// Scan open/ directory
+	openEntries, err := os.ReadDir(filepath.Join(fs.root, "open"))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
 
-	for _, entry := range entries {
-		if filepath.Ext(entry.Name()) == ".lock" {
-			id := entry.Name()[:len(entry.Name())-5]
+	for _, entry := range openEntries {
+		name := entry.Name()
+		ext := filepath.Ext(name)
+
+		// Check for orphaned temp files
+		if strings.Contains(name, ".tmp.") {
+			problems = append(problems, fmt.Sprintf("orphaned temp file: open/%s", name))
+			if fix {
+				os.Remove(filepath.Join(fs.root, "open", name))
+			}
+			continue
+		}
+
+		// Check for orphaned lock files
+		if ext == ".lock" {
+			id := name[:len(name)-5]
 			jsonPath := filepath.Join(fs.root, "open", id+".json")
 			if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
-				problems = append(problems, fmt.Sprintf("orphaned lock file: %s", entry.Name()))
+				problems = append(problems, fmt.Sprintf("orphaned lock file: open/%s", name))
 				if fix {
-					os.Remove(filepath.Join(fs.root, "open", entry.Name()))
+					os.Remove(filepath.Join(fs.root, "open", name))
 				}
 			}
+			continue
+		}
+
+		if ext != ".json" {
+			continue
+		}
+
+		id := name[:len(name)-5]
+		path := filepath.Join(fs.root, "open", name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("cannot read file: open/%s: %v", name, err))
+			continue
+		}
+
+		var issue storage.Issue
+		if err := json.Unmarshal(data, &issue); err != nil {
+			problems = append(problems, fmt.Sprintf("malformed JSON: open/%s: %v", name, err))
+			continue
+		}
+
+		openIssues[id] = &issue
+		allIssues[id] = &issue
+	}
+
+	// Scan closed/ directory
+	closedEntries, err := os.ReadDir(filepath.Join(fs.root, "closed"))
+	if err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+
+	for _, entry := range closedEntries {
+		name := entry.Name()
+		ext := filepath.Ext(name)
+
+		// Check for orphaned temp files
+		if strings.Contains(name, ".tmp.") {
+			problems = append(problems, fmt.Sprintf("orphaned temp file: closed/%s", name))
+			if fix {
+				os.Remove(filepath.Join(fs.root, "closed", name))
+			}
+			continue
+		}
+
+		if ext != ".json" {
+			continue
+		}
+
+		id := name[:len(name)-5]
+		path := filepath.Join(fs.root, "closed", name)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			problems = append(problems, fmt.Sprintf("cannot read file: closed/%s: %v", name, err))
+			continue
+		}
+
+		var issue storage.Issue
+		if err := json.Unmarshal(data, &issue); err != nil {
+			problems = append(problems, fmt.Sprintf("malformed JSON: closed/%s: %v", name, err))
+			continue
+		}
+
+		closedIssues[id] = &issue
+		// Only add to allIssues if not already in open (duplicate check below)
+		if _, exists := allIssues[id]; !exists {
+			allIssues[id] = &issue
+		}
+	}
+
+	// Check for duplicate issues (same ID in both open/ and closed/)
+	for id := range openIssues {
+		if closedIssue, exists := closedIssues[id]; exists {
+			openIssue := openIssues[id]
+			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both open/ and closed/", id))
+			if fix {
+				// Prefer the version with Status=closed if in closed/, otherwise keep the newer one
+				if closedIssue.Status == storage.StatusClosed {
+					// Remove from open/
+					os.Remove(filepath.Join(fs.root, "open", id+".json"))
+					allIssues[id] = closedIssue
+				} else if openIssue.Status == storage.StatusClosed {
+					// Remove from closed/
+					os.Remove(filepath.Join(fs.root, "closed", id+".json"))
+					allIssues[id] = openIssue
+				} else {
+					// Both have non-closed status, keep the one in open/ and remove from closed/
+					os.Remove(filepath.Join(fs.root, "closed", id+".json"))
+					allIssues[id] = openIssue
+				}
+			}
+		}
+	}
+
+	// Check for status-location mismatches
+	for id, issue := range openIssues {
+		if _, isDuplicate := closedIssues[id]; isDuplicate {
+			continue // Already handled above
+		}
+		if issue.Status == storage.StatusClosed {
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in open/", id))
+			if fix {
+				// Move to closed/
+				openPath := filepath.Join(fs.root, "open", id+".json")
+				closedPath := filepath.Join(fs.root, "closed", id+".json")
+				if err := atomicWriteJSON(closedPath, issue); err == nil {
+					os.Remove(openPath)
+				}
+			}
+		}
+	}
+
+	for id, issue := range closedIssues {
+		if _, isDuplicate := openIssues[id]; isDuplicate {
+			continue // Already handled above
+		}
+		if issue.Status != storage.StatusClosed {
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in closed/", id, issue.Status))
+			if fix {
+				// Move to open/
+				closedPath := filepath.Join(fs.root, "closed", id+".json")
+				openPath := filepath.Join(fs.root, "open", id+".json")
+				if err := atomicWriteJSON(openPath, issue); err == nil {
+					os.Remove(closedPath)
+				}
+			}
+		}
+	}
+
+	// Check for broken references and asymmetric relationships
+	issuesNeedingUpdate := make(map[string]bool)
+
+	for id, issue := range allIssues {
+		// Check parent reference
+		if issue.Parent != "" {
+			if _, exists := allIssues[issue.Parent]; !exists {
+				problems = append(problems, fmt.Sprintf("broken parent reference: %s references non-existent parent %s", id, issue.Parent))
+				if fix {
+					issue.Parent = ""
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: parent should have this issue in children
+				parent := allIssues[issue.Parent]
+				if !contains(parent.Children, id) {
+					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s has parent %s but parent doesn't list it as child", id, issue.Parent))
+					if fix {
+						parent.Children = append(parent.Children, id)
+						issuesNeedingUpdate[issue.Parent] = true
+					}
+				}
+			}
+		}
+
+		// Check children references
+		for _, childID := range issue.Children {
+			if _, exists := allIssues[childID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken child reference: %s references non-existent child %s", id, childID))
+				if fix {
+					issue.Children = remove(issue.Children, childID)
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: child should have this issue as parent
+				child := allIssues[childID]
+				if child.Parent != id {
+					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s lists %s as child but child's parent is %q", id, childID, child.Parent))
+					if fix {
+						if child.Parent == "" {
+							child.Parent = id
+							issuesNeedingUpdate[childID] = true
+						} else {
+							// Child has a different parent, remove from our children
+							issue.Children = remove(issue.Children, childID)
+							issuesNeedingUpdate[id] = true
+						}
+					}
+				}
+			}
+		}
+
+		// Check depends_on references
+		for _, depID := range issue.DependsOn {
+			if _, exists := allIssues[depID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken dependency: %s depends on non-existent %s", id, depID))
+				if fix {
+					issue.DependsOn = remove(issue.DependsOn, depID)
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: dependency should have this issue in dependents
+				dep := allIssues[depID]
+				if !contains(dep.Dependents, id) {
+					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s depends on %s but %s doesn't list it as dependent", id, depID, depID))
+					if fix {
+						dep.Dependents = append(dep.Dependents, id)
+						issuesNeedingUpdate[depID] = true
+					}
+				}
+			}
+		}
+
+		// Check dependents references
+		for _, depID := range issue.Dependents {
+			if _, exists := allIssues[depID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken dependent reference: %s has non-existent dependent %s", id, depID))
+				if fix {
+					issue.Dependents = remove(issue.Dependents, depID)
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: dependent should have this issue in depends_on
+				dep := allIssues[depID]
+				if !contains(dep.DependsOn, id) {
+					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s lists %s as dependent but %s doesn't depend on it", id, depID, depID))
+					if fix {
+						dep.DependsOn = append(dep.DependsOn, id)
+						issuesNeedingUpdate[depID] = true
+					}
+				}
+			}
+		}
+
+		// Check blocks references
+		for _, blockedID := range issue.Blocks {
+			if _, exists := allIssues[blockedID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken blocks reference: %s blocks non-existent %s", id, blockedID))
+				if fix {
+					issue.Blocks = remove(issue.Blocks, blockedID)
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: blocked issue should have this issue in blocked_by
+				blocked := allIssues[blockedID]
+				if !contains(blocked.BlockedBy, id) {
+					problems = append(problems, fmt.Sprintf("asymmetric blocks: %s blocks %s but %s doesn't list it in blocked_by", id, blockedID, blockedID))
+					if fix {
+						blocked.BlockedBy = append(blocked.BlockedBy, id)
+						issuesNeedingUpdate[blockedID] = true
+					}
+				}
+			}
+		}
+
+		// Check blocked_by references
+		for _, blockerID := range issue.BlockedBy {
+			if _, exists := allIssues[blockerID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken blocked_by reference: %s blocked by non-existent %s", id, blockerID))
+				if fix {
+					issue.BlockedBy = remove(issue.BlockedBy, blockerID)
+					issuesNeedingUpdate[id] = true
+				}
+			} else {
+				// Check asymmetry: blocker should have this issue in blocks
+				blocker := allIssues[blockerID]
+				if !contains(blocker.Blocks, id) {
+					problems = append(problems, fmt.Sprintf("asymmetric blocked_by: %s blocked by %s but %s doesn't list it in blocks", id, blockerID, blockerID))
+					if fix {
+						blocker.Blocks = append(blocker.Blocks, id)
+						issuesNeedingUpdate[blockerID] = true
+					}
+				}
+			}
+		}
+	}
+
+	// Write back updated issues
+	if fix {
+		for id := range issuesNeedingUpdate {
+			issue := allIssues[id]
+			isClosed := issue.Status == storage.StatusClosed
+			path := fs.issuePath(id, isClosed)
+			atomicWriteJSON(path, issue)
 		}
 	}
 
