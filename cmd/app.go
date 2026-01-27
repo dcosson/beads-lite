@@ -1,4 +1,4 @@
-// Package cmd implements CLI commands for beads.
+// Package cmd implements the bd command-line interface.
 package cmd
 
 import (
