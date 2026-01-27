@@ -244,6 +244,7 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 }
 
 // List returns all issues matching the filter.
+// Results are sorted by CreatedAt (oldest first).
 func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilter) ([]*storage.Issue, error) {
 	var issues []*storage.Issue
 
@@ -273,6 +274,11 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 		}
 		issues = append(issues, closedIssues...)
 	}
+
+	// Sort by CreatedAt (oldest first)
+	sort.Slice(issues, func(i, j int) bool {
+		return issues[i].CreatedAt.Before(issues[j].CreatedAt)
+	})
 
 	return issues, nil
 }

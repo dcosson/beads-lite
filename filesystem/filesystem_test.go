@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"beads2/storage"
 )
@@ -200,5 +201,134 @@ func TestFilesystemStorage_ConcurrentWrites(t *testing.T) {
 	}
 	if got.ID != id {
 		t.Errorf("Issue ID mismatch after concurrent writes")
+	}
+}
+
+func setupTestStorage(t *testing.T) *FilesystemStorage {
+	t.Helper()
+	dir := t.TempDir()
+	s := New(dir)
+	if err := s.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+// TestListSorting verifies that List returns issues sorted by CreatedAt.
+func TestListSorting(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create issues with deliberate delays to ensure different CreatedAt times
+	issues := []struct {
+		title string
+	}{
+		{"First Issue"},
+		{"Second Issue"},
+		{"Third Issue"},
+	}
+
+	var createdIDs []string
+	for _, spec := range issues {
+		id, err := s.Create(ctx, &storage.Issue{
+			Title:    spec.title,
+			Status:   storage.StatusOpen,
+			Priority: storage.PriorityMedium,
+			Type:     storage.TypeTask,
+		})
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+		createdIDs = append(createdIDs, id)
+		// Small delay to ensure different timestamps
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// List all issues
+	result, err := s.List(ctx, nil)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(result) != 3 {
+		t.Fatalf("Expected 3 issues, got %d", len(result))
+	}
+
+	// Verify they are sorted by CreatedAt (oldest first)
+	for i := 1; i < len(result); i++ {
+		if result[i-1].CreatedAt.After(result[i].CreatedAt) {
+			t.Errorf("Issues not sorted by CreatedAt: issue %d (created %v) should be before issue %d (created %v)",
+				i-1, result[i-1].CreatedAt, i, result[i].CreatedAt)
+		}
+	}
+
+	// Verify the order matches creation order
+	for i, id := range createdIDs {
+		if result[i].ID != id {
+			t.Errorf("Position %d: expected issue %s, got %s", i, id, result[i].ID)
+		}
+	}
+}
+
+// TestListFilteringSorting verifies sorting is preserved after filtering.
+func TestListFilteringSorting(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create issues with different priorities
+	_, err := s.Create(ctx, &storage.Issue{
+		Title:    "High Priority 1",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityHigh,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+
+	_, err = s.Create(ctx, &storage.Issue{
+		Title:    "Low Priority",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityLow,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(10 * time.Millisecond)
+
+	_, err = s.Create(ctx, &storage.Issue{
+		Title:    "High Priority 2",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityHigh,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Filter by high priority
+	highPriority := storage.PriorityHigh
+	result, err := s.List(ctx, &storage.ListFilter{Priority: &highPriority})
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Fatalf("Expected 2 high priority issues, got %d", len(result))
+	}
+
+	// Verify sorted by CreatedAt
+	if result[0].CreatedAt.After(result[1].CreatedAt) {
+		t.Error("Filtered issues not sorted by CreatedAt")
+	}
+
+	// First should be "High Priority 1", second "High Priority 2"
+	if result[0].Title != "High Priority 1" {
+		t.Errorf("Expected first issue to be 'High Priority 1', got %q", result[0].Title)
+	}
+	if result[1].Title != "High Priority 2" {
+		t.Errorf("Expected second issue to be 'High Priority 2', got %q", result[1].Title)
 	}
 }
