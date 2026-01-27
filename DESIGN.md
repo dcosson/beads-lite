@@ -548,7 +548,7 @@ Initialize beads in the current directory.
 bd init
 ```
 
-Creates `.beads/open/` and `.beads/closed/` directories.
+Creates `.beads/<project>/open/` and `.beads/<project>/closed/` directories.
 
 #### `bd create`
 
@@ -939,9 +939,16 @@ id:
 
 # Actor (used for comments, audit)
 actor: "${USER}"
+
+# Project data location
+project:
+  name: "issues"
 ```
 
-Configuration is loaded once at startup and passed to commands.
+Configuration is loaded once at startup and passed to commands. The config provider:
+- Resolves the config path by searching upward for `.beads/config.yaml` (or defaults to `./.beads/config.yaml` when none is found).
+- Resolves the data path by using the configured project name (`.beads/<project.name>`).
+- Fails fast with a helpful `bd init` message when config or data paths are missing.
 
 ## Git Merge Conflict Handling
 
@@ -968,7 +975,7 @@ bd doctor --fix
 
 # For manual resolution, issues are human-readable JSON
 # Edit the file directly, then verify:
-cat .beads/open/bd-a1b2.json | jq .  # validates JSON
+cat .beads/<project>/open/bd-a1b2.json | jq .  # validates JSON
 ```
 
 **Recommended .gitattributes:**

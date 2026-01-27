@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"beads2/internal/config"
 )
 
 func TestInit(t *testing.T) {
@@ -29,16 +31,23 @@ func TestInit(t *testing.T) {
 			t.Error(".beads directory was not created")
 		}
 
-		// Check open/ subdirectory exists
-		openPath := filepath.Join(beadsPath, "open")
+		// Check config.yaml exists
+		configPath := filepath.Join(beadsPath, "config.yaml")
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			t.Error(".beads/config.yaml was not created")
+		}
+
+		// Check data directories exist
+		dataPath := filepath.Join(beadsPath, "issues")
+		openPath := filepath.Join(dataPath, "open")
 		if _, err := os.Stat(openPath); os.IsNotExist(err) {
-			t.Error(".beads/open directory was not created")
+			t.Error(".beads/issues/open directory was not created")
 		}
 
 		// Check closed/ subdirectory exists
-		closedPath := filepath.Join(beadsPath, "closed")
+		closedPath := filepath.Join(dataPath, "closed")
 		if _, err := os.Stat(closedPath); os.IsNotExist(err) {
-			t.Error(".beads/closed directory was not created")
+			t.Error(".beads/issues/closed directory was not created")
 		}
 	})
 
@@ -89,9 +98,9 @@ func TestInit(t *testing.T) {
 		}
 
 		// Verify directories were created
-		openPath := filepath.Join(beadsPath, "open")
+		openPath := filepath.Join(beadsPath, "issues", "open")
 		if _, err := os.Stat(openPath); os.IsNotExist(err) {
-			t.Error(".beads/open directory was not created after --force")
+			t.Error(".beads/issues/open directory was not created after --force")
 		}
 	})
 
@@ -121,6 +130,42 @@ func TestInit(t *testing.T) {
 		beadsPath := filepath.Join(tmpDir, ".beads")
 		if _, err := os.Stat(beadsPath); os.IsNotExist(err) {
 			t.Error(".beads directory was not created in current directory")
+		}
+	})
+
+	t.Run("uses project flag for data directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{"--project", "work"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
+		cfg, err := config.Load(configPath)
+		if err != nil {
+			t.Fatalf("loading config: %v", err)
+		}
+		if cfg.Project.Name != "work" {
+			t.Errorf("config project name = %q, want %q", cfg.Project.Name, "work")
+		}
+
+		dataPath := filepath.Join(tmpDir, ".beads", "work")
+		if _, err := os.Stat(dataPath); os.IsNotExist(err) {
+			t.Error(".beads/work directory was not created")
 		}
 	})
 }

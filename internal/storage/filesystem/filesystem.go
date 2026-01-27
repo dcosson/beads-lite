@@ -1,5 +1,5 @@
 // Package filesystem implements the Storage interface using the local filesystem.
-// Each issue is stored as a JSON file in .beads/open/ or .beads/closed/.
+// Each issue is stored as a JSON file in .beads/<project>/open/ or .beads/<project>/closed/.
 package filesystem
 
 import (

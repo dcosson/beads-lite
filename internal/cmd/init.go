@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"beads2/internal/config"
 	"beads2/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -16,23 +17,30 @@ import (
 // newInitCmd creates the init command.
 // Note: init doesn't use the provider since it creates the .beads directory.
 func newInitCmd(provider *AppProvider) *cobra.Command {
-	var force bool
+	var (
+		force       bool
+		projectName string
+	)
 
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Initialize a new beads repository",
 		Long:  `Initialize a new beads repository in the current directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(provider.BeadsPath, force)
+			return runInit(provider.BeadsPath, force, projectName)
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Force initialization even if .beads exists")
+	cmd.Flags().StringVar(&projectName, "project", "issues", "Project name for data directory")
 
 	return cmd
 }
 
-func runInit(path string, force bool) error {
+func runInit(path string, force bool, projectName string) error {
+	if projectName == "" {
+		return errors.New("project name cannot be empty")
+	}
 	// Default to current directory
 	basePath := path
 	if basePath == "" {
@@ -49,7 +57,10 @@ func runInit(path string, force bool) error {
 		return fmt.Errorf("resolving path: %w", err)
 	}
 
-	beadsPath := filepath.Join(absPath, ".beads")
+	beadsPath := absPath
+	if filepath.Base(beadsPath) != ".beads" {
+		beadsPath = filepath.Join(absPath, ".beads")
+	}
 
 	// Check if .beads already exists
 	if _, err := os.Stat(beadsPath); err == nil {
@@ -60,8 +71,21 @@ func runInit(path string, force bool) error {
 		return fmt.Errorf("checking .beads directory: %w", err)
 	}
 
+	if err := os.MkdirAll(beadsPath, 0755); err != nil {
+		return fmt.Errorf("creating .beads directory: %w", err)
+	}
+
+	configPath := filepath.Join(beadsPath, "config.yaml")
+	cfg := config.Default()
+	cfg.Project.Name = projectName
+	if err := config.Write(configPath, cfg); err != nil {
+		return err
+	}
+
+	dataPath := filepath.Join(beadsPath, cfg.Project.Name)
+
 	// Create the storage
-	storage := filesystem.New(beadsPath)
+	storage := filesystem.New(dataPath)
 	if err := storage.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
 	}

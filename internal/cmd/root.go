@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"beads2/internal/config"
 	"beads2/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -47,12 +48,12 @@ func NewTestProvider(app *App) *AppProvider {
 }
 
 func (p *AppProvider) init() (*App, error) {
-	beadsDir, err := FindBeadsDir(p.BeadsPath)
+	paths, cfg, err := config.ResolvePaths(p.BeadsPath)
 	if err != nil {
 		return nil, err
 	}
 
-	store := filesystem.New(beadsDir)
+	store := filesystem.New(paths.DataDir)
 
 	out := p.Out
 	if out == nil {
@@ -65,6 +66,7 @@ func (p *AppProvider) init() (*App, error) {
 
 	return &App{
 		Storage: store,
+		Config:  cfg,
 		Out:     out,
 		Err:     errOut,
 		JSON:    p.JSONOutput,
@@ -128,7 +130,7 @@ func newRootCmd(provider *AppProvider) *cobra.Command {
 		Use:   "bd",
 		Short: "A lightweight issue tracker that lives in your repo",
 		Long: `Beads is a git-native issue tracker that stores issues as JSON files.
-Issues are stored in .beads/open/ and .beads/closed/ directories,
+Issues are stored in .beads/<project>/open/ and .beads/<project>/closed/ directories,
 making them easy to review, diff, and track alongside your code.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -136,7 +138,7 @@ making them easy to review, diff, and track alongside your code.`,
 
 	// Global flags - these populate the provider config
 	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format")
-	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to .beads directory (default: search from cwd)")
+	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to repo or .beads directory (default: search from cwd)")
 
 	// Register all commands
 	rootCmd.AddCommand(newInitCmd(provider))

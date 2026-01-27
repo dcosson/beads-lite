@@ -44,8 +44,8 @@ git merge branch-b -m "Merge branch-b" || true
 
 # If there's a merge conflict, auto-resolve by accepting the merge
 # This simulates a user blindly accepting the conflicted file
-if [ -f ".beads/open/${ID}.json" ]; then
-    git add ".beads/open/${ID}.json"
+if [ -f ".beads/issues/open/${ID}.json" ]; then
+    git add ".beads/issues/open/${ID}.json"
     git commit -m "Resolve conflict (corrupted)" --no-edit 2>/dev/null || true
 fi
 

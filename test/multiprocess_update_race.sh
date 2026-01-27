@@ -49,7 +49,7 @@ fi
 if ! bd show "$ID" --path "$BEADS_DIR" --json | jq . > /dev/null 2>&1; then
     echo "FAIL: Issue corrupted - invalid JSON"
     echo "Raw content:"
-    bd show "$ID" --path "$BEADS_DIR" --json || cat "$BEADS_DIR/.beads/open/$ID.json" 2>/dev/null || true
+    bd show "$ID" --path "$BEADS_DIR" --json || cat "$BEADS_DIR/.beads/issues/open/$ID.json" 2>/dev/null || true
     exit 1
 fi
 
