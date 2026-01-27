@@ -24,7 +24,7 @@ func TestSearchCmd_NoArgs(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	err := cmd.Execute()
 	if err == nil {
 		t.Fatal("expected error for missing query argument")
@@ -48,7 +48,7 @@ func TestSearchCmd_NoMatches(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"nonexistent"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -77,7 +77,7 @@ func TestSearchCmd_MatchTitle(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"authentication"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -112,7 +112,7 @@ func TestSearchCmd_MatchDescription(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"authentication"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -147,7 +147,7 @@ func TestSearchCmd_TitleOnly(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"authentication", "--title-only"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -185,7 +185,7 @@ func TestSearchCmd_IncludeClosed(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"auth"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -201,7 +201,7 @@ func TestSearchCmd_IncludeClosed(t *testing.T) {
 
 	// Now search with --all
 	out.Reset()
-	cmd = NewSearchCmd(app)
+	cmd = newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"auth", "--all"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -232,7 +232,7 @@ func TestSearchCmd_CaseInsensitive(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"authentication"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
@@ -262,7 +262,7 @@ func TestSearchCmd_JSON(t *testing.T) {
 		JSON:    true,
 	}
 
-	cmd := NewSearchCmd(app)
+	cmd := newSearchCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"auth"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)

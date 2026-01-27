@@ -18,13 +18,18 @@ type StatsResult struct {
 	Total      int `json:"total"`
 }
 
-// NewStatsCmd creates the stats command.
-func NewStatsCmd(app *App) *cobra.Command {
+// newStatsCmd creates the stats command.
+func newStatsCmd(provider *AppProvider) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "stats",
 		Short: "Show statistics",
 		Long:  `Display statistics about issues in the beads storage.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
 			ctx := cmd.Context()
 
 			var result StatsResult

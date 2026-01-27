@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -10,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewReadyCmd creates the ready command.
-func NewReadyCmd(app *App) *cobra.Command {
+// newReadyCmd creates the ready command.
+func newReadyCmd(provider *AppProvider) *cobra.Command {
 	var priority string
 
 	cmd := &cobra.Command{
@@ -23,70 +22,73 @@ An issue is "ready" if:
 - Status is "open" (not in-progress, blocked, deferred, or closed)
 - All issues in depends_on are closed`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runReady(cmd.Context(), app, priority)
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+
+			// List all open issues
+			openStatus := storage.StatusOpen
+			filter := &storage.ListFilter{
+				Status: &openStatus,
+			}
+
+			// Apply priority filter if specified
+			if priority != "" {
+				p := storage.Priority(priority)
+				filter.Priority = &p
+			}
+
+			issues, err := app.Storage.List(ctx, filter)
+			if err != nil {
+				return fmt.Errorf("listing issues: %w", err)
+			}
+
+			// Get closed issues to check dependency resolution
+			closedStatus := storage.StatusClosed
+			closedFilter := &storage.ListFilter{
+				Status: &closedStatus,
+			}
+			closedIssues, err := app.Storage.List(ctx, closedFilter)
+			if err != nil {
+				return fmt.Errorf("listing closed issues: %w", err)
+			}
+			closedSet := make(map[string]bool)
+			for _, issue := range closedIssues {
+				closedSet[issue.ID] = true
+			}
+
+			// Filter to only ready issues
+			var ready []*storage.Issue
+			for _, issue := range issues {
+				if isReady(issue, closedSet) {
+					ready = append(ready, issue)
+				}
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(ready)
+			}
+
+			if len(ready) == 0 {
+				fmt.Fprintln(app.Out, "No ready issues found.")
+				return nil
+			}
+
+			fmt.Fprintf(app.Out, "Ready issues (%d):\n\n", len(ready))
+			for _, issue := range ready {
+				fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+			}
+
+			return nil
 		},
 	}
 
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
 
 	return cmd
-}
-
-func runReady(ctx context.Context, app *App, priorityFilter string) error {
-	// List all open issues
-	openStatus := storage.StatusOpen
-	filter := &storage.ListFilter{
-		Status: &openStatus,
-	}
-
-	// Apply priority filter if specified
-	if priorityFilter != "" {
-		p := storage.Priority(priorityFilter)
-		filter.Priority = &p
-	}
-
-	issues, err := app.Storage.List(ctx, filter)
-	if err != nil {
-		return fmt.Errorf("listing issues: %w", err)
-	}
-
-	// Get closed issues to check dependency resolution
-	closedStatus := storage.StatusClosed
-	closedFilter := &storage.ListFilter{
-		Status: &closedStatus,
-	}
-	closedIssues, err := app.Storage.List(ctx, closedFilter)
-	if err != nil {
-		return fmt.Errorf("listing closed issues: %w", err)
-	}
-	closedSet := make(map[string]bool)
-	for _, issue := range closedIssues {
-		closedSet[issue.ID] = true
-	}
-
-	// Filter to only ready issues
-	var ready []*storage.Issue
-	for _, issue := range issues {
-		if isReady(issue, closedSet) {
-			ready = append(ready, issue)
-		}
-	}
-
-	if app.JSON {
-		return json.NewEncoder(app.Out).Encode(ready)
-	}
-
-	if len(ready) == 0 {
-		fmt.Fprintln(app.Out, "No ready issues found.")
-		return nil
-	}
-
-	fmt.Fprintf(app.Out, "Ready issues (%d):\n\n", len(ready))
-	for _, issue := range ready {
-		fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
-	}
-
-	return nil
 }
 
 // isReady returns true if an issue is ready to work on.

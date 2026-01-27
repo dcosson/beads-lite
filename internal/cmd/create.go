@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewCreateCmd creates the create command.
-func NewCreateCmd(app *App) *cobra.Command {
+// newCreateCmd creates the create command.
+func newCreateCmd(provider *AppProvider) *cobra.Command {
 	var (
 		typeFlag    string
 		priority    string
@@ -39,6 +39,11 @@ Examples:
   bd create "Task" --description -   # read description from stdin`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
 			ctx := cmd.Context()
 			title := args[0]
 

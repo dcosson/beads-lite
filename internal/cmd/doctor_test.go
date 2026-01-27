@@ -32,7 +32,7 @@ func TestDoctorCmd_NoProblems(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewDoctorCmd(app)
+	cmd := newDoctorCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("doctor command failed: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestDoctorCmd_WithProblems(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewDoctorCmd(app)
+	cmd := newDoctorCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("doctor command failed: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestDoctorCmd_JSON(t *testing.T) {
 		JSON:    true,
 	}
 
-	cmd := NewDoctorCmd(app)
+	cmd := newDoctorCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("doctor command failed: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestDoctorCmd_Fix(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewDoctorCmd(app)
+	cmd := newDoctorCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--fix"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("doctor command failed: %v", err)
@@ -157,7 +157,7 @@ func TestDoctorCmd_Fix(t *testing.T) {
 
 	// Verify the issue is fixed
 	out.Reset()
-	cmd = NewDoctorCmd(app)
+	cmd = newDoctorCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("doctor command failed: %v", err)
 	}

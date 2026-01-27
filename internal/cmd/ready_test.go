@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"beads2/internal/storage/filesystem"
 	"beads2/internal/storage"
+	"beads2/internal/storage/filesystem"
 )
 
 func TestReadyCommand(t *testing.T) {
@@ -60,34 +60,35 @@ func TestReadyCommand(t *testing.T) {
 	}
 
 	// Test ready command - should show issues 1 and 2, but not 3
-	err = runReady(ctx, app, "")
-	if err != nil {
-		t.Fatalf("runReady failed: %v", err)
+	cmd := newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed: %v", err)
 	}
 
 	output := out.String()
-	if !containsString(output, id1) {
+	if !bytes.Contains([]byte(output), []byte(id1)) {
 		t.Errorf("expected output to contain %s, got: %s", id1, output)
 	}
-	if !containsString(output, id2) {
+	if !bytes.Contains([]byte(output), []byte(id2)) {
 		t.Errorf("expected output to contain %s, got: %s", id2, output)
 	}
-	if containsString(output, id3) {
+	if bytes.Contains([]byte(output), []byte(id3)) {
 		t.Errorf("expected output NOT to contain %s (blocked), got: %s", id3, output)
 	}
 
 	// Test with priority filter
 	out.Reset()
-	err = runReady(ctx, app, "high")
-	if err != nil {
-		t.Fatalf("runReady with priority failed: %v", err)
+	cmd = newReadyCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--priority", "high"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command with priority failed: %v", err)
 	}
 
 	output = out.String()
-	if !containsString(output, id1) {
+	if !bytes.Contains([]byte(output), []byte(id1)) {
 		t.Errorf("expected high priority output to contain %s, got: %s", id1, output)
 	}
-	if containsString(output, id2) {
+	if bytes.Contains([]byte(output), []byte(id2)) {
 		t.Errorf("expected high priority output NOT to contain %s (medium priority), got: %s", id2, output)
 	}
 }
@@ -129,13 +130,13 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	}
 
 	// Initially, main issue should NOT be ready (dependency not closed)
-	err = runReady(ctx, app, "")
-	if err != nil {
-		t.Fatalf("runReady failed: %v", err)
+	cmd := newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed: %v", err)
 	}
 
 	output := out.String()
-	if containsString(output, mainID) {
+	if bytes.Contains([]byte(output), []byte(mainID)) {
 		t.Errorf("expected main issue NOT to be ready (dependency open), got: %s", output)
 	}
 
@@ -146,13 +147,13 @@ func TestReadyWithClosedDependency(t *testing.T) {
 
 	// Now main issue should be ready
 	out.Reset()
-	err = runReady(ctx, app, "")
-	if err != nil {
-		t.Fatalf("runReady failed after closing dependency: %v", err)
+	cmd = newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed after closing dependency: %v", err)
 	}
 
 	output = out.String()
-	if !containsString(output, mainID) {
+	if !bytes.Contains([]byte(output), []byte(mainID)) {
 		t.Errorf("expected main issue to be ready (dependency closed), got: %s", output)
 	}
 }
@@ -183,20 +184,16 @@ func TestReadyJSON(t *testing.T) {
 		JSON:    true,
 	}
 
-	err = runReady(ctx, app, "")
-	if err != nil {
-		t.Fatalf("runReady JSON failed: %v", err)
+	cmd := newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command JSON failed: %v", err)
 	}
 
 	output := out.String()
-	if !containsString(output, "[") {
+	if !bytes.Contains([]byte(output), []byte("[")) {
 		t.Errorf("expected JSON array output, got: %s", output)
 	}
-	if !containsString(output, "Ready issue") {
+	if !bytes.Contains([]byte(output), []byte("Ready issue")) {
 		t.Errorf("expected JSON to contain issue title, got: %s", output)
 	}
-}
-
-func containsString(s, substr string) bool {
-	return bytes.Contains([]byte(s), []byte(substr))
 }

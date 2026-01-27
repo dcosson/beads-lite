@@ -16,8 +16,8 @@ type SearchResult struct {
 	Status string `json:"status"`
 }
 
-// NewSearchCmd creates the search command.
-func NewSearchCmd(app *App) *cobra.Command {
+// newSearchCmd creates the search command.
+func newSearchCmd(provider *AppProvider) *cobra.Command {
 	var (
 		all       bool
 		titleOnly bool
@@ -33,6 +33,11 @@ Use --all to include closed issues.
 Use --title-only to search only in titles.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
 			ctx := cmd.Context()
 			query := strings.ToLower(args[0])
 

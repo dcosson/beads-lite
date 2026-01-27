@@ -10,9 +10,17 @@ func TestInit(t *testing.T) {
 	t.Run("creates beads directory structure", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		err := Init(InitOptions{Path: tmpDir})
-		if err != nil {
-			t.Fatalf("Init failed: %v", err)
+		// Change working directory temporarily
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
 		}
 
 		// Check .beads directory exists
@@ -43,9 +51,18 @@ func TestInit(t *testing.T) {
 			t.Fatalf("setup failed: %v", err)
 		}
 
-		err := Init(InitOptions{Path: tmpDir})
+		// Change working directory temporarily
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		err := cmd.Execute()
 		if err == nil {
-			t.Error("Init should have failed when .beads already exists")
+			t.Error("init command should have failed when .beads already exists")
 		}
 	})
 
@@ -58,9 +75,17 @@ func TestInit(t *testing.T) {
 			t.Fatalf("setup failed: %v", err)
 		}
 
-		err := Init(InitOptions{Path: tmpDir, Force: true})
-		if err != nil {
-			t.Errorf("Init with --force should succeed: %v", err)
+		// Change working directory temporarily
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{"--force"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Errorf("init command with --force should succeed: %v", err)
 		}
 
 		// Verify directories were created
@@ -84,9 +109,12 @@ func TestInit(t *testing.T) {
 			t.Fatalf("changing directory: %v", err)
 		}
 
-		err = Init(InitOptions{})
-		if err != nil {
-			t.Fatalf("Init failed: %v", err)
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
 		}
 
 		// Check .beads was created in tmpDir

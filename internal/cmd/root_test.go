@@ -109,7 +109,7 @@ func TestFindBeadsDir_NotFound(t *testing.T) {
 	}
 }
 
-func TestNewApp(t *testing.T) {
+func TestAppProvider_Get(t *testing.T) {
 	// Create a temp .beads directory with required structure
 	tmpDir := t.TempDir()
 	beadsDir := filepath.Join(tmpDir, ".beads")
@@ -121,9 +121,16 @@ func TestNewApp(t *testing.T) {
 	}
 
 	var out, errOut bytes.Buffer
-	app, err := NewApp(beadsDir, true, &out, &errOut)
+	provider := &AppProvider{
+		BeadsPath:  beadsDir,
+		JSONOutput: true,
+		Out:        &out,
+		Err:        &errOut,
+	}
+
+	app, err := provider.Get()
 	if err != nil {
-		t.Fatalf("NewApp error: %v", err)
+		t.Fatalf("provider.Get() error: %v", err)
 	}
 
 	if app.Storage == nil {
@@ -138,11 +145,41 @@ func TestNewApp(t *testing.T) {
 	if !app.JSON {
 		t.Error("App.JSON should be true")
 	}
+
+	// Second call should return same app (lazy init)
+	app2, err := provider.Get()
+	if err != nil {
+		t.Fatalf("second provider.Get() error: %v", err)
+	}
+	if app2 != app {
+		t.Error("provider.Get() should return same app on second call")
+	}
 }
 
-func TestNewApp_InvalidPath(t *testing.T) {
-	_, err := NewApp("/nonexistent/path", false, nil, nil)
+func TestAppProvider_Get_InvalidPath(t *testing.T) {
+	provider := &AppProvider{
+		BeadsPath: "/nonexistent/path",
+	}
+
+	_, err := provider.Get()
 	if err == nil {
-		t.Error("NewApp with invalid path should return error")
+		t.Error("provider.Get() with invalid path should return error")
+	}
+}
+
+func TestNewTestProvider(t *testing.T) {
+	var out bytes.Buffer
+	app := &App{
+		Out:  &out,
+		JSON: true,
+	}
+
+	provider := NewTestProvider(app)
+	gotApp, err := provider.Get()
+	if err != nil {
+		t.Fatalf("NewTestProvider().Get() error: %v", err)
+	}
+	if gotApp != app {
+		t.Error("NewTestProvider should return the provided app")
 	}
 }

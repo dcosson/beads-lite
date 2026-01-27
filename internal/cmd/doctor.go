@@ -13,8 +13,8 @@ type DoctorResult struct {
 	Fixed    bool     `json:"fixed"`
 }
 
-// NewDoctorCmd creates the doctor command.
-func NewDoctorCmd(app *App) *cobra.Command {
+// newDoctorCmd creates the doctor command.
+func newDoctorCmd(provider *AppProvider) *cobra.Command {
 	var fix bool
 
 	cmd := &cobra.Command{
@@ -30,6 +30,11 @@ Checks for:
 - Malformed JSON files
 - Asymmetric relationships (A depends on B but B doesn't list A as dependent)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
 			ctx := cmd.Context()
 
 			problems, err := app.Storage.Doctor(ctx, fix)

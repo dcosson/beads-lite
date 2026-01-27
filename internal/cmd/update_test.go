@@ -33,7 +33,7 @@ func TestUpdateTitle(t *testing.T) {
 	issueID := createTestIssue(t, store)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--title", "New title"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -57,7 +57,7 @@ func TestUpdateDescription(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--description", "New description"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -86,7 +86,7 @@ func TestUpdatePriority(t *testing.T) {
 			app, store := setupTestApp(t)
 			issueID := createTestIssue(t, store)
 
-			cmd := NewUpdateCmd(app)
+			cmd := newUpdateCmd(NewTestProvider(app))
 			cmd.SetArgs([]string{issueID, "--priority", tt.priority})
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("update failed: %v", err)
@@ -118,7 +118,7 @@ func TestUpdateType(t *testing.T) {
 			app, store := setupTestApp(t)
 			issueID := createTestIssue(t, store)
 
-			cmd := NewUpdateCmd(app)
+			cmd := newUpdateCmd(NewTestProvider(app))
 			cmd.SetArgs([]string{issueID, "--type", tt.typeFlag})
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("update failed: %v", err)
@@ -151,7 +151,7 @@ func TestUpdateStatus(t *testing.T) {
 			app, store := setupTestApp(t)
 			issueID := createTestIssue(t, store)
 
-			cmd := NewUpdateCmd(app)
+			cmd := newUpdateCmd(NewTestProvider(app))
 			cmd.SetArgs([]string{issueID, "--status", tt.status})
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("update failed: %v", err)
@@ -169,7 +169,7 @@ func TestUpdateAssignee(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--assignee", "alice"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -191,7 +191,7 @@ func TestUpdateUnassign(t *testing.T) {
 		t.Fatal("test issue should have an assignee initially")
 	}
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--assignee", ""})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -207,7 +207,7 @@ func TestUpdateAddLabel(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--add-label", "urgent"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -227,7 +227,7 @@ func TestUpdateAddMultipleLabels(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--add-label", "urgent", "--add-label", "frontend"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -244,7 +244,7 @@ func TestUpdateAddDuplicateLabel(t *testing.T) {
 	issueID := createTestIssue(t, store)
 
 	// Add a label that already exists
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--add-label", "backend"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -267,7 +267,7 @@ func TestUpdateRemoveLabel(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--remove-label", "backend"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -287,7 +287,7 @@ func TestUpdateAddAndRemoveLabels(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--add-label", "urgent", "--remove-label", "backend"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -309,7 +309,7 @@ func TestUpdateMultipleFields(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{
 		issueID,
 		"--title", "New title",
@@ -342,7 +342,7 @@ func TestUpdateWithJSONOutput(t *testing.T) {
 	issueID := createTestIssue(t, store)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--title", "New title"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -365,7 +365,7 @@ func TestUpdateNoChanges(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID})
 	err := cmd.Execute()
 	if err == nil {
@@ -380,7 +380,7 @@ func TestUpdateInvalidPriority(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--priority", "invalid"})
 	err := cmd.Execute()
 	if err == nil {
@@ -395,7 +395,7 @@ func TestUpdateInvalidType(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--type", "invalid"})
 	err := cmd.Execute()
 	if err == nil {
@@ -410,7 +410,7 @@ func TestUpdateInvalidStatus(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--status", "invalid"})
 	err := cmd.Execute()
 	if err == nil {
@@ -424,7 +424,7 @@ func TestUpdateInvalidStatus(t *testing.T) {
 func TestUpdateNonExistentIssue(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"bd-nonexistent", "--title", "New title"})
 	err := cmd.Execute()
 	if err == nil {
@@ -435,7 +435,7 @@ func TestUpdateNonExistentIssue(t *testing.T) {
 func TestUpdateNoArgs(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
 	if err == nil {
@@ -448,7 +448,7 @@ func TestUpdateRemoveNonExistentLabel(t *testing.T) {
 	issueID := createTestIssue(t, store)
 
 	// Removing a non-existent label should not cause an error
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--remove-label", "nonexistent"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)
@@ -471,7 +471,7 @@ func TestUpdateIssueWithNoLabels(t *testing.T) {
 	}
 	id, _ := store.Create(context.Background(), issue)
 
-	cmd := NewUpdateCmd(app)
+	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id, "--add-label", "new-label"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("update failed: %v", err)

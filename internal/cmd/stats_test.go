@@ -24,7 +24,7 @@ func TestStatsCmd_Empty(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewStatsCmd(app)
+	cmd := newStatsCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("stats command failed: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 		Out:     &out,
 	}
 
-	cmd := NewStatsCmd(app)
+	cmd := newStatsCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("stats command failed: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestStatsCmd_JSON(t *testing.T) {
 		JSON:    true,
 	}
 
-	cmd := NewStatsCmd(app)
+	cmd := newStatsCmd(NewTestProvider(app))
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("stats command failed: %v", err)
 	}

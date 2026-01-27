@@ -6,59 +6,68 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"beads2/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
 )
 
-var (
-	// Global flags
-	jsonOutput bool
-	beadsPath  string
+// AppProvider lazily initializes the App on first use.
+type AppProvider struct {
+	once sync.Once
+	app  *App
+	err  error
 
-	// The App instance, initialized in PersistentPreRunE
-	app *App
-)
-
-// rootCmd is the base command when called without any subcommands.
-var rootCmd = &cobra.Command{
-	Use:   "bd",
-	Short: "A lightweight issue tracker that lives in your repo",
-	Long: `Beads is a git-native issue tracker that stores issues as JSON files.
-Issues are stored in .beads/open/ and .beads/closed/ directories,
-making them easy to review, diff, and track alongside your code.`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Skip initialization for commands that don't need storage
-		if cmd.Name() == "init" || cmd.Name() == "help" || cmd.Name() == "version" {
-			return nil
-		}
-
-		var err error
-		app, err = NewApp(beadsPath, jsonOutput, os.Stdout, os.Stderr)
-		if err != nil {
-			return err
-		}
-		return nil
-	},
+	// Config captured from flags before Execute()
+	BeadsPath  string
+	JSONOutput bool
+	Out        io.Writer
+	Err        io.Writer
 }
 
-// NewApp creates a new App instance with initialized storage.
-func NewApp(path string, jsonOutput bool, out, errOut io.Writer) (*App, error) {
-	beadsDir, err := FindBeadsDir(path)
+// Get returns the App, initializing it on first call.
+func (p *AppProvider) Get() (*App, error) {
+	p.once.Do(func() {
+		if p.app == nil {
+			p.app, p.err = p.init()
+		}
+	})
+	return p.app, p.err
+}
+
+// NewTestProvider creates a provider pre-initialized with the given App.
+// Used for testing commands with a mock/test App.
+func NewTestProvider(app *App) *AppProvider {
+	return &AppProvider{
+		app: app,
+		Out: app.Out,
+		Err: app.Err,
+	}
+}
+
+func (p *AppProvider) init() (*App, error) {
+	beadsDir, err := FindBeadsDir(p.BeadsPath)
 	if err != nil {
 		return nil, err
 	}
 
 	store := filesystem.New(beadsDir)
 
+	out := p.Out
+	if out == nil {
+		out = os.Stdout
+	}
+	errOut := p.Err
+	if errOut == nil {
+		errOut = os.Stderr
+	}
+
 	return &App{
 		Storage: store,
 		Out:     out,
 		Err:     errOut,
-		JSON:    jsonOutput,
+		JSON:    p.JSONOutput,
 	}, nil
 }
 
@@ -102,18 +111,42 @@ func FindBeadsDir(path string) (string, error) {
 	}
 }
 
-// Execute runs the root command.
+// Execute runs the CLI.
 func Execute() error {
+	provider := &AppProvider{
+		Out: os.Stdout,
+		Err: os.Stderr,
+	}
+
+	rootCmd := newRootCmd(provider)
 	return rootCmd.Execute()
 }
 
-// GetApp returns the initialized App instance.
-// This should only be called from subcommand Run functions.
-func GetApp() *App {
-	return app
-}
+// newRootCmd creates the root command with all subcommands.
+func newRootCmd(provider *AppProvider) *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:   "bd",
+		Short: "A lightweight issue tracker that lives in your repo",
+		Long: `Beads is a git-native issue tracker that stores issues as JSON files.
+Issues are stored in .beads/open/ and .beads/closed/ directories,
+making them easy to review, diff, and track alongside your code.`,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+	}
 
-func init() {
-	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
-	rootCmd.PersistentFlags().StringVar(&beadsPath, "path", "", "Path to .beads directory (default: search from cwd)")
+	// Global flags - these populate the provider config
+	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format")
+	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to .beads directory (default: search from cwd)")
+
+	// Register all commands
+	rootCmd.AddCommand(newInitCmd(provider))
+	rootCmd.AddCommand(newCreateCmd(provider))
+	rootCmd.AddCommand(newUpdateCmd(provider))
+	rootCmd.AddCommand(newDoctorCmd(provider))
+	rootCmd.AddCommand(newStatsCmd(provider))
+	rootCmd.AddCommand(newSearchCmd(provider))
+	rootCmd.AddCommand(newReadyCmd(provider))
+	rootCmd.AddCommand(newBlockedCmd(provider))
+
+	return rootCmd
 }

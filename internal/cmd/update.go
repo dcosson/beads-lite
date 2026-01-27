@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewUpdateCmd creates the update command.
-func NewUpdateCmd(app *App) *cobra.Command {
+// newUpdateCmd creates the update command.
+func newUpdateCmd(provider *AppProvider) *cobra.Command {
 	var (
 		title        string
 		description  string
@@ -41,6 +41,11 @@ Examples:
   bd update bd-a1b2 --description -   # read from stdin`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
 			ctx := cmd.Context()
 			issueID := args[0]
 

@@ -29,7 +29,7 @@ func TestCreateBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Fix login bug"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -74,7 +74,7 @@ func TestCreateWithType(t *testing.T) {
 			app, store := setupTestApp(t)
 			out := app.Out.(*bytes.Buffer)
 
-			cmd := NewCreateCmd(app)
+			cmd := newCreateCmd(NewTestProvider(app))
 			cmd.SetArgs([]string{"Test issue", "--type", tt.typeFlag})
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("create failed: %v", err)
@@ -106,7 +106,7 @@ func TestCreateWithPriority(t *testing.T) {
 			app, store := setupTestApp(t)
 			out := app.Out.(*bytes.Buffer)
 
-			cmd := NewCreateCmd(app)
+			cmd := newCreateCmd(NewTestProvider(app))
 			cmd.SetArgs([]string{"Test issue", "--priority", tt.priority})
 			if err := cmd.Execute(); err != nil {
 				t.Fatalf("create failed: %v", err)
@@ -125,7 +125,7 @@ func TestCreateWithLabels(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "-l", "backend", "-l", "urgent"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -145,7 +145,7 @@ func TestCreateWithAssignee(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--assignee", "alice"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -162,7 +162,7 @@ func TestCreateWithDescription(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--description", "This is a detailed description"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -186,7 +186,7 @@ func TestCreateWithParent(t *testing.T) {
 	}
 
 	out := app.Out.(*bytes.Buffer)
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Child task", "--parent", parentID})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -223,7 +223,7 @@ func TestCreateWithDependsOn(t *testing.T) {
 	}
 
 	out := app.Out.(*bytes.Buffer)
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Dependent task", "--depends-on", depID})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -265,7 +265,7 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 	dep2, _ := store.Create(context.Background(), &storage.Issue{Title: "Dep 2"})
 
 	out := app.Out.(*bytes.Buffer)
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Dependent task", "-d", dep1, "-d", dep2})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -284,7 +284,7 @@ func TestCreateWithJSONOutput(t *testing.T) {
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
@@ -310,7 +310,7 @@ func TestCreateWithJSONOutput(t *testing.T) {
 func TestCreateInvalidType(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--type", "invalid"})
 	err := cmd.Execute()
 	if err == nil {
@@ -324,7 +324,7 @@ func TestCreateInvalidType(t *testing.T) {
 func TestCreateInvalidPriority(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--priority", "invalid"})
 	err := cmd.Execute()
 	if err == nil {
@@ -338,7 +338,7 @@ func TestCreateInvalidPriority(t *testing.T) {
 func TestCreateNoArgs(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
 	if err == nil {
@@ -349,7 +349,7 @@ func TestCreateNoArgs(t *testing.T) {
 func TestCreateParentNotFound(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--parent", "bd-nonexistent"})
 	err := cmd.Execute()
 	if err == nil {
@@ -360,7 +360,7 @@ func TestCreateParentNotFound(t *testing.T) {
 func TestCreateDependencyNotFound(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"Test issue", "--depends-on", "bd-nonexistent"})
 	err := cmd.Execute()
 	if err == nil {
@@ -376,7 +376,7 @@ func TestCreateAllFlags(t *testing.T) {
 	depID, _ := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
 
 	out := app.Out.(*bytes.Buffer)
-	cmd := NewCreateCmd(app)
+	cmd := newCreateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{
 		"Full featured issue",
 		"--type", "feature",
