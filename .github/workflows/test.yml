@@ -1,0 +1,76 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run unit tests
+        run: go test ./... -race -coverprofile=coverage.out
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
+  stress:
+    name: Stress Tests (Race Detection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run stress tests
+        run: go test ./... -race -count=10
+
+  multiprocess:
+    name: Multi-Process Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build ./...
+
+      - name: Run multiprocess tests
+        run: |
+          chmod +x test/*.sh
+          for script in test/*.sh; do
+            echo "Running $script..."
+            bash "$script"
+          done
+
+  large-dataset:
+    name: Large Dataset Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run large dataset tests
+        run: go test ./... -run Large -timeout 10m
