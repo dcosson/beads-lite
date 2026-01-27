@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
@@ -12,8 +11,7 @@ import (
 )
 
 func TestChildrenCommand(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
@@ -25,13 +23,7 @@ func TestChildrenCommand(t *testing.T) {
 	store.SetParent(ctx, child1ID, parentID)
 	store.SetParent(ctx, child2ID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	app = testApp
 
 	// Reset the tree flag
 	childrenTree = false
@@ -40,7 +32,7 @@ func TestChildrenCommand(t *testing.T) {
 		t.Fatalf("children command failed: %v", err)
 	}
 
-	output := out.String()
+	output := testApp.Out.(*bytes.Buffer).String()
 	if !strings.Contains(output, child1ID) {
 		t.Errorf("Expected output to contain child1 ID %s, got: %s", child1ID, output)
 	}
@@ -53,21 +45,14 @@ func TestChildrenCommand(t *testing.T) {
 }
 
 func TestChildrenCommandNoChildren(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
 	// Create issue with no children
 	issueID, _ := store.Create(ctx, &storage.Issue{Title: "Lonely", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	app = testApp
 
 	childrenTree = false
 	err := childrenCmd.RunE(childrenCmd, []string{issueID})
@@ -75,14 +60,15 @@ func TestChildrenCommandNoChildren(t *testing.T) {
 		t.Fatalf("children command failed: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "No children") {
-		t.Errorf("Expected 'No children' message, got: %s", out.String())
+	output := testApp.Out.(*bytes.Buffer).String()
+	if !strings.Contains(output, "No children") {
+		t.Errorf("Expected 'No children' message, got: %s", output)
 	}
 }
 
 func TestChildrenCommandJSON(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
+	testApp.JSON = true
 
 	ctx := context.Background()
 
@@ -90,13 +76,7 @@ func TestChildrenCommandJSON(t *testing.T) {
 	childID, _ := store.Create(ctx, &storage.Issue{Title: "Child", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
 	store.SetParent(ctx, childID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    true,
-	}
+	app = testApp
 
 	childrenTree = false
 	err := childrenCmd.RunE(childrenCmd, []string{parentID})
@@ -105,7 +85,7 @@ func TestChildrenCommandJSON(t *testing.T) {
 	}
 
 	var result []map[string]interface{}
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+	if err := json.Unmarshal(testApp.Out.(*bytes.Buffer).Bytes(), &result); err != nil {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 	if len(result) != 1 {
@@ -117,8 +97,7 @@ func TestChildrenCommandJSON(t *testing.T) {
 }
 
 func TestChildrenCommandTree(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
@@ -130,13 +109,7 @@ func TestChildrenCommandTree(t *testing.T) {
 	store.SetParent(ctx, parentID, grandparentID)
 	store.SetParent(ctx, childID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	app = testApp
 
 	childrenTree = true
 	err := childrenCmd.RunE(childrenCmd, []string{grandparentID})
@@ -144,7 +117,7 @@ func TestChildrenCommandTree(t *testing.T) {
 		t.Fatalf("children --tree command failed: %v", err)
 	}
 
-	output := out.String()
+	output := testApp.Out.(*bytes.Buffer).String()
 	// Should contain all three levels
 	if !strings.Contains(output, "Grandparent") {
 		t.Errorf("Expected output to contain 'Grandparent', got: %s", output)
@@ -162,8 +135,8 @@ func TestChildrenCommandTree(t *testing.T) {
 }
 
 func TestChildrenCommandTreeJSON(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
+	testApp.JSON = true
 
 	ctx := context.Background()
 
@@ -175,13 +148,7 @@ func TestChildrenCommandTreeJSON(t *testing.T) {
 	store.SetParent(ctx, parentID, grandparentID)
 	store.SetParent(ctx, childID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    true,
-	}
+	app = testApp
 
 	childrenTree = true
 	err := childrenCmd.RunE(childrenCmd, []string{grandparentID})
@@ -190,7 +157,7 @@ func TestChildrenCommandTreeJSON(t *testing.T) {
 	}
 
 	var result TreeNode
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+	if err := json.Unmarshal(testApp.Out.(*bytes.Buffer).Bytes(), &result); err != nil {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 
@@ -213,16 +180,8 @@ func TestChildrenCommandTreeJSON(t *testing.T) {
 }
 
 func TestChildrenCommandNotFound(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
-
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	testApp, _ := setupTestApp(t)
+	app = testApp
 
 	childrenTree = false
 	err := childrenCmd.RunE(childrenCmd, []string{"nonexistent"})
@@ -252,5 +211,31 @@ func TestStatusSymbol(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("statusSymbol(%q) = %q, want %q", tc.status, got, tc.want)
 		}
+	}
+}
+
+func TestChildrenCommandEmptyJSON(t *testing.T) {
+	testApp, store := setupTestApp(t)
+	testApp.JSON = true
+
+	ctx := context.Background()
+
+	// Create issue with no children
+	issueID, _ := store.Create(ctx, &storage.Issue{Title: "Lonely", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
+
+	app = testApp
+
+	childrenTree = false
+	err := childrenCmd.RunE(childrenCmd, []string{issueID})
+	if err != nil {
+		t.Fatalf("children command failed: %v", err)
+	}
+
+	var result []interface{}
+	if err := json.Unmarshal(testApp.Out.(*bytes.Buffer).Bytes(), &result); err != nil {
+		t.Fatalf("Failed to parse JSON: %v", err)
+	}
+	if len(result) != 0 {
+		t.Errorf("Expected empty array, got %v", result)
 	}
 }

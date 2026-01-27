@@ -5,72 +5,40 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"beads2/filesystem"
 	"beads2/storage"
 )
 
-func setupTestApp(t *testing.T) (storage.Storage, func()) {
-	tmpDir, err := os.MkdirTemp("", "beads-test-*")
-	if err != nil {
-		t.Fatalf("Failed to create temp dir: %v", err)
-	}
-
-	beadsDir := filepath.Join(tmpDir, ".beads")
-	store := filesystem.New(beadsDir)
-	ctx := context.Background()
-
-	if err := store.Init(ctx); err != nil {
-		t.Fatalf("Failed to init storage: %v", err)
-	}
-
-	cleanup := func() {
-		os.RemoveAll(tmpDir)
-	}
-
-	return store, cleanup
-}
-
 func TestParentSetCommand(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
 	// Create parent and child issues
-	parent := &storage.Issue{
+	parentID, err := store.Create(ctx, &storage.Issue{
 		Title:    "Parent Issue",
 		Status:   storage.StatusOpen,
 		Priority: storage.PriorityMedium,
 		Type:     storage.TypeEpic,
-	}
-	parentID, err := store.Create(ctx, parent)
+	})
 	if err != nil {
 		t.Fatalf("Failed to create parent: %v", err)
 	}
 
-	child := &storage.Issue{
+	childID, err := store.Create(ctx, &storage.Issue{
 		Title:    "Child Issue",
 		Status:   storage.StatusOpen,
 		Priority: storage.PriorityMedium,
 		Type:     storage.TypeTask,
-	}
-	childID, err := store.Create(ctx, child)
+	})
 	if err != nil {
 		t.Fatalf("Failed to create child: %v", err)
 	}
 
-	// Test parent set command
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	// Set up global app for command
+	app = testApp
 
 	// Call RunE directly with args
 	err = parentSetCmd.RunE(parentSetCmd, []string{childID, parentID})
@@ -78,8 +46,9 @@ func TestParentSetCommand(t *testing.T) {
 		t.Fatalf("parent set failed: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "Set parent") {
-		t.Errorf("Expected success message, got: %s", out.String())
+	output := testApp.Out.(*bytes.Buffer).String()
+	if !strings.Contains(output, "Set parent") {
+		t.Errorf("Expected success message, got: %s", output)
 	}
 
 	// Verify the relationship was created
@@ -101,21 +70,15 @@ func TestParentSetCommand(t *testing.T) {
 }
 
 func TestParentSetCommandJSON(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
+	testApp.JSON = true
 
 	ctx := context.Background()
 
 	parentID, _ := store.Create(ctx, &storage.Issue{Title: "P", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeEpic})
 	childID, _ := store.Create(ctx, &storage.Issue{Title: "C", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    true,
-	}
+	app = testApp
 
 	err := parentSetCmd.RunE(parentSetCmd, []string{childID, parentID})
 	if err != nil {
@@ -123,7 +86,7 @@ func TestParentSetCommandJSON(t *testing.T) {
 	}
 
 	var result map[string]string
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+	if err := json.Unmarshal(testApp.Out.(*bytes.Buffer).Bytes(), &result); err != nil {
 		t.Fatalf("Failed to parse JSON: %v", err)
 	}
 	if result["status"] != "ok" {
@@ -135,8 +98,7 @@ func TestParentSetCommandJSON(t *testing.T) {
 }
 
 func TestParentSetCycle(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
@@ -145,13 +107,7 @@ func TestParentSetCycle(t *testing.T) {
 	childID, _ := store.Create(ctx, &storage.Issue{Title: "B", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
 	store.SetParent(ctx, childID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	app = testApp
 
 	// Try to make A a child of B (would create cycle)
 	err := parentSetCmd.RunE(parentSetCmd, []string{parentID, childID})
@@ -164,8 +120,7 @@ func TestParentSetCycle(t *testing.T) {
 }
 
 func TestParentRemoveCommand(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
+	testApp, store := setupTestApp(t)
 
 	ctx := context.Background()
 
@@ -174,21 +129,16 @@ func TestParentRemoveCommand(t *testing.T) {
 	childID, _ := store.Create(ctx, &storage.Issue{Title: "C", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
 	store.SetParent(ctx, childID, parentID)
 
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	app = testApp
 
 	err := parentRemoveCmd.RunE(parentRemoveCmd, []string{childID})
 	if err != nil {
 		t.Fatalf("parent remove failed: %v", err)
 	}
 
-	if !strings.Contains(out.String(), "Removed parent") {
-		t.Errorf("Expected success message, got: %s", out.String())
+	output := testApp.Out.(*bytes.Buffer).String()
+	if !strings.Contains(output, "Removed parent") {
+		t.Errorf("Expected success message, got: %s", output)
 	}
 
 	// Verify the relationship was removed
@@ -204,16 +154,8 @@ func TestParentRemoveCommand(t *testing.T) {
 }
 
 func TestParentRemoveNotFound(t *testing.T) {
-	store, cleanup := setupTestApp(t)
-	defer cleanup()
-
-	var out bytes.Buffer
-	app = &App{
-		Storage: store,
-		Out:     &out,
-		Err:     os.Stderr,
-		JSON:    false,
-	}
+	testApp, _ := setupTestApp(t)
+	app = testApp
 
 	err := parentRemoveCmd.RunE(parentRemoveCmd, []string{"nonexistent"})
 	if err == nil {
@@ -223,3 +165,32 @@ func TestParentRemoveNotFound(t *testing.T) {
 		t.Errorf("Expected not found error, got: %v", err)
 	}
 }
+
+func TestParentRemoveJSON(t *testing.T) {
+	testApp, store := setupTestApp(t)
+	testApp.JSON = true
+
+	ctx := context.Background()
+
+	parentID, _ := store.Create(ctx, &storage.Issue{Title: "P", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeEpic})
+	childID, _ := store.Create(ctx, &storage.Issue{Title: "C", Status: storage.StatusOpen, Priority: storage.PriorityMedium, Type: storage.TypeTask})
+	store.SetParent(ctx, childID, parentID)
+
+	app = testApp
+
+	err := parentRemoveCmd.RunE(parentRemoveCmd, []string{childID})
+	if err != nil {
+		t.Fatalf("parent remove failed: %v", err)
+	}
+
+	var result map[string]string
+	if err := json.Unmarshal(testApp.Out.(*bytes.Buffer).Bytes(), &result); err != nil {
+		t.Fatalf("Failed to parse JSON: %v", err)
+	}
+	if result["status"] != "ok" {
+		t.Errorf("Expected status=ok, got %v", result)
+	}
+}
+
+// Ensure global app isn't nil for commands that use GetApp()
+var _ = os.Stderr // silence unused import warning

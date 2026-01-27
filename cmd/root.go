@@ -8,18 +8,9 @@ import (
 	"path/filepath"
 
 	"beads2/filesystem"
-	"beads2/storage"
 
 	"github.com/spf13/cobra"
 )
-
-// App holds the application state shared across all commands.
-type App struct {
-	Storage storage.Storage
-	Out     io.Writer
-	Err     io.Writer
-	JSON    bool
-}
 
 var (
 	// Global flags
