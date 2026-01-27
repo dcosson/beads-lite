@@ -340,3 +340,306 @@ func TestFilesystemContract(t *testing.T) {
 	}
 	storage.RunContractTests(t, factory)
 }
+
+// TestClose verifies that Close updates status and moves the file.
+func TestClose(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Close non-existent issue should return ErrNotFound
+	err := s.Close(ctx, "nonexistent-id")
+	if err != storage.ErrNotFound {
+		t.Errorf("Close non-existent: got %v, want ErrNotFound", err)
+	}
+
+	// Create an issue
+	issue := &storage.Issue{
+		Title:    "To Close",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityLow,
+		Type:     storage.TypeTask,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Close it
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// Verify status changed
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get after Close failed: %v", err)
+	}
+	if got.Status != storage.StatusClosed {
+		t.Errorf("Status after Close: got %q, want %q", got.Status, storage.StatusClosed)
+	}
+	if got.ClosedAt == nil {
+		t.Error("ClosedAt should be set after Close")
+	}
+}
+
+// TestReopen verifies that Reopen updates status and moves the file back.
+func TestReopen(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create and close an issue
+	issue := &storage.Issue{
+		Title:    "To Reopen",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityLow,
+		Type:     storage.TypeTask,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// Reopen it
+	if err := s.Reopen(ctx, id); err != nil {
+		t.Fatalf("Reopen failed: %v", err)
+	}
+
+	// Verify status changed back
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get after Reopen failed: %v", err)
+	}
+	if got.Status != storage.StatusOpen {
+		t.Errorf("Status after Reopen: got %q, want %q", got.Status, storage.StatusOpen)
+	}
+	if got.ClosedAt != nil {
+		t.Error("ClosedAt should be nil after Reopen")
+	}
+}
+
+// TestCloseMovesFile verifies that Close physically moves the JSON file.
+func TestCloseMovesFile(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &storage.Issue{
+		Title:    "Test Close Move",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Verify file is in open/
+	openPath := s.issuePath(id, false)
+	closedPath := s.issuePath(id, true)
+
+	if !fileExists(openPath) {
+		t.Error("Issue file should exist in open/ after create")
+	}
+	if fileExists(closedPath) {
+		t.Error("Issue file should not exist in closed/ after create")
+	}
+
+	// Close the issue
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// Verify file moved to closed/
+	if fileExists(openPath) {
+		t.Error("Issue file should not exist in open/ after close")
+	}
+	if !fileExists(closedPath) {
+		t.Error("Issue file should exist in closed/ after close")
+	}
+}
+
+// TestReopenMovesFile verifies that Reopen physically moves the JSON file back.
+func TestReopenMovesFile(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &storage.Issue{
+		Title:    "Test Reopen Move",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Close then reopen
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+	if err := s.Reopen(ctx, id); err != nil {
+		t.Fatalf("Reopen failed: %v", err)
+	}
+
+	// Verify file is back in open/
+	openPath := s.issuePath(id, false)
+	closedPath := s.issuePath(id, true)
+
+	if !fileExists(openPath) {
+		t.Error("Issue file should exist in open/ after reopen")
+	}
+	if fileExists(closedPath) {
+		t.Error("Issue file should not exist in closed/ after reopen")
+	}
+}
+
+// TestReopenNonExistent verifies Reopen returns ErrNotFound for missing issues.
+func TestReopenNonExistent(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	err := s.Reopen(ctx, "nonexistent-id")
+	if err != storage.ErrNotFound {
+		t.Errorf("Reopen non-existent: got %v, want ErrNotFound", err)
+	}
+}
+
+// TestCloseAndGetPreservesData verifies all issue data is preserved through close.
+func TestCloseAndGetPreservesData(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &storage.Issue{
+		Title:       "Full Issue",
+		Description: "A complete issue with all fields",
+		Status:      storage.StatusInProgress,
+		Priority:    storage.PriorityHigh,
+		Type:        storage.TypeBug,
+		Labels:      []string{"urgent", "backend"},
+		Assignee:    "alice",
+	}
+
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get after Close failed: %v", err)
+	}
+
+	if got.Title != issue.Title {
+		t.Errorf("Title: got %q, want %q", got.Title, issue.Title)
+	}
+	if got.Description != issue.Description {
+		t.Errorf("Description: got %q, want %q", got.Description, issue.Description)
+	}
+	if got.Priority != issue.Priority {
+		t.Errorf("Priority: got %q, want %q", got.Priority, issue.Priority)
+	}
+	if got.Type != issue.Type {
+		t.Errorf("Type: got %q, want %q", got.Type, issue.Type)
+	}
+	if got.Assignee != issue.Assignee {
+		t.Errorf("Assignee: got %q, want %q", got.Assignee, issue.Assignee)
+	}
+	if len(got.Labels) != len(issue.Labels) {
+		t.Errorf("Labels length: got %d, want %d", len(got.Labels), len(issue.Labels))
+	}
+}
+
+// TestListExcludesClosedByDefault verifies List with nil filter excludes closed issues.
+func TestListExcludesClosedByDefault(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create two issues
+	id1, err := s.Create(ctx, &storage.Issue{
+		Title:    "Open Issue",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatalf("Create 1 failed: %v", err)
+	}
+
+	id2, err := s.Create(ctx, &storage.Issue{
+		Title:    "To Close",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatalf("Create 2 failed: %v", err)
+	}
+
+	// Close one
+	if err := s.Close(ctx, id2); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// List should only return the open one
+	issues, err := s.List(ctx, nil)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(issues) != 1 {
+		t.Errorf("List should return 1 issue, got %d", len(issues))
+	}
+	if len(issues) > 0 && issues[0].ID != id1 {
+		t.Errorf("List should return open issue %s, got %s", id1, issues[0].ID)
+	}
+}
+
+// TestListClosedFilter verifies List with closed filter returns closed issues.
+func TestListClosedFilter(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create and close an issue
+	id, err := s.Create(ctx, &storage.Issue{
+		Title:    "To Close",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := s.Close(ctx, id); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	// List with closed filter
+	status := storage.StatusClosed
+	issues, err := s.List(ctx, &storage.ListFilter{Status: &status})
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(issues) != 1 {
+		t.Errorf("List closed should return 1 issue, got %d", len(issues))
+	}
+	if len(issues) > 0 && issues[0].ID != id {
+		t.Errorf("List closed should return %s, got %s", id, issues[0].ID)
+	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
