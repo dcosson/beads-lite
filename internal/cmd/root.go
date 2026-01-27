@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"beads2/filesystem"
+	"beads2/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
 )

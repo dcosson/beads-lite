@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 )
 
 func setupBenchmarkStorage(b *testing.B) *FilesystemStorage {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 )
 
 func createTestIssue(t *testing.T, store storage.Storage) string {

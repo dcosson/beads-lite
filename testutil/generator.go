@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 )
 
 // IssueGenerator creates test issues with various relationship patterns.

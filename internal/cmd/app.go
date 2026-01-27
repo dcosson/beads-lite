@@ -4,7 +4,7 @@ package cmd
 import (
 	"io"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 )
 
 // App holds application state shared across commands.

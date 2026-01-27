@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"beads2/filesystem"
+	"beads2/internal/storage/filesystem"
 )
 
 // InitOptions configures the init command.

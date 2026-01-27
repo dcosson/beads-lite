@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 )
 
 func TestDoctorOrphanedLockFiles(t *testing.T) {

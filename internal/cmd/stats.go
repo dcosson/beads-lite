@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"beads2/storage"
+	"beads2/internal/storage"
 	"github.com/spf13/cobra"
 )
 
