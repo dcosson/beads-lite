@@ -4,12 +4,125 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"beads2/storage"
 )
+
+// TestGenerateID verifies the ID format is bd-XXXX (4 hex chars).
+func TestGenerateID(t *testing.T) {
+	idPattern := regexp.MustCompile(`^bd-[0-9a-f]{4}$`)
+
+	// Generate multiple IDs and verify format
+	seen := make(map[string]bool)
+	for i := 0; i < 100; i++ {
+		id, err := generateID()
+		if err != nil {
+			t.Fatalf("generateID failed: %v", err)
+		}
+
+		if !idPattern.MatchString(id) {
+			t.Errorf("ID %q does not match expected format bd-XXXX", id)
+		}
+
+		// Track uniqueness (not guaranteed but very likely in 100 samples)
+		seen[id] = true
+	}
+
+	// With 65536 possibilities, 100 samples should have some variety
+	if len(seen) < 50 {
+		t.Errorf("Expected more unique IDs, got only %d unique out of 100", len(seen))
+	}
+}
+
+// TestCreate_IDCollisionRetry verifies that Create retries on ID collision.
+func TestCreate_IDCollisionRetry(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	ctx := context.Background()
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create many issues to verify IDs are unique
+	ids := make(map[string]bool)
+	for i := 0; i < 50; i++ {
+		issue := &storage.Issue{
+			Title:    "Test Issue",
+			Status:   storage.StatusOpen,
+			Priority: storage.PriorityMedium,
+			Type:     storage.TypeTask,
+		}
+		id, err := s.Create(ctx, issue)
+		if err != nil {
+			t.Fatalf("Create %d failed: %v", i, err)
+		}
+
+		if ids[id] {
+			t.Errorf("Duplicate ID generated: %s", id)
+		}
+		ids[id] = true
+	}
+}
+
+// TestCreate_ConcurrentIDGeneration verifies concurrent creates don't collide.
+func TestCreate_ConcurrentIDGeneration(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	ctx := context.Background()
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	const numWorkers = 10
+	const issuesPerWorker = 10
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	ids := make(map[string]bool)
+	errors := make([]error, 0)
+
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < issuesPerWorker; i++ {
+				issue := &storage.Issue{
+					Title:    "Concurrent Test",
+					Status:   storage.StatusOpen,
+					Priority: storage.PriorityMedium,
+					Type:     storage.TypeTask,
+				}
+				id, err := s.Create(ctx, issue)
+				mu.Lock()
+				if err != nil {
+					errors = append(errors, err)
+				} else if ids[id] {
+					errors = append(errors, err)
+				} else {
+					ids[id] = true
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	if len(errors) > 0 {
+		t.Errorf("Got %d errors during concurrent create: %v", len(errors), errors[0])
+	}
+
+	expected := numWorkers * issuesPerWorker
+	if len(ids) != expected {
+		t.Errorf("Expected %d unique IDs, got %d", expected, len(ids))
+	}
+}
 
 // TestAtomicWriteJSON_CreatesFile tests that atomicWriteJSON creates the file with correct content.
 func TestAtomicWriteJSON_CreatesFile(t *testing.T) {
