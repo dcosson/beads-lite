@@ -106,7 +106,9 @@ func generateID() (string, error) {
 func atomicWriteJSON(path string, data interface{}) error {
 	// Generate a unique temporary filename
 	randBytes := make([]byte, 8)
-	rand.Read(randBytes)
+	if _, err := rand.Read(randBytes); err != nil {
+		return fmt.Errorf("generating random suffix: %w", err)
+	}
 	tmp := path + ".tmp." + hex.EncodeToString(randBytes)
 
 	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0644)
@@ -126,9 +128,16 @@ func atomicWriteJSON(path string, data interface{}) error {
 		os.Remove(tmp)
 		return err
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return err
+	}
 
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	return nil
 }
 
 // Create creates a new issue and returns its generated ID.
