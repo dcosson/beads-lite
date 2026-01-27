@@ -430,6 +430,15 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 
 // AddDependency creates a dependency relationship (A depends on B).
 func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dependencyID string) error {
+	// Check for cycle before acquiring locks
+	hasCycle, err := fs.hasDependencyCycle(ctx, dependentID, dependencyID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
+	}
+
 	locks, err := fs.acquireLocksOrdered([]string{dependentID, dependencyID})
 	if err != nil {
 		return err
@@ -443,6 +452,15 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dep
 	dependency, err := fs.Get(ctx, dependencyID)
 	if err != nil {
 		return err
+	}
+
+	// Re-check for cycle after acquiring locks (data may have changed)
+	hasCycle, err = fs.hasDependencyCycle(ctx, dependentID, dependencyID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
 	}
 
 	// Add to dependent's depends_on
@@ -494,6 +512,15 @@ func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, dependentID, 
 
 // AddBlock creates a blocking relationship (A blocks B).
 func (fs *FilesystemStorage) AddBlock(ctx context.Context, blockerID, blockedID string) error {
+	// Check for cycle before acquiring locks
+	hasCycle, err := fs.hasBlockCycle(ctx, blockerID, blockedID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
+	}
+
 	locks, err := fs.acquireLocksOrdered([]string{blockerID, blockedID})
 	if err != nil {
 		return err
@@ -507,6 +534,15 @@ func (fs *FilesystemStorage) AddBlock(ctx context.Context, blockerID, blockedID 
 	blocked, err := fs.Get(ctx, blockedID)
 	if err != nil {
 		return err
+	}
+
+	// Re-check for cycle after acquiring locks (data may have changed)
+	hasCycle, err = fs.hasBlockCycle(ctx, blockerID, blockedID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
 	}
 
 	if !contains(blocker.Blocks, blockedID) {
@@ -556,6 +592,15 @@ func (fs *FilesystemStorage) RemoveBlock(ctx context.Context, blockerID, blocked
 
 // SetParent sets the parent of an issue.
 func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID string) error {
+	// Check for cycle before acquiring locks
+	hasCycle, err := fs.hasHierarchyCycle(ctx, childID, parentID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
+	}
+
 	// Get the current child to check for old parent
 	child, err := fs.Get(ctx, childID)
 	if err != nil {
@@ -581,6 +626,15 @@ func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID st
 	parent, err := fs.Get(ctx, parentID)
 	if err != nil {
 		return err
+	}
+
+	// Re-check for cycle after acquiring locks (data may have changed)
+	hasCycle, err = fs.hasHierarchyCycle(ctx, childID, parentID)
+	if err != nil {
+		return err
+	}
+	if hasCycle {
+		return storage.ErrCycle
 	}
 
 	// Remove from old parent if exists
@@ -719,4 +773,123 @@ func remove(slice []string, item string) []string {
 		}
 	}
 	return result
+}
+
+// hasDependencyCycle checks if adding a dependency from dependent to dependency would create a cycle.
+// It walks the dependency graph from 'dependency' to see if 'dependent' is reachable.
+func (fs *FilesystemStorage) hasDependencyCycle(ctx context.Context, dependent, dependency string) (bool, error) {
+	// Self-reference is always a cycle
+	if dependent == dependency {
+		return true, nil
+	}
+
+	// BFS to check if dependent is reachable from dependency via DependsOn
+	visited := make(map[string]bool)
+	queue := []string{dependency}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+
+		issue, err := fs.Get(ctx, current)
+		if err != nil {
+			if err == storage.ErrNotFound {
+				continue
+			}
+			return false, err
+		}
+
+		for _, dep := range issue.DependsOn {
+			if dep == dependent {
+				return true, nil
+			}
+			if !visited[dep] {
+				queue = append(queue, dep)
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// hasBlockCycle checks if adding a block relationship (blocker blocks blocked) would create a cycle.
+// It walks the block graph from 'blocked' to see if 'blocker' is reachable via Blocks.
+func (fs *FilesystemStorage) hasBlockCycle(ctx context.Context, blocker, blocked string) (bool, error) {
+	// Self-reference is always a cycle
+	if blocker == blocked {
+		return true, nil
+	}
+
+	// BFS to check if blocker is reachable from blocked via Blocks
+	visited := make(map[string]bool)
+	queue := []string{blocked}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+
+		issue, err := fs.Get(ctx, current)
+		if err != nil {
+			if err == storage.ErrNotFound {
+				continue
+			}
+			return false, err
+		}
+
+		for _, b := range issue.Blocks {
+			if b == blocker {
+				return true, nil
+			}
+			if !visited[b] {
+				queue = append(queue, b)
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// hasHierarchyCycle checks if setting parent as the parent of child would create a cycle.
+// It walks up the ancestor chain from parent to see if child is an ancestor of parent.
+func (fs *FilesystemStorage) hasHierarchyCycle(ctx context.Context, child, parent string) (bool, error) {
+	// Self-reference is always a cycle
+	if child == parent {
+		return true, nil
+	}
+
+	// Walk up the ancestor chain from parent
+	current := parent
+	visited := make(map[string]bool)
+
+	for current != "" {
+		if visited[current] {
+			break // Existing cycle in data, stop here
+		}
+		visited[current] = true
+
+		issue, err := fs.Get(ctx, current)
+		if err != nil {
+			if err == storage.ErrNotFound {
+				break
+			}
+			return false, err
+		}
+
+		if issue.Parent == child {
+			return true, nil
+		}
+		current = issue.Parent
+	}
+
+	return false, nil
 }

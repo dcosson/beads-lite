@@ -411,7 +411,7 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A failed: %v", err)
 	}
-	if !contains(gotA.DependsOn, idB) {
+	if !containsStr(gotA.DependsOn, idB) {
 		t.Errorf("A.DependsOn should contain B; got %v", gotA.DependsOn)
 	}
 
@@ -419,7 +419,7 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get B failed: %v", err)
 	}
-	if !contains(gotB.Dependents, idA) {
+	if !containsStr(gotB.Dependents, idA) {
 		t.Errorf("B.Dependents should contain A; got %v", gotB.Dependents)
 	}
 
@@ -433,7 +433,7 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A after remove failed: %v", err)
 	}
-	if contains(gotA.DependsOn, idB) {
+	if containsStr(gotA.DependsOn, idB) {
 		t.Errorf("A.DependsOn should not contain B after remove; got %v", gotA.DependsOn)
 	}
 
@@ -441,7 +441,7 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get B after remove failed: %v", err)
 	}
-	if contains(gotB.Dependents, idA) {
+	if containsStr(gotB.Dependents, idA) {
 		t.Errorf("B.Dependents should not contain A after remove; got %v", gotB.Dependents)
 	}
 }
@@ -475,7 +475,7 @@ func testBlocking(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A failed: %v", err)
 	}
-	if !contains(gotA.Blocks, idB) {
+	if !containsStr(gotA.Blocks, idB) {
 		t.Errorf("A.Blocks should contain B; got %v", gotA.Blocks)
 	}
 
@@ -483,7 +483,7 @@ func testBlocking(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get B failed: %v", err)
 	}
-	if !contains(gotB.BlockedBy, idA) {
+	if !containsStr(gotB.BlockedBy, idA) {
 		t.Errorf("B.BlockedBy should contain A; got %v", gotB.BlockedBy)
 	}
 
@@ -497,7 +497,7 @@ func testBlocking(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A after remove failed: %v", err)
 	}
-	if contains(gotA.Blocks, idB) {
+	if containsStr(gotA.Blocks, idB) {
 		t.Errorf("A.Blocks should not contain B after remove; got %v", gotA.Blocks)
 	}
 
@@ -505,7 +505,7 @@ func testBlocking(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get B after remove failed: %v", err)
 	}
-	if contains(gotB.BlockedBy, idA) {
+	if containsStr(gotB.BlockedBy, idA) {
 		t.Errorf("B.BlockedBy should not contain A after remove; got %v", gotB.BlockedBy)
 	}
 }
@@ -547,7 +547,7 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get parent failed: %v", err)
 	}
-	if !contains(gotParent.Children, childID) {
+	if !containsStr(gotParent.Children, childID) {
 		t.Errorf("Parent.Children should contain child; got %v", gotParent.Children)
 	}
 
@@ -567,7 +567,7 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get old parent failed: %v", err)
 	}
-	if contains(gotOldParent.Children, childID) {
+	if containsStr(gotOldParent.Children, childID) {
 		t.Errorf("Old parent should not have child; got %v", gotOldParent.Children)
 	}
 
@@ -576,7 +576,7 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get new parent failed: %v", err)
 	}
-	if !contains(gotNewParent.Children, childID) {
+	if !containsStr(gotNewParent.Children, childID) {
 		t.Errorf("New parent should have child; got %v", gotNewParent.Children)
 	}
 
@@ -608,7 +608,7 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get new parent after RemoveParent failed: %v", err)
 	}
-	if contains(gotNewParent.Children, childID) {
+	if containsStr(gotNewParent.Children, childID) {
 		t.Errorf("New parent should not have child after RemoveParent; got %v", gotNewParent.Children)
 	}
 }
@@ -760,8 +760,8 @@ func testComments(t *testing.T, s Storage) {
 	}
 }
 
-// contains checks if a slice contains a specific string.
-func contains(slice []string, item string) bool {
+// containsStr checks if a slice contains a specific string.
+func containsStr(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
 			return true

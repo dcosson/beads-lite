@@ -332,3 +332,11 @@ func TestListFilteringSorting(t *testing.T) {
 		t.Errorf("Expected second issue to be 'High Priority 2', got %q", result[1].Title)
 	}
 }
+
+func TestFilesystemContract(t *testing.T) {
+	factory := func() storage.Storage {
+		dir := t.TempDir()
+		return New(dir)
+	}
+	storage.RunContractTests(t, factory)
+}
