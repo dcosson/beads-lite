@@ -4,7 +4,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"time"
 )
 
@@ -159,11 +158,3 @@ type Storage interface {
 	Doctor(ctx context.Context, fix bool) ([]string, error)
 }
 
-// Errors returned by Storage implementations.
-var (
-	ErrNotFound      = errors.New("issue not found")
-	ErrAlreadyExists = errors.New("issue already exists")
-	ErrLockTimeout   = errors.New("could not acquire lock")
-	ErrInvalidID     = errors.New("invalid issue ID")
-	ErrCycle         = errors.New("operation would create a cycle")
-)
