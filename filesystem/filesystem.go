@@ -68,13 +68,22 @@ func (fs *FilesystemStorage) acquireLock(id string) (*os.File, error) {
 }
 
 // acquireLocksOrdered acquires locks on multiple issues in sorted order to prevent deadlocks.
+// Duplicate IDs are deduplicated to prevent deadlocks from acquiring the same lock twice.
 func (fs *FilesystemStorage) acquireLocksOrdered(ids []string) ([]*os.File, error) {
-	sorted := make([]string, len(ids))
-	copy(sorted, ids)
-	sort.Strings(sorted)
+	// Deduplicate IDs to prevent deadlock from acquiring same lock twice
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id)
+		}
+	}
 
-	locks := make([]*os.File, 0, len(sorted))
-	for _, id := range sorted {
+	sort.Strings(unique)
+
+	locks := make([]*os.File, 0, len(unique))
+	for _, id := range unique {
 		lock, err := fs.acquireLock(id)
 		if err != nil {
 			// Release already-acquired locks
@@ -415,6 +424,17 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 
 // AddDependency creates a dependency relationship (A depends on B).
 func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dependencyID string) error {
+	// Self-dependency is always a cycle
+	if dependentID == dependencyID {
+		return storage.ErrCycle
+	}
+
+	// Check for cycle: if dependency already has a path to dependent, adding
+	// dependent -> dependency would create a cycle.
+	if fs.hasDependencyPath(ctx, dependencyID, dependentID) {
+		return storage.ErrCycle
+	}
+
 	locks, err := fs.acquireLocksOrdered([]string{dependentID, dependencyID})
 	if err != nil {
 		return err
@@ -479,6 +499,11 @@ func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, dependentID, 
 
 // AddBlock creates a blocking relationship (A blocks B).
 func (fs *FilesystemStorage) AddBlock(ctx context.Context, blockerID, blockedID string) error {
+	// Self-blocking is always a cycle
+	if blockerID == blockedID {
+		return storage.ErrCycle
+	}
+
 	locks, err := fs.acquireLocksOrdered([]string{blockerID, blockedID})
 	if err != nil {
 		return err
@@ -541,6 +566,17 @@ func (fs *FilesystemStorage) RemoveBlock(ctx context.Context, blockerID, blocked
 
 // SetParent sets the parent of an issue.
 func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID string) error {
+	// Self-parenting is always a cycle
+	if childID == parentID {
+		return storage.ErrCycle
+	}
+
+	// Check for cycle: if child is already an ancestor of parent, making
+	// parent the parent of child would create a cycle.
+	if fs.hasAncestor(ctx, parentID, childID) {
+		return storage.ErrCycle
+	}
+
 	// Get the current child to check for old parent
 	child, err := fs.Get(ctx, childID)
 	if err != nil {
@@ -704,4 +740,57 @@ func remove(slice []string, item string) []string {
 		}
 	}
 	return result
+}
+
+// hasDependencyPath checks if there's a path from 'from' to 'to' following DependsOn links.
+// Used to detect cycles: if adding 'from depends on to' would create a cycle,
+// there must already be a path from 'to' to 'from'.
+func (fs *FilesystemStorage) hasDependencyPath(ctx context.Context, from, to string) bool {
+	visited := make(map[string]bool)
+	return fs.hasDependencyPathDFS(ctx, from, to, visited)
+}
+
+func (fs *FilesystemStorage) hasDependencyPathDFS(ctx context.Context, current, target string, visited map[string]bool) bool {
+	if current == target {
+		return true
+	}
+	if visited[current] {
+		return false
+	}
+	visited[current] = true
+
+	issue, err := fs.Get(ctx, current)
+	if err != nil {
+		return false
+	}
+
+	for _, dep := range issue.DependsOn {
+		if fs.hasDependencyPathDFS(ctx, dep, target, visited) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasAncestor checks if 'ancestor' is an ancestor of 'issue' in the parent/child hierarchy.
+func (fs *FilesystemStorage) hasAncestor(ctx context.Context, issueID, ancestorID string) bool {
+	current := issueID
+	visited := make(map[string]bool)
+
+	for current != "" {
+		if current == ancestorID {
+			return true
+		}
+		if visited[current] {
+			return false // Already visited, prevent infinite loop
+		}
+		visited[current] = true
+
+		issue, err := fs.Get(ctx, current)
+		if err != nil {
+			return false
+		}
+		current = issue.Parent
+	}
+	return false
 }
