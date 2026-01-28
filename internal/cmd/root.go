@@ -158,6 +158,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newParentCmd(provider))
 	rootCmd.AddCommand(newChildrenCmd(provider))
 	rootCmd.AddCommand(newDepCmd(provider))
+	rootCmd.AddCommand(newCompactCmd(provider))
 
 	return rootCmd
 }
