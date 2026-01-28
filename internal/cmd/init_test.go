@@ -204,27 +204,4 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("path flag overrides BEADS_DIR", func(t *testing.T) {
-		envDir := t.TempDir()
-		flagDir := t.TempDir()
-		t.Setenv("BEADS_DIR", envDir)
-
-		provider := &AppProvider{BeadsPath: flagDir}
-		cmd := newInitCmd(provider)
-		cmd.SetArgs([]string{})
-
-		if err := cmd.Execute(); err != nil {
-			t.Fatalf("init command failed: %v", err)
-		}
-
-		// .beads should be created in flagDir, not envDir
-		flagBeads := filepath.Join(flagDir, ".beads")
-		if _, err := os.Stat(flagBeads); os.IsNotExist(err) {
-			t.Error(".beads directory was not created at --path location")
-		}
-		envBeads := filepath.Join(envDir, ".beads")
-		if _, err := os.Stat(envBeads); err == nil {
-			t.Error(".beads directory should NOT be created in BEADS_DIR when --path is set")
-		}
-	})
 }

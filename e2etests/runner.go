@@ -55,10 +55,10 @@ type RunResult struct {
 }
 
 // Run executes a bd command with the given arguments.
-// It automatically appends --path <sandbox> to the arguments.
+// It sets BEADS_DIR to the sandbox path so the command finds the right .beads directory.
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
-	fullArgs := append(args, "--path", sandbox)
-	cmd := exec.Command(r.BdCmd, fullArgs...)
+	cmd := exec.Command(r.BdCmd, args...)
+	cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

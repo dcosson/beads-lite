@@ -12,20 +12,12 @@ import (
 func TestAppProvider_Get(t *testing.T) {
 	// Create a temp .beads directory with required structure
 	tmpDir := t.TempDir()
-	beadsDir := filepath.Join(tmpDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := config.WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	beadsDir := setupBeadsDir(t, tmpDir)
+
+	t.Setenv("BEADS_DIR", beadsDir)
 
 	var out, errOut bytes.Buffer
 	provider := &AppProvider{
-		BeadsPath:  beadsDir,
 		JSONOutput: true,
 		Out:        &out,
 		Err:        &errOut,
@@ -62,14 +54,14 @@ func TestAppProvider_Get(t *testing.T) {
 	}
 }
 
-func TestAppProvider_Get_InvalidPath(t *testing.T) {
-	provider := &AppProvider{
-		BeadsPath: "/nonexistent/path",
-	}
+func TestAppProvider_Get_InvalidBEADS_DIR(t *testing.T) {
+	t.Setenv("BEADS_DIR", "/nonexistent/path")
+
+	provider := &AppProvider{}
 
 	_, err := provider.Get()
 	if err == nil {
-		t.Error("provider.Get() with invalid path should return error")
+		t.Error("provider.Get() with invalid BEADS_DIR should return error")
 	}
 }
 
@@ -133,14 +125,14 @@ func TestAppProvider_Get_EnvOverrides(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := setupBeadsDir(t, tmpDir)
 
+	t.Setenv("BEADS_DIR", beadsDir)
 	t.Setenv("BD_ACTOR", "env-actor")
 	t.Setenv("BD_PROJECT", "issues") // keep same project name so data dir exists
 
 	var out, errOut bytes.Buffer
 	provider := &AppProvider{
-		BeadsPath: beadsDir,
-		Out:       &out,
-		Err:       &errOut,
+		Out: &out,
+		Err: &errOut,
 	}
 
 	app, err := provider.Get()
@@ -156,18 +148,17 @@ func TestAppProvider_Get_BD_JSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := setupBeadsDir(t, tmpDir)
 
+	t.Setenv("BEADS_DIR", beadsDir)
 	t.Setenv("BD_JSON", "1")
 
 	var out, errOut bytes.Buffer
 	provider := &AppProvider{
-		BeadsPath: beadsDir,
-		Out:       &out,
-		Err:       &errOut,
+		Out: &out,
+		Err: &errOut,
 	}
 
 	// Use the root command to test PersistentPreRunE
 	rootCmd := newRootCmd(provider)
-	// Add a dummy subcommand that uses the provider
 	rootCmd.SetArgs([]string{"list"})
 	rootCmd.SetOut(&out)
 	rootCmd.SetErr(&errOut)
@@ -186,13 +177,13 @@ func TestAppProvider_Get_BD_JSON_FlagOverridesEnv(t *testing.T) {
 	beadsDir := setupBeadsDir(t, tmpDir)
 
 	// Set BD_JSON but also pass --json=false explicitly
+	t.Setenv("BEADS_DIR", beadsDir)
 	t.Setenv("BD_JSON", "1")
 
 	var out, errOut bytes.Buffer
 	provider := &AppProvider{
-		BeadsPath: beadsDir,
-		Out:       &out,
-		Err:       &errOut,
+		Out: &out,
+		Err: &errOut,
 	}
 
 	rootCmd := newRootCmd(provider)

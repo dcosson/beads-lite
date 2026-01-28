@@ -18,18 +18,9 @@ type Paths struct {
 }
 
 // ResolvePaths resolves config and data paths.
-// Discovery order: explicit basePath > BEADS_DIR env var > walk up from CWD (stopping at git root, with worktree fallback).
-func ResolvePaths(basePath string) (Paths, Config, error) {
-	// 1. Explicit --path flag
-	if basePath != "" {
-		normalized, err := normalizeBasePath(basePath)
-		if err != nil {
-			return Paths{}, Config{}, err
-		}
-		return resolveFromBase(normalized)
-	}
-
-	// 2. BEADS_DIR env var
+// Discovery order: BEADS_DIR env var > walk up from CWD (stopping at git root, with worktree fallback).
+func ResolvePaths() (Paths, Config, error) {
+	// 1. BEADS_DIR env var
 	if envDir := os.Getenv(EnvBeadsDir); envDir != "" {
 		normalized, err := normalizeBasePath(envDir)
 		if err != nil {
@@ -38,7 +29,7 @@ func ResolvePaths(basePath string) (Paths, Config, error) {
 		return resolveFromBase(normalized)
 	}
 
-	// 3. Walk up from CWD, stopping at git root
+	// 2. Walk up from CWD, stopping at git root
 	cwd, err := os.Getwd()
 	if err != nil {
 		return Paths{}, Config{}, fmt.Errorf("cannot get current directory: %w", err)
@@ -49,7 +40,7 @@ func ResolvePaths(basePath string) (Paths, Config, error) {
 		return Paths{}, Config{}, err
 	}
 
-	// 4. If not found and in a git worktree, check the main repo root
+	// 3. If not found and in a git worktree, check the main repo root
 	if !found {
 		worktreeRoot, wtErr := findGitWorktreeRoot(cwd)
 		if wtErr == nil && worktreeRoot != "" {

@@ -27,7 +27,7 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 		Short: "Initialize a new beads-lite repository",
 		Long:  `Initialize a new beads-lite repository in the current directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(provider.BeadsPath, force, projectName)
+			return runInit(force, projectName)
 		},
 	}
 
@@ -37,18 +37,15 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 	return cmd
 }
 
-func runInit(path string, force bool, projectName string) error {
+func runInit(force bool, projectName string) error {
 	if projectName == "" {
 		return errors.New("project name cannot be empty")
 	}
-	// Path resolution: --path flag > BEADS_DIR env var > CWD
-	basePath := path
-	if basePath == "" {
-		if envDir := os.Getenv(config.EnvBeadsDir); envDir != "" {
-			basePath = envDir
-		}
-	}
-	if basePath == "" {
+	// Path resolution: BEADS_DIR env var > CWD
+	var basePath string
+	if envDir := os.Getenv(config.EnvBeadsDir); envDir != "" {
+		basePath = envDir
+	} else {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return fmt.Errorf("getting current directory: %w", err)

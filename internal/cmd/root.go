@@ -20,7 +20,6 @@ type AppProvider struct {
 	err  error
 
 	// Config captured from flags before Execute()
-	BeadsPath  string
 	JSONOutput bool
 	Out        io.Writer
 	Err        io.Writer
@@ -47,7 +46,7 @@ func NewTestProvider(app *App) *AppProvider {
 }
 
 func (p *AppProvider) init() (*App, error) {
-	paths, cfg, err := config.ResolvePaths(p.BeadsPath)
+	paths, cfg, err := config.ResolvePaths()
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +111,6 @@ making them easy to review, diff, and track alongside your code.`,
 
 	// Global flags - these populate the provider config
 	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format (env: BD_JSON)")
-	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to repo or .beads directory (env: BEADS_DIR)")
 
 	// Register all commands
 	rootCmd.AddCommand(newInitCmd(provider))

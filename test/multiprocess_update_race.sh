@@ -9,7 +9,7 @@ set -e
 NUM_PROCESSES=50
 
 # Create temporary beads directory
-BEADS_DIR=$(mktemp -d)
+export BEADS_DIR=$(mktemp -d)
 trap "rm -rf $BEADS_DIR" EXIT
 
 echo "Testing multi-process concurrent updates to same issue..."
@@ -17,17 +17,17 @@ echo "  Processes: $NUM_PROCESSES"
 echo "  Beads dir: $BEADS_DIR"
 
 # Initialize beads in the temp directory
-bd init --path "$BEADS_DIR"
+bd init
 
 # Create a single test issue
-ID=$(bd create "Test Issue" --path "$BEADS_DIR")
+ID=$(bd create "Test Issue")
 echo "  Test issue: $ID"
 
 # Spawn processes that all update the same issue concurrently
 # Each process updates the title to include its process number
 pids=()
 for i in $(seq 1 $NUM_PROCESSES); do
-    bd update "$ID" --title "Updated by $i" --path "$BEADS_DIR" &
+    bd update "$ID" --title "Updated by $i" &
     pids+=($!)
 done
 
@@ -46,18 +46,18 @@ if [ $failed -gt 0 ]; then
 fi
 
 # Verify issue is still valid JSON and readable
-if ! bd show "$ID" --path "$BEADS_DIR" --json | jq . > /dev/null 2>&1; then
+if ! bd show "$ID" --json | jq . > /dev/null 2>&1; then
     echo "FAIL: Issue corrupted - invalid JSON"
     echo "Raw content:"
-    bd show "$ID" --path "$BEADS_DIR" --json || cat "$BEADS_DIR/.beads/issues/open/$ID.json" 2>/dev/null || true
+    bd show "$ID" --json || cat "$BEADS_DIR/.beads/issues/open/$ID.json" 2>/dev/null || true
     exit 1
 fi
 
 # Verify the issue has a valid title (one of the updates should have won)
-TITLE=$(bd show "$ID" --path "$BEADS_DIR" --json | jq -r '.title')
+TITLE=$(bd show "$ID" --json | jq -r '.title')
 if [ -z "$TITLE" ] || [ "$TITLE" = "null" ]; then
     echo "FAIL: Issue has empty or null title after updates"
-    bd show "$ID" --path "$BEADS_DIR"
+    bd show "$ID"
     exit 1
 fi
 
@@ -68,10 +68,10 @@ if ! echo "$TITLE" | grep -qE "^Updated by [0-9]+$"; then
 fi
 
 # Verify bd doctor finds no problems
-PROBLEMS=$(bd doctor --path "$BEADS_DIR" 2>&1 | grep -c "problem\|error\|corrupt" || true)
+PROBLEMS=$(bd doctor 2>&1 | grep -c "problem\|error\|corrupt" || true)
 if [ "$PROBLEMS" -ne 0 ]; then
     echo "FAIL: Doctor found problems after concurrent updates"
-    bd doctor --path "$BEADS_DIR"
+    bd doctor
     exit 1
 fi
 

@@ -9,7 +9,7 @@ set -e
 NUM_PROCESSES=20
 
 # Create temporary beads directory
-BEADS_DIR=$(mktemp -d)
+export BEADS_DIR=$(mktemp -d)
 trap "rm -rf $BEADS_DIR" EXIT
 
 echo "Testing multi-process concurrent creates..."
@@ -17,13 +17,13 @@ echo "  Processes: $NUM_PROCESSES"
 echo "  Beads dir: $BEADS_DIR"
 
 # Initialize beads in the temp directory
-bd init --path "$BEADS_DIR"
+bd init
 
 # Spawn processes doing concurrent creates
 # Each process creates one issue
 pids=()
 for i in $(seq 1 $NUM_PROCESSES); do
-    bd create "Issue $i" --path "$BEADS_DIR" &
+    bd create "Issue $i" &
     pids+=($!)
 done
 
@@ -42,27 +42,27 @@ if [ $failed -gt 0 ]; then
 fi
 
 # Verify all issues were created
-COUNT=$(bd list --path "$BEADS_DIR" --format ids | wc -l | tr -d ' ')
+COUNT=$(bd list --format ids | wc -l | tr -d ' ')
 if [ "$COUNT" -ne "$NUM_PROCESSES" ]; then
     echo "FAIL: Expected $NUM_PROCESSES issues, got $COUNT"
-    bd list --path "$BEADS_DIR"
+    bd list
     exit 1
 fi
 
 # Verify all IDs are unique (no collisions)
-UNIQUE_COUNT=$(bd list --path "$BEADS_DIR" --format ids | sort -u | wc -l | tr -d ' ')
+UNIQUE_COUNT=$(bd list --format ids | sort -u | wc -l | tr -d ' ')
 if [ "$UNIQUE_COUNT" -ne "$NUM_PROCESSES" ]; then
     echo "FAIL: Expected $NUM_PROCESSES unique IDs, got $UNIQUE_COUNT"
     echo "Duplicate IDs detected:"
-    bd list --path "$BEADS_DIR" --format ids | sort | uniq -d
+    bd list --format ids | sort | uniq -d
     exit 1
 fi
 
 # Verify bd doctor finds no problems
-PROBLEMS=$(bd doctor --path "$BEADS_DIR" 2>&1 | grep -c "problem\|error\|corrupt" || true)
+PROBLEMS=$(bd doctor 2>&1 | grep -c "problem\|error\|corrupt" || true)
 if [ "$PROBLEMS" -ne 0 ]; then
     echo "FAIL: Doctor found problems after concurrent creates"
-    bd doctor --path "$BEADS_DIR"
+    bd doctor
     exit 1
 fi
 

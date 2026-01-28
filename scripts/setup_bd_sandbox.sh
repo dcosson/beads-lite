@@ -9,6 +9,6 @@ set -e
 BD_CMD="${BD_CMD:-bd}"
 SANDBOX_DIR=$(mktemp -d "${TMPDIR:-/tmp}/beads-sandbox-XXXXXXXX")
 
-$BD_CMD init --path "$SANDBOX_DIR" > /dev/null 2>&1
+BEADS_DIR="$SANDBOX_DIR" $BD_CMD init > /dev/null 2>&1
 
 echo "$SANDBOX_DIR"

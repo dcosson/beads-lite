@@ -2,7 +2,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -154,17 +153,4 @@ func Write(path string, cfg Config) error {
 // WriteDefault writes the default configuration to path.
 func WriteDefault(path string) error {
 	return Write(path, Default())
-}
-
-// loadOptional loads a config file, returning an empty Config and nil error
-// if the file does not exist.
-func loadOptional(path string) (Config, error) {
-	cfg, err := Load(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return Config{}, nil
-		}
-		return Config{}, err
-	}
-	return cfg, nil
 }

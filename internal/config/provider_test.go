@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestResolvePaths_ExplicitBase(t *testing.T) {
+func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := filepath.Join(tmpDir, ".beads")
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "open"), 0755); err != nil {
@@ -23,7 +23,9 @@ func TestResolvePaths_ExplicitBase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, cfg, err := ResolvePaths(beadsDir)
+	t.Setenv(EnvBeadsDir, beadsDir)
+
+	paths, cfg, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -70,7 +72,7 @@ func TestResolvePaths_SearchUpward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths("")
+	paths, _, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -115,7 +117,9 @@ func TestResolvePaths_CustomProjectName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, loaded, err := ResolvePaths(beadsDir)
+	t.Setenv(EnvBeadsDir, beadsDir)
+
+	paths, loaded, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -144,7 +148,7 @@ func TestResolvePaths_MissingConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths("")
+	_, _, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when config is missing")
 	}
@@ -163,7 +167,9 @@ func TestResolvePaths_MissingDataDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err := ResolvePaths(beadsDir)
+	t.Setenv(EnvBeadsDir, beadsDir)
+
+	_, _, err := ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when data dir is missing")
 	}
@@ -208,7 +214,7 @@ func TestResolvePaths_BEADS_DIR(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths("")
+	paths, _, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -217,29 +223,6 @@ func TestResolvePaths_BEADS_DIR(t *testing.T) {
 	wantConfig := resolvePath(beadsDir)
 	if gotConfig != wantConfig {
 		t.Errorf("ConfigDir = %q, want %q", gotConfig, wantConfig)
-	}
-}
-
-func TestResolvePaths_FlagOverridesBEADS_DIR(t *testing.T) {
-	// Create two beads dirs
-	flagDir := t.TempDir()
-	flagBeads := setupBeadsDir(t, flagDir)
-
-	envDir := t.TempDir()
-	setupBeadsDir(t, envDir)
-	envBeads := filepath.Join(envDir, ".beads")
-
-	t.Setenv(EnvBeadsDir, envBeads)
-
-	paths, _, err := ResolvePaths(flagBeads)
-	if err != nil {
-		t.Fatalf("ResolvePaths error: %v", err)
-	}
-
-	gotConfig := resolvePath(paths.ConfigDir)
-	wantConfig := resolvePath(flagBeads)
-	if gotConfig != wantConfig {
-		t.Errorf("ConfigDir = %q, want %q (flag should override BEADS_DIR)", gotConfig, wantConfig)
 	}
 }
 
@@ -284,7 +267,7 @@ func TestResolvePaths_StopsAtGitRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths("")
+	_, _, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should not find .beads above git root")
 	}
@@ -322,7 +305,7 @@ func TestResolvePaths_RedirectFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths("")
+	paths, _, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -363,7 +346,7 @@ func TestResolvePaths_RedirectRelativePath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths("")
+	paths, _, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -398,7 +381,7 @@ func TestResolvePaths_RedirectInvalid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths("")
+	_, _, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when redirect target doesn't exist")
 	}
@@ -635,7 +618,9 @@ func TestResolvePaths_OriginalBeadsDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err := ResolvePaths(beadsDir)
+	t.Setenv(EnvBeadsDir, beadsDir)
+
+	_, _, err := ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error for original beads dir")
 	}
