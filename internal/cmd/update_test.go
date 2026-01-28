@@ -519,3 +519,169 @@ func TestUpdateIssueWithNoLabels(t *testing.T) {
 		t.Errorf("expected labels [new-label], got %v", updated.Labels)
 	}
 }
+
+func TestUpdateSetParent(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	parent := &storage.Issue{Title: "Parent", Type: storage.TypeEpic}
+	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+
+	parentID, _ := store.Create(context.Background(), parent)
+	childID, _ := store.Create(context.Background(), child)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{childID, "--parent", parentID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update --parent failed: %v", err)
+	}
+
+	if !strings.Contains(out.String(), "Updated") {
+		t.Errorf("expected 'Updated' in output, got %q", out.String())
+	}
+
+	// Verify child has parent
+	gotChild, _ := store.Get(context.Background(), childID)
+	if gotChild.Parent != parentID {
+		t.Errorf("expected child parent %q, got %q", parentID, gotChild.Parent)
+	}
+
+	// Verify parent has child in children list
+	gotParent, _ := store.Get(context.Background(), parentID)
+	found := false
+	for _, c := range gotParent.Children {
+		if c == childID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected parent to have child %q in children list", childID)
+	}
+}
+
+func TestUpdateReparent(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	parent1 := &storage.Issue{Title: "Parent 1", Type: storage.TypeEpic}
+	parent2 := &storage.Issue{Title: "Parent 2", Type: storage.TypeEpic}
+	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+
+	parent1ID, _ := store.Create(context.Background(), parent1)
+	parent2ID, _ := store.Create(context.Background(), parent2)
+	childID, _ := store.Create(context.Background(), child)
+
+	// Set initial parent
+	if err := store.SetParent(context.Background(), childID, parent1ID); err != nil {
+		t.Fatalf("failed to set initial parent: %v", err)
+	}
+
+	// Re-parent via update
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{childID, "--parent", parent2ID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update --parent (reparent) failed: %v", err)
+	}
+
+	gotChild, _ := store.Get(context.Background(), childID)
+	if gotChild.Parent != parent2ID {
+		t.Errorf("expected child parent %q, got %q", parent2ID, gotChild.Parent)
+	}
+
+	// Old parent should not have child
+	gotOldParent, _ := store.Get(context.Background(), parent1ID)
+	for _, c := range gotOldParent.Children {
+		if c == childID {
+			t.Errorf("old parent should not have child in children list")
+		}
+	}
+
+	// New parent should have child
+	gotNewParent, _ := store.Get(context.Background(), parent2ID)
+	found := false
+	for _, c := range gotNewParent.Children {
+		if c == childID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("new parent should have child in children list")
+	}
+}
+
+func TestUpdateRemoveParent(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	parent := &storage.Issue{Title: "Parent", Type: storage.TypeEpic}
+	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+
+	parentID, _ := store.Create(context.Background(), parent)
+	childID, _ := store.Create(context.Background(), child)
+
+	if err := store.SetParent(context.Background(), childID, parentID); err != nil {
+		t.Fatalf("failed to set parent: %v", err)
+	}
+
+	// Remove parent via update --parent ""
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{childID, "--parent", ""})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update --parent '' failed: %v", err)
+	}
+
+	gotChild, _ := store.Get(context.Background(), childID)
+	if gotChild.Parent != "" {
+		t.Errorf("expected child to have no parent, got %q", gotChild.Parent)
+	}
+
+	gotParent, _ := store.Get(context.Background(), parentID)
+	for _, c := range gotParent.Children {
+		if c == childID {
+			t.Errorf("parent should not have child in children list after removal")
+		}
+	}
+}
+
+func TestUpdateParentNotFound(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	childID, _ := store.Create(context.Background(), child)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{childID, "--parent", "bd-nonexistent"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for non-existent parent")
+	}
+	if !strings.Contains(err.Error(), "not found") {
+		t.Errorf("expected 'not found' in error, got: %v", err)
+	}
+}
+
+func TestUpdateParentCycle(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issueA := &storage.Issue{Title: "A", Type: storage.TypeTask}
+	issueB := &storage.Issue{Title: "B", Type: storage.TypeTask}
+
+	idA, _ := store.Create(context.Background(), issueA)
+	idB, _ := store.Create(context.Background(), issueB)
+
+	// Make A parent of B
+	if err := store.SetParent(context.Background(), idB, idA); err != nil {
+		t.Fatalf("failed to set initial parent: %v", err)
+	}
+
+	// Try to make B parent of A (would create cycle)
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{idA, "--parent", idB})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for cycle")
+	}
+	if !strings.Contains(err.Error(), "cycle") {
+		t.Errorf("expected 'cycle' in error, got: %v", err)
+	}
+}

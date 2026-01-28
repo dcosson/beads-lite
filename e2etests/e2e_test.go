@@ -11,6 +11,23 @@ import (
 
 var update = flag.Bool("update", false, "update expected output files")
 
+// verifyReferenceBeads checks that BD_CMD points to the original beads binary,
+// not beads-lite. Expected output files must be generated from the reference
+// implementation. If the --help output contains "Beads Lite", this is the wrong
+// binary and the update run is aborted.
+func verifyReferenceBeads(t *testing.T, runner *Runner) {
+	t.Helper()
+	result := runner.Run("", "--help")
+	if result.ExitCode != 0 {
+		t.Fatalf("BD_CMD --help failed (exit %d): %s", result.ExitCode, result.Stderr)
+	}
+	if strings.Contains(result.Stdout, "Beads Lite") {
+		t.Fatal("ABORTING: BD_CMD points to beads-lite, not the reference beads binary.\n" +
+			"Expected output files must be generated from the original beads.\n" +
+			"Set BD_CMD to the original beads binary (e.g. BD_CMD=$(which bd)).")
+	}
+}
+
 func TestE2E(t *testing.T) {
 	bdCmd := os.Getenv("BD_CMD")
 	if bdCmd == "" {
@@ -18,6 +35,10 @@ func TestE2E(t *testing.T) {
 	}
 
 	runner := &Runner{BdCmd: bdCmd}
+
+	if *update {
+		verifyReferenceBeads(t, runner)
+	}
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {

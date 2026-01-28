@@ -55,43 +55,13 @@ type RunResult struct {
 }
 
 // Run executes a bd command with the given arguments.
-// It sets BEADS_DIR to the sandbox path so the command finds the right .beads directory.
+// If sandbox is non-empty, BEADS_DIR is set so the command finds the right .beads directory.
+// Pass an empty sandbox for commands that don't need one (e.g., --help).
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
 	cmd := exec.Command(r.BdCmd, args...)
-	cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			exitCode = -1
-		}
+	if sandbox != "" {
+		cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
 	}
-
-	return RunResult{
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-		ExitCode: exitCode,
-	}
-}
-
-// RunJSON executes a bd command with --json flag and returns the result.
-// It automatically appends --json and --path <sandbox>.
-func (r *Runner) RunJSON(sandbox string, args ...string) RunResult {
-	fullArgs := append(args, "--json")
-	return r.Run(sandbox, fullArgs...)
-}
-
-// RunRaw executes the bd binary with the given arguments directly,
-// without appending --path. Useful for --help and other global commands.
-func (r *Runner) RunRaw(args ...string) RunResult {
-	cmd := exec.Command(r.BdCmd, args...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

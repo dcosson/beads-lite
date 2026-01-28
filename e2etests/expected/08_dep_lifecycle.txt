@@ -2,7 +2,7 @@
 {
   "created_at": "TIMESTAMP",
   "created_by": "Danny Cosson",
-  "id": "e2etests-efj",
+  "id": "e2etests-5kt",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
   "priority": 2,
@@ -15,7 +15,7 @@
 {
   "created_at": "TIMESTAMP",
   "created_by": "Danny Cosson",
-  "id": "e2etests-08h",
+  "id": "e2etests-dlh",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
   "priority": 2,
@@ -26,8 +26,8 @@
 
 === add dependency A depends on B ===
 {
-  "depends_on_id": "e2etests-08h",
-  "issue_id": "e2etests-efj",
+  "depends_on_id": "e2etests-dlh",
+  "issue_id": "e2etests-5kt",
   "status": "added",
   "type": "blocks"
 }
@@ -42,7 +42,7 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "dependency_type": "blocks",
-        "id": "e2etests-08h",
+        "id": "e2etests-dlh",
         "issue_type": "task",
         "owner": "dcosson@gmail.com",
         "priority": 2,
@@ -51,7 +51,7 @@
         "updated_at": "TIMESTAMP"
       }
     ],
-    "id": "e2etests-efj",
+    "id": "e2etests-5kt",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -71,7 +71,7 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "dependency_type": "blocks",
-        "id": "e2etests-efj",
+        "id": "e2etests-5kt",
         "issue_type": "task",
         "owner": "dcosson@gmail.com",
         "priority": 2,
@@ -80,7 +80,7 @@
         "updated_at": "TIMESTAMP"
       }
     ],
-    "id": "e2etests-08h",
+    "id": "e2etests-dlh",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -96,7 +96,7 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "dependency_type": "blocks",
-    "id": "e2etests-08h",
+    "id": "e2etests-dlh",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -108,8 +108,8 @@
 
 === remove dependency ===
 {
-  "depends_on_id": "e2etests-08h",
-  "issue_id": "e2etests-efj",
+  "depends_on_id": "e2etests-dlh",
+  "issue_id": "e2etests-5kt",
   "status": "removed"
 }
 
@@ -118,7 +118,7 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-efj",
+    "id": "e2etests-5kt",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,

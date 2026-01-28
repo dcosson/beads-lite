@@ -1,6 +1,6 @@
 === delete issue ===
 {
-  "deleted": "e2etests-zrg",
+  "deleted": "e2etests-x0r",
   "dependencies_removed": 0,
   "references_updated": 0
 }
@@ -12,7 +12,7 @@
     "created_by": "Danny Cosson",
     "dependency_count": 0,
     "dependent_count": 0,
-    "id": "e2etests-xu3",
+    "id": "e2etests-u37",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,

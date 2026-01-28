@@ -46,9 +46,9 @@ func sectionExitCode(out *strings.Builder, label string, exitCode int) {
 	out.WriteString("\n\n")
 }
 
-// mustRunJSON runs a JSON command and returns the result, failing the test case on error.
-func mustRunJSON(r *Runner, sandbox string, args ...string) (RunResult, error) {
-	result := r.RunJSON(sandbox, args...)
+// mustRun runs a command and returns the result, failing the test case on error.
+func mustRun(r *Runner, sandbox string, args ...string) (RunResult, error) {
+	result := r.Run(sandbox, args...)
 	if result.ExitCode != 0 {
 		return result, fmt.Errorf("command %v failed (exit %d): %s", args, result.ExitCode, result.Stderr)
 	}
@@ -69,7 +69,7 @@ func caseCreateBasic(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create
-	result, err := mustRunJSON(r, sandbox, "create", "Fix login bug")
+	result, err := mustRun(r, sandbox, "create", "Fix login bug", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -81,14 +81,14 @@ func caseCreateBasic(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Show
-	result, err = mustRunJSON(r, sandbox, "show", id)
+	result, err = mustRun(r, sandbox, "show", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show the created issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// List
-	result, err = mustRunJSON(r, sandbox, "list")
+	result, err = mustRun(r, sandbox, "list", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -102,7 +102,7 @@ func caseCreateWithFlags(r *Runner, n *Normalizer, sandbox string) (string, erro
 	var out strings.Builder
 
 	// Create a dependency target first
-	result, err := mustRunJSON(r, sandbox, "create", "Dependency target")
+	result, err := mustRun(r, sandbox, "create", "Dependency target", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +114,7 @@ func caseCreateWithFlags(r *Runner, n *Normalizer, sandbox string) (string, erro
 	}
 
 	// Create a parent
-	result, err = mustRunJSON(r, sandbox, "create", "Parent issue", "--type", "epic")
+	result, err = mustRun(r, sandbox, "create", "Parent issue", "--type", "epic", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +126,7 @@ func caseCreateWithFlags(r *Runner, n *Normalizer, sandbox string) (string, erro
 	}
 
 	// Create issue with all flags
-	result, err = mustRunJSON(r, sandbox, "create", "Full featured issue",
+	result, err = mustRun(r, sandbox, "create", "Full featured issue",
 		"--type", "feature",
 		"--priority", "1",
 		"--description", "A detailed description",
@@ -135,6 +135,7 @@ func caseCreateWithFlags(r *Runner, n *Normalizer, sandbox string) (string, erro
 		"--assignee", "alice",
 		"--depends-on", depID,
 		"--parent", parentID,
+		"--json",
 	)
 	if err != nil {
 		return "", err
@@ -147,7 +148,7 @@ func caseCreateWithFlags(r *Runner, n *Normalizer, sandbox string) (string, erro
 	}
 
 	// Show the fully created issue
-	result, err = mustRunJSON(r, sandbox, "show", fullID)
+	result, err = mustRun(r, sandbox, "show", fullID, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -161,7 +162,7 @@ func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create parent
-	result, err := mustRunJSON(r, sandbox, "create", "Parent task")
+	result, err := mustRun(r, sandbox, "create", "Parent task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -171,13 +172,14 @@ func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Create main issue as child of parent
-	result, err = mustRunJSON(r, sandbox, "create", "Main task",
+	result, err = mustRun(r, sandbox, "create", "Main task",
 		"--type", "feature",
 		"--priority", "1",
 		"--description", "Main task description",
 		"--label", "important",
 		"--assignee", "bob",
 		"--parent", parentID,
+		"--json",
 	)
 	if err != nil {
 		return "", err
@@ -188,7 +190,7 @@ func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Create a dependency
-	result, err = mustRunJSON(r, sandbox, "create", "Dependency task")
+	result, err = mustRun(r, sandbox, "create", "Dependency task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -198,25 +200,25 @@ func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Create a child of main
-	result, err = mustRunJSON(r, sandbox, "create", "Child task", "--parent", mainID)
+	result, err = mustRun(r, sandbox, "create", "Child task", "--parent", mainID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Add dependency
-	_, err = mustRunJSON(r, sandbox, "dep", "add", mainID, depID)
+	_, err = mustRun(r, sandbox, "dep", "add", mainID, depID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Add comment
-	_, err = mustRunJSON(r, sandbox, "comment", "add", mainID, "This is a comment")
+	_, err = mustRun(r, sandbox, "comment", "add", mainID, "This is a comment", "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Show the fully populated issue
-	result, err = mustRunJSON(r, sandbox, "show", mainID)
+	result, err = mustRun(r, sandbox, "show", mainID, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -230,7 +232,7 @@ func caseUpdate(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issue
-	result, err := mustRunJSON(r, sandbox, "create", "Original title")
+	result, err := mustRun(r, sandbox, "create", "Original title", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -240,63 +242,63 @@ func caseUpdate(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Update title
-	result, err = mustRunJSON(r, sandbox, "update", id, "--title", "Updated title")
+	result, err = mustRun(r, sandbox, "update", id, "--title", "Updated title", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update title", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update description
-	result, err = mustRunJSON(r, sandbox, "update", id, "--description", "New description")
+	result, err = mustRun(r, sandbox, "update", id, "--description", "New description", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update description", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update priority
-	result, err = mustRunJSON(r, sandbox, "update", id, "--priority", "0")
+	result, err = mustRun(r, sandbox, "update", id, "--priority", "0", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update priority", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update type
-	result, err = mustRunJSON(r, sandbox, "update", id, "--type", "bug")
+	result, err = mustRun(r, sandbox, "update", id, "--type", "bug", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update type", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update status
-	result, err = mustRunJSON(r, sandbox, "update", id, "--status", "in-progress")
+	result, err = mustRun(r, sandbox, "update", id, "--status", "in-progress", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update status", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Add labels
-	result, err = mustRunJSON(r, sandbox, "update", id, "--add-label", "urgent", "--add-label", "v2")
+	result, err = mustRun(r, sandbox, "update", id, "--add-label", "urgent", "--add-label", "v2", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add labels", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Remove label
-	result, err = mustRunJSON(r, sandbox, "update", id, "--remove-label", "urgent")
+	result, err = mustRun(r, sandbox, "update", id, "--remove-label", "urgent", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "remove label", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update assignee
-	result, err = mustRunJSON(r, sandbox, "update", id, "--assignee", "charlie")
+	result, err = mustRun(r, sandbox, "update", id, "--assignee", "charlie", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "update assignee", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show final state
-	result, err = mustRunJSON(r, sandbox, "show", id)
+	result, err = mustRun(r, sandbox, "show", id, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -310,12 +312,12 @@ func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issues with various attributes
-	result, err := mustRunJSON(r, sandbox, "create", "Open task", "--type", "task", "--priority", "2")
+	result, err := mustRun(r, sandbox, "create", "Open task", "--type", "task", "--priority", "2", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "High bug", "--type", "bug", "--priority", "1")
+	result, err = mustRun(r, sandbox, "create", "High bug", "--type", "bug", "--priority", "1", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -324,54 +326,54 @@ func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Feature request", "--type", "feature", "--priority", "3")
+	result, err = mustRun(r, sandbox, "create", "Feature request", "--type", "feature", "--priority", "3", "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Close one issue
-	_, err = mustRunJSON(r, sandbox, "close", bugID)
+	_, err = mustRun(r, sandbox, "close", bugID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// List all open (default)
-	result, err = mustRunJSON(r, sandbox, "list")
+	result, err = mustRun(r, sandbox, "list", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list open issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List all issues
-	result, err = mustRunJSON(r, sandbox, "list", "--all")
+	result, err = mustRun(r, sandbox, "list", "--all", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list all issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List closed
-	result, err = mustRunJSON(r, sandbox, "list", "--closed")
+	result, err = mustRun(r, sandbox, "list", "--closed", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list closed issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List by type
-	result, err = mustRunJSON(r, sandbox, "list", "--type", "feature")
+	result, err = mustRun(r, sandbox, "list", "--type", "feature", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list by type feature", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List by priority
-	result, err = mustRunJSON(r, sandbox, "list", "--priority", "high")
+	result, err = mustRun(r, sandbox, "list", "--priority", "high", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list by priority high", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List format ids
-	result, err = mustRunJSON(r, sandbox, "list", "--format", "ids")
+	result, err = mustRun(r, sandbox, "list", "--format", "ids", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -385,7 +387,7 @@ func caseCloseReopen(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issue
-	result, err := mustRunJSON(r, sandbox, "create", "Closeable task")
+	result, err := mustRun(r, sandbox, "create", "Closeable task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -395,42 +397,42 @@ func caseCloseReopen(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Close it
-	result, err = mustRunJSON(r, sandbox, "close", id)
+	result, err = mustRun(r, sandbox, "close", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "close issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show closed state
-	result, err = mustRunJSON(r, sandbox, "show", id)
+	result, err = mustRun(r, sandbox, "show", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show closed issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Verify in closed list
-	result, err = mustRunJSON(r, sandbox, "list", "--closed")
+	result, err = mustRun(r, sandbox, "list", "--closed", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list closed", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Reopen
-	result, err = mustRunJSON(r, sandbox, "reopen", id)
+	result, err = mustRun(r, sandbox, "reopen", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "reopen issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show reopened state
-	result, err = mustRunJSON(r, sandbox, "show", id)
+	result, err = mustRun(r, sandbox, "show", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show reopened issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Verify in open list
-	result, err = mustRunJSON(r, sandbox, "list")
+	result, err = mustRun(r, sandbox, "list", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -444,12 +446,12 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create two issues
-	result, err := mustRunJSON(r, sandbox, "create", "Keeper")
+	result, err := mustRun(r, sandbox, "create", "Keeper", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Deletable")
+	result, err = mustRun(r, sandbox, "create", "Deletable", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -459,21 +461,21 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Delete the second
-	result, err = mustRunJSON(r, sandbox, "delete", deleteID, "--force")
+	result, err = mustRun(r, sandbox, "delete", deleteID, "--force", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "delete issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// List should only show first
-	result, err = mustRunJSON(r, sandbox, "list")
+	result, err = mustRun(r, sandbox, "list", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list after delete", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Show deleted should fail
-	showResult := r.RunJSON(sandbox, "show", deleteID)
+	showResult := r.Run(sandbox, "show", deleteID, "--json")
 	sectionExitCode(&out, "show deleted issue", showResult.ExitCode)
 
 	return out.String(), nil
@@ -484,7 +486,7 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 	var out strings.Builder
 
 	// Create two issues
-	result, err := mustRunJSON(r, sandbox, "create", "Issue A")
+	result, err := mustRun(r, sandbox, "create", "Issue A", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -494,7 +496,7 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Issue B")
+	result, err = mustRun(r, sandbox, "create", "Issue B", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -505,42 +507,42 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 	}
 
 	// Add dep: A depends on B
-	result, err = mustRunJSON(r, sandbox, "dep", "add", idA, idB)
+	result, err = mustRun(r, sandbox, "dep", "add", idA, idB, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add dependency A depends on B", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show A has depends_on
-	result, err = mustRunJSON(r, sandbox, "show", idA)
+	result, err = mustRun(r, sandbox, "show", idA, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show A has depends_on", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show B has dependents
-	result, err = mustRunJSON(r, sandbox, "show", idB)
+	result, err = mustRun(r, sandbox, "show", idB, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show B has dependents", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Dep list A
-	result, err = mustRunJSON(r, sandbox, "dep", "list", idA)
+	result, err = mustRun(r, sandbox, "dep", "list", idA, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "dep list A", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Remove dependency
-	result, err = mustRunJSON(r, sandbox, "dep", "remove", idA, idB)
+	result, err = mustRun(r, sandbox, "dep", "remove", idA, idB, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "remove dependency", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show A after removal
-	result, err = mustRunJSON(r, sandbox, "show", idA)
+	result, err = mustRun(r, sandbox, "show", idA, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -554,7 +556,7 @@ func caseParentChildren(r *Runner, n *Normalizer, sandbox string) (string, error
 	var out strings.Builder
 
 	// Create parent
-	result, err := mustRunJSON(r, sandbox, "create", "Parent issue", "--type", "epic")
+	result, err := mustRun(r, sandbox, "create", "Parent issue", "--type", "epic", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -565,7 +567,7 @@ func caseParentChildren(r *Runner, n *Normalizer, sandbox string) (string, error
 	}
 
 	// Create child
-	result, err = mustRunJSON(r, sandbox, "create", "Child issue")
+	result, err = mustRun(r, sandbox, "create", "Child issue", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -575,36 +577,36 @@ func caseParentChildren(r *Runner, n *Normalizer, sandbox string) (string, error
 		return "", err
 	}
 
-	// Set parent
-	result, err = mustRunJSON(r, sandbox, "parent", "set", childID, parentID)
+	// Set parent via update
+	result, err = mustRun(r, sandbox, "update", childID, "--parent", parentID, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "set parent", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show child has parent
-	result, err = mustRunJSON(r, sandbox, "show", childID)
+	result, err = mustRun(r, sandbox, "show", childID, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "show child has parent", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// List children of parent
-	result, err = mustRunJSON(r, sandbox, "children", parentID)
+	result, err = mustRun(r, sandbox, "children", parentID, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list children of parent", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
-	// Remove parent
-	result, err = mustRunJSON(r, sandbox, "parent", "remove", childID)
+	// Remove parent via update
+	result, err = mustRun(r, sandbox, "update", childID, "--parent", "", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "remove parent", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show child after removal
-	result, err = mustRunJSON(r, sandbox, "show", childID)
+	result, err = mustRun(r, sandbox, "show", childID, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -618,7 +620,7 @@ func caseComment(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issue
-	result, err := mustRunJSON(r, sandbox, "create", "Commentable task")
+	result, err := mustRun(r, sandbox, "create", "Commentable task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -628,28 +630,28 @@ func caseComment(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Add first comment
-	result, err = mustRunJSON(r, sandbox, "comment", "add", id, "First comment")
+	result, err = mustRun(r, sandbox, "comment", "add", id, "First comment", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add first comment", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Add second comment
-	result, err = mustRunJSON(r, sandbox, "comment", "add", id, "Second comment")
+	result, err = mustRun(r, sandbox, "comment", "add", id, "Second comment", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add second comment", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// List comments
-	result, err = mustRunJSON(r, sandbox, "comment", "list", id)
+	result, err = mustRun(r, sandbox, "comment", "list", id, "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "list comments", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Show issue with comments
-	result, err = mustRunJSON(r, sandbox, "show", id)
+	result, err = mustRun(r, sandbox, "show", id, "--json")
 	if err != nil {
 		return "", err
 	}
@@ -663,7 +665,7 @@ func caseReadyBlocked(r *Runner, n *Normalizer, sandbox string) (string, error) 
 	var out strings.Builder
 
 	// Create issues
-	result, err := mustRunJSON(r, sandbox, "create", "Blocker task")
+	result, err := mustRun(r, sandbox, "create", "Blocker task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -672,7 +674,7 @@ func caseReadyBlocked(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Blocked task")
+	result, err = mustRun(r, sandbox, "create", "Blocked task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -681,46 +683,46 @@ func caseReadyBlocked(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Independent task")
+	result, err = mustRun(r, sandbox, "create", "Independent task", "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Add dep: blocked depends on blocker
-	_, err = mustRunJSON(r, sandbox, "dep", "add", blockedID, blockerID)
+	_, err = mustRun(r, sandbox, "dep", "add", blockedID, blockerID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Ready should show blocker and independent (not blocked)
-	result, err = mustRunJSON(r, sandbox, "ready")
+	result, err = mustRun(r, sandbox, "ready", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "ready issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Blocked should show the blocked issue
-	result, err = mustRunJSON(r, sandbox, "blocked")
+	result, err = mustRun(r, sandbox, "blocked", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "blocked issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Close blocker
-	_, err = mustRunJSON(r, sandbox, "close", blockerID)
+	_, err = mustRun(r, sandbox, "close", blockerID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Ready should now include previously blocked
-	result, err = mustRunJSON(r, sandbox, "ready")
+	result, err = mustRun(r, sandbox, "ready", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "ready after closing blocker", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Blocked should be empty
-	result = r.RunJSON(sandbox, "blocked")
+	result = r.Run(sandbox, "blocked", "--json")
 	section(&out, "blocked after closing blocker", n.NormalizeJSON([]byte(result.Stdout)))
 
 	return out.String(), nil
@@ -731,17 +733,17 @@ func caseSearch(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issues
-	_, err := mustRunJSON(r, sandbox, "create", "Fix authentication bug", "--description", "Login fails for OAuth users")
+	_, err := mustRun(r, sandbox, "create", "Fix authentication bug", "--description", "Login fails for OAuth users", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	_, err = mustRunJSON(r, sandbox, "create", "Add search feature", "--description", "Full text search needed")
+	_, err = mustRun(r, sandbox, "create", "Add search feature", "--description", "Full text search needed", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err := mustRunJSON(r, sandbox, "create", "Update OAuth library")
+	result, err := mustRun(r, sandbox, "create", "Update OAuth library", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -751,34 +753,34 @@ func caseSearch(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Close one to test --all
-	_, err = mustRunJSON(r, sandbox, "close", oauthID)
+	_, err = mustRun(r, sandbox, "close", oauthID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Search open only (default)
-	result, err = mustRunJSON(r, sandbox, "search", "OAuth")
+	result, err = mustRun(r, sandbox, "search", "OAuth", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "search OAuth open only", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Search all
-	result, err = mustRunJSON(r, sandbox, "search", "OAuth", "--all")
+	result, err = mustRun(r, sandbox, "search", "OAuth", "--all", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "search OAuth all", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Search title only
-	result, err = mustRunJSON(r, sandbox, "search", "OAuth", "--title-only")
+	result, err = mustRun(r, sandbox, "search", "OAuth", "--title-only", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "search OAuth title only", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Search by description content
-	result, err = mustRunJSON(r, sandbox, "search", "Full text")
+	result, err = mustRun(r, sandbox, "search", "Full text", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -792,17 +794,17 @@ func caseStats(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create issues in various states
-	result, err := mustRunJSON(r, sandbox, "create", "Open task one")
+	result, err := mustRun(r, sandbox, "create", "Open task one", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Open task two")
+	result, err = mustRun(r, sandbox, "create", "Open task two", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "In progress task")
+	result, err = mustRun(r, sandbox, "create", "In progress task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -810,12 +812,12 @@ func caseStats(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = mustRunJSON(r, sandbox, "update", ipID, "--status", "in-progress")
+	_, err = mustRun(r, sandbox, "update", ipID, "--status", "in-progress", "--json")
 	if err != nil {
 		return "", err
 	}
 
-	result, err = mustRunJSON(r, sandbox, "create", "Closed task")
+	result, err = mustRun(r, sandbox, "create", "Closed task", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -823,13 +825,13 @@ func caseStats(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = mustRunJSON(r, sandbox, "close", closedID)
+	_, err = mustRun(r, sandbox, "close", closedID, "--json")
 	if err != nil {
 		return "", err
 	}
 
 	// Get stats
-	result, err = mustRunJSON(r, sandbox, "stats")
+	result, err = mustRun(r, sandbox, "stats", "--json")
 	if err != nil {
 		return "", err
 	}

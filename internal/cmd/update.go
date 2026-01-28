@@ -22,6 +22,7 @@ func newUpdateCmd(provider *AppProvider) *cobra.Command {
 		typeFlag     string
 		status       string
 		assignee     string
+		parent       string
 		addLabels    []string
 		removeLabels []string
 	)
@@ -38,7 +39,9 @@ Examples:
   bd update bd-a1b2 --add-label urgent --remove-label backlog
   bd update bd-a1b2 --assignee alice
   bd update bd-a1b2 --assignee ""     # unassign
-  bd update bd-a1b2 --description -   # read from stdin`,
+  bd update bd-a1b2 --parent bd-c3d4 # set parent
+  bd update bd-a1b2 --parent ""      # remove parent
+  bd update bd-a1b2 --description -  # read from stdin`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -114,6 +117,38 @@ Examples:
 				changed = true
 			}
 
+			// Update parent if specified
+			if cmd.Flags().Changed("parent") {
+				if parent == "" {
+					// Remove parent
+					if issue.Parent != "" {
+						if err := app.Storage.RemoveParent(ctx, issueID); err != nil {
+							return fmt.Errorf("removing parent: %w", err)
+						}
+					}
+				} else {
+					// Set parent - verify it exists
+					if _, err := app.Storage.Get(ctx, parent); err != nil {
+						if err == storage.ErrNotFound {
+							return fmt.Errorf("parent issue not found: %s", parent)
+						}
+						return fmt.Errorf("getting parent issue: %w", err)
+					}
+					if err := app.Storage.SetParent(ctx, issueID, parent); err != nil {
+						if err == storage.ErrCycle {
+							return fmt.Errorf("cannot set parent: would create a cycle")
+						}
+						return fmt.Errorf("setting parent: %w", err)
+					}
+				}
+				// Re-fetch issue since SetParent/RemoveParent modify storage directly
+				issue, err = app.Storage.Get(ctx, issueID)
+				if err != nil {
+					return fmt.Errorf("re-fetching issue after parent update: %w", err)
+				}
+				changed = true
+			}
+
 			// Handle label modifications
 			if len(addLabels) > 0 || len(removeLabels) > 0 {
 				labels := issue.Labels
@@ -164,6 +199,7 @@ Examples:
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, closed)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user (empty string to unassign)")
+	cmd.Flags().StringVar(&parent, "parent", "", "Set parent issue (empty string to remove parent)")
 	cmd.Flags().StringSliceVar(&addLabels, "add-label", nil, "Add label (can repeat)")
 	cmd.Flags().StringSliceVar(&removeLabels, "remove-label", nil, "Remove label (can repeat)")
 

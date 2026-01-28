@@ -24,8 +24,6 @@ var knownCommands = map[string]bool{
 	"dep add":        true,
 	"dep remove":     true,
 	"dep list":       true,
-	"parent set":     true,
-	"parent remove":  true,
 	"children":       true,
 	"comment add":    true,
 	"comment list":   true,
@@ -37,7 +35,6 @@ var knownCommands = map[string]bool{
 // We need to run --help on these to discover their subcommands.
 var parentCommands = map[string]bool{
 	"dep":     true,
-	"parent":  true,
 	"comment": true,
 }
 
@@ -56,7 +53,7 @@ func DiscoverCommands(r *Runner) (unknown []string, err error) {
 	discovered := make(map[string]bool)
 
 	// Parse top-level commands from bd --help
-	result := r.RunRaw("--help")
+	result := r.Run("", "--help")
 	if result.ExitCode != 0 {
 		return nil, fmt.Errorf("bd --help failed: %s", result.Stderr)
 	}
@@ -70,7 +67,7 @@ func DiscoverCommands(r *Runner) (unknown []string, err error) {
 
 		if parentCommands[cmd] {
 			// Parse subcommands
-			subResult := r.RunRaw(cmd, "--help")
+			subResult := r.Run("", cmd, "--help")
 			if subResult.ExitCode != 0 {
 				return nil, fmt.Errorf("bd %s --help failed: %s", cmd, subResult.Stderr)
 			}
