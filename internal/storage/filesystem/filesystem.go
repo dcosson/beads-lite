@@ -241,6 +241,10 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 	if os.IsNotExist(err) {
 		return storage.ErrNotFound
 	}
+	if err == nil {
+		// Clean up lock file for deleted issues.
+		_ = os.Remove(fs.lockPath(id))
+	}
 	return err
 }
 

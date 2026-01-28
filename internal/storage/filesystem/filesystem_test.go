@@ -575,6 +575,32 @@ func TestCloseMovesFile(t *testing.T) {
 	}
 }
 
+func TestDeleteRemovesLockFile(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &storage.Issue{
+		Title:    "Delete Lock Cleanup",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := s.Delete(ctx, id); err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+
+	lockPath := s.lockPath(id)
+	if fileExists(lockPath) {
+		t.Error("Lock file should be removed after delete")
+	}
+}
+
 // TestReopenMovesFile verifies that Reopen physically moves the JSON file back.
 func TestReopenMovesFile(t *testing.T) {
 	s := setupTestStorage(t)
