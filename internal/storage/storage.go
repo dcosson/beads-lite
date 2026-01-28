@@ -1,4 +1,4 @@
-// Package storage defines the interface for issue persistence in beads.
+// Package storage defines the interface for issue persistence in beads-lite.
 // All storage engines (filesystem, SQLite, Dolt, etc.) implement this interface.
 package storage
 

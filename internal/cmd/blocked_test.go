@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"beads2/internal/storage"
-	"beads2/internal/storage/filesystem"
+	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 )
 
 func TestBlockedCommand(t *testing.T) {

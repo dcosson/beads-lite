@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads2/internal/storage"
-	"beads2/internal/storage/filesystem"
+	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 )
 
 func TestListCommand_DefaultListsOpenIssues(t *testing.T) {

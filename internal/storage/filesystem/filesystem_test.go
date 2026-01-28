@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"beads2/internal/storage"
+	"beads-lite/internal/storage"
 )
 
 // TestGenerateID verifies the ID format is bd-XXXX (4 hex chars).

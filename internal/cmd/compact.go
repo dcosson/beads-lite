@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"beads2/internal/storage"
+	"beads-lite/internal/storage"
 
 	"github.com/spf13/cobra"
 )

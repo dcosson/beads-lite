@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"beads2/internal/cmd"
+	"beads-lite/internal/cmd"
 )
 
 func main() {

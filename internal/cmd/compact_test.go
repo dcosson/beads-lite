@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"beads2/internal/storage"
+	"beads-lite/internal/storage"
 )
 
 func TestCompactDryRun(t *testing.T) {

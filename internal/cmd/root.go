@@ -1,4 +1,4 @@
-// Package cmd implements the CLI commands for beads.
+// Package cmd implements the CLI commands for beads-lite.
 package cmd
 
 import (
@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"beads2/internal/config"
-	"beads2/internal/storage/filesystem"
+	"beads-lite/internal/config"
+	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
 )
@@ -130,7 +130,7 @@ func newRootCmd(provider *AppProvider) *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "bd",
 		Short: "A lightweight issue tracker that lives in your repo",
-		Long: `Beads is a git-native issue tracker that stores issues as JSON files.
+		Long: `Beads Lite is a git-native issue tracker that stores issues as JSON files.
 Issues are stored in .beads/<project>/open/ and .beads/<project>/closed/ directories,
 making them easy to review, diff, and track alongside your code.`,
 		SilenceUsage:  true,

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Create a temporary beads sandbox directory for testing
+# Create a temporary beads-lite sandbox directory for testing
 # Usage: ./setup_bd_sandbox.sh
 # Prints the sandbox directory path on success
 

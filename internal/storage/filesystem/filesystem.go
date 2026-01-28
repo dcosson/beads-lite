@@ -16,7 +16,7 @@ import (
 	"syscall"
 	"time"
 
-	"beads2/internal/storage"
+	"beads-lite/internal/storage"
 )
 
 // FilesystemStorage implements storage.Storage using filesystem-based JSON files.

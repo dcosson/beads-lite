@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"beads2/internal/config"
+	"beads-lite/internal/config"
 )
 
 func TestAppProvider_Get(t *testing.T) {

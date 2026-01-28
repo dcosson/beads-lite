@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"beads2/internal/config"
-	"beads2/internal/storage/filesystem"
+	"beads-lite/internal/config"
+	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
 )
@@ -24,8 +24,8 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "init",
-		Short: "Initialize a new beads repository",
-		Long:  `Initialize a new beads repository in the current directory.`,
+		Short: "Initialize a new beads-lite repository",
+		Long:  `Initialize a new beads-lite repository in the current directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runInit(provider.BeadsPath, force, projectName)
 		},
@@ -65,7 +65,7 @@ func runInit(path string, force bool, projectName string) error {
 	// Check if .beads already exists
 	if _, err := os.Stat(beadsPath); err == nil {
 		if !force {
-			return errors.New("beads repository already exists (use --force to reinitialize)")
+			return errors.New("beads-lite repository already exists (use --force to reinitialize)")
 		}
 	} else if !os.IsNotExist(err) {
 		return fmt.Errorf("checking .beads directory: %w", err)
@@ -90,6 +90,6 @@ func runInit(path string, force bool, projectName string) error {
 		return fmt.Errorf("initializing storage: %w", err)
 	}
 
-	fmt.Printf("Initialized beads repository at %s\n", beadsPath)
+	fmt.Printf("Initialized beads-lite repository at %s\n", beadsPath)
 	return nil
 }

@@ -1,4 +1,4 @@
-module beads2
+module beads-lite
 
 go 1.24.4
 

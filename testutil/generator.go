@@ -1,4 +1,4 @@
-// Package testutil provides test utilities for beads storage testing.
+// Package testutil provides test utilities for beads-lite storage testing.
 package testutil
 
 import (
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 
-	"beads2/internal/storage"
+	"beads-lite/internal/storage"
 )
 
 // IssueGenerator creates test issues with various relationship patterns.

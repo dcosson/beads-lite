@@ -5,8 +5,8 @@ import (
 	"io"
 	"os"
 
-	"beads2/internal/config"
-	"beads2/internal/storage"
+	"beads-lite/internal/config"
+	"beads-lite/internal/storage"
 
 	"golang.org/x/term"
 )

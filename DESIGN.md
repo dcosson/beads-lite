@@ -1,8 +1,8 @@
-# Beads v2 Design Specification
+# Beads Lite Design Specification
 
 ## Overview
 
-Beads v2 is a complete redesign of the storage layer, replacing the dual SQLite + JSONL sync architecture with a **pluggable storage engine** model. The system defines a clean `Storage` interface that commands program against, with swappable backend implementations.
+Beads Lite is a complete redesign of the storage layer, replacing the dual SQLite + JSONL sync architecture with a **pluggable storage engine** model. The system defines a clean `Storage` interface that commands program against, with swappable backend implementations.
 
 **Core principles:**
 - Storage engine is swappable via interface (filesystem, SQLite, Dolt, etc.)
@@ -439,7 +439,7 @@ import (
     "path/filepath"
     "syscall"
 
-    "beads/storage"
+    "beads-lite/storage"
 )
 
 type FilesystemStorage struct {
@@ -845,7 +845,7 @@ import (
     "context"
     "fmt"
 
-    "beads/storage"
+    "beads-lite/storage"
     "github.com/spf13/cobra"
 )
 

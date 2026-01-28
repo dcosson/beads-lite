@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Benchmark script for beads issue operations
+# Benchmark script for beads-lite issue operations
 # Usage: ./benchmark_beads.sh [count]
 #   count: number of issues to create (default: 10)
 
@@ -12,7 +12,7 @@ BD_CMD="${BD_CMD:-bd}"
 # Number of issues to create
 COUNT="${1:-10}"
 
-echo "=== Beads Benchmark ==="
+echo "=== Beads Lite Benchmark ==="
 echo "Command: $BD_CMD"
 echo "Issue count: $COUNT"
 

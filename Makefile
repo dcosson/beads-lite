@@ -1,4 +1,4 @@
-BD_CMD ?= ./bd
+BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= $(shell which bd)
 
 .PHONY: test test-unit test-e2e e2e-update build
@@ -9,8 +9,8 @@ test-unit:
 	go test ./internal/... ./cmd/...
 
 test-e2e:
-	@test -x "$(BD_CMD)" || (echo "error: bd binary not found at $(BD_CMD)" && echo "Run 'make build' first or set BD_CMD" && exit 1)
-	BD_CMD=$(realpath $(BD_CMD)) go test ./e2etests -v -count=1
+	@test -x "$(BD_LITE_CMD)" || (echo "error: bd binary not found at $(BD_LITE_CMD)" && echo "Run 'make build' first or set BD_LITE_CMD" && exit 1)
+	BD_CMD=$(realpath $(BD_LITE_CMD)) go test ./e2etests -v -count=1
 
 e2e-update:
 	@test -n "$(BD_REF_CMD)" || (echo "error: reference bd not found in PATH" && echo "Install bd or set BD_REF_CMD" && exit 1)

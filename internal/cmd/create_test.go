@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads2/internal/storage/filesystem"
-	"beads2/internal/storage"
+	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/storage"
 )
 
 func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {

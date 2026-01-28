@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"beads2/internal/storage/filesystem"
-	"beads2/internal/storage"
+	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/storage"
 )
 
 // TestFilesystemContract runs the storage contract tests against FilesystemStorage.

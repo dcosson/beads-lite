@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Tear down a beads sandbox directory
+# Tear down a beads-lite sandbox directory
 # Usage: ./teardown_bd_sandbox.sh <sandbox-dir>
 #        ./teardown_bd_sandbox.sh --all
 
