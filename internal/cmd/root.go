@@ -141,6 +141,7 @@ making them easy to review, diff, and track alongside your code.`,
 	// Register all commands
 	rootCmd.AddCommand(newInitCmd(provider))
 	rootCmd.AddCommand(newCreateCmd(provider))
+	rootCmd.AddCommand(newShowCmd(provider))
 	rootCmd.AddCommand(newUpdateCmd(provider))
 	rootCmd.AddCommand(newDeleteCmd(provider))
 	rootCmd.AddCommand(newDoctorCmd(provider))
