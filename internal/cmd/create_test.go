@@ -25,6 +25,25 @@ func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
 	}, store
 }
 
+// extractCreatedID extracts the issue ID from create command output.
+// The output format is:
+//
+//	✓ Created issue: bd-xxxx
+//	  Title: ...
+//	  Priority: ...
+//	  Status: ...
+func extractCreatedID(output string) string {
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "Created issue:") {
+			parts := strings.Split(line, "Created issue:")
+			if len(parts) == 2 {
+				return strings.TrimSpace(parts[1])
+			}
+		}
+	}
+	return ""
+}
+
 func TestCreateBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
@@ -35,7 +54,7 @@ func TestCreateBasic(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	id := strings.TrimSpace(out.String())
+	id := extractCreatedID(out.String())
 	if !strings.HasPrefix(id, "bd-") {
 		t.Errorf("expected id to start with bd-, got %q", id)
 	}
@@ -80,7 +99,7 @@ func TestCreateWithType(t *testing.T) {
 				t.Fatalf("create failed: %v", err)
 			}
 
-			id := strings.TrimSpace(out.String())
+			id := extractCreatedID(out.String())
 			issue, _ := store.Get(context.Background(), id)
 			if issue.Type != tt.expected {
 				t.Errorf("expected type %q, got %q", tt.expected, issue.Type)
@@ -94,11 +113,17 @@ func TestCreateWithPriority(t *testing.T) {
 		priority string
 		expected storage.Priority
 	}{
-		{"critical", storage.PriorityCritical},
-		{"high", storage.PriorityHigh},
-		{"medium", storage.PriorityMedium},
-		{"low", storage.PriorityLow},
-		{"HIGH", storage.PriorityHigh}, // test case insensitivity
+		{"0", storage.PriorityCritical},
+		{"p0", storage.PriorityCritical},
+		{"P0", storage.PriorityCritical}, // test case insensitivity
+		{"1", storage.PriorityHigh},
+		{"p1", storage.PriorityHigh},
+		{"2", storage.PriorityMedium},
+		{"p2", storage.PriorityMedium},
+		{"3", storage.PriorityLow},
+		{"p3", storage.PriorityLow},
+		{"4", storage.PriorityBacklog},
+		{"p4", storage.PriorityBacklog},
 	}
 
 	for _, tt := range tests {
@@ -112,7 +137,7 @@ func TestCreateWithPriority(t *testing.T) {
 				t.Fatalf("create failed: %v", err)
 			}
 
-			id := strings.TrimSpace(out.String())
+			id := extractCreatedID(out.String())
 			issue, _ := store.Get(context.Background(), id)
 			if issue.Priority != tt.expected {
 				t.Errorf("expected priority %q, got %q", tt.expected, issue.Priority)
@@ -131,7 +156,7 @@ func TestCreateWithLabels(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	id := strings.TrimSpace(out.String())
+	id := extractCreatedID(out.String())
 	issue, _ := store.Get(context.Background(), id)
 	if len(issue.Labels) != 2 {
 		t.Errorf("expected 2 labels, got %d", len(issue.Labels))
@@ -151,7 +176,7 @@ func TestCreateWithAssignee(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	id := strings.TrimSpace(out.String())
+	id := extractCreatedID(out.String())
 	issue, _ := store.Get(context.Background(), id)
 	if issue.Assignee != "alice" {
 		t.Errorf("expected assignee %q, got %q", "alice", issue.Assignee)
@@ -168,7 +193,7 @@ func TestCreateWithDescription(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	id := strings.TrimSpace(out.String())
+	id := extractCreatedID(out.String())
 	issue, _ := store.Get(context.Background(), id)
 	if issue.Description != "This is a detailed description" {
 		t.Errorf("expected description %q, got %q", "This is a detailed description", issue.Description)
@@ -192,7 +217,7 @@ func TestCreateWithParent(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	childID := strings.TrimSpace(out.String())
+	childID := extractCreatedID(out.String())
 	child, _ := store.Get(context.Background(), childID)
 	if child.Parent != parentID {
 		t.Errorf("expected parent %q, got %q", parentID, child.Parent)
@@ -229,7 +254,7 @@ func TestCreateWithDependsOn(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	dependentID := strings.TrimSpace(out.String())
+	dependentID := extractCreatedID(out.String())
 	dependent, _ := store.Get(context.Background(), dependentID)
 
 	found := false
@@ -271,7 +296,7 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	dependentID := strings.TrimSpace(out.String())
+	dependentID := extractCreatedID(out.String())
 	dependent, _ := store.Get(context.Background(), dependentID)
 
 	if len(dependent.DependsOn) != 2 {
@@ -322,16 +347,26 @@ func TestCreateInvalidType(t *testing.T) {
 }
 
 func TestCreateInvalidPriority(t *testing.T) {
-	app, _ := setupTestApp(t)
+	// Test that word priorities are rejected (must use 0-4 or P0-P4)
+	invalidPriorities := []string{"invalid", "medium", "high", "low", "critical"}
 
-	cmd := newCreateCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"Test issue", "--priority", "invalid"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Error("expected error for invalid priority")
-	}
-	if !strings.Contains(err.Error(), "invalid priority") {
-		t.Errorf("expected error about invalid priority, got: %v", err)
+	for _, priority := range invalidPriorities {
+		t.Run(priority, func(t *testing.T) {
+			app, _ := setupTestApp(t)
+
+			cmd := newCreateCmd(NewTestProvider(app))
+			cmd.SetArgs([]string{"Test issue", "--priority", priority})
+			err := cmd.Execute()
+			if err == nil {
+				t.Errorf("expected error for priority %q", priority)
+			}
+			if !strings.Contains(err.Error(), "invalid priority") {
+				t.Errorf("expected error about invalid priority, got: %v", err)
+			}
+			if !strings.Contains(err.Error(), "not words like high/medium/low") {
+				t.Errorf("expected error message to mention word restriction, got: %v", err)
+			}
+		})
 	}
 }
 
@@ -380,7 +415,7 @@ func TestCreateAllFlags(t *testing.T) {
 	cmd.SetArgs([]string{
 		"Full featured issue",
 		"--type", "feature",
-		"--priority", "high",
+		"--priority", "1",
 		"--parent", parentID,
 		"--depends-on", depID,
 		"--label", "backend",
@@ -392,7 +427,7 @@ func TestCreateAllFlags(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	id := strings.TrimSpace(out.String())
+	id := extractCreatedID(out.String())
 	issue, _ := store.Get(context.Background(), id)
 
 	if issue.Title != "Full featured issue" {

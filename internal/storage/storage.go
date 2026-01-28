@@ -63,7 +63,26 @@ const (
 	PriorityHigh     Priority = "high"
 	PriorityMedium   Priority = "medium"
 	PriorityLow      Priority = "low"
+	PriorityBacklog  Priority = "backlog"
 )
+
+// Display returns the priority in P0-P4 format for human-readable output.
+func (p Priority) Display() string {
+	switch p {
+	case PriorityCritical:
+		return "P0"
+	case PriorityHigh:
+		return "P1"
+	case PriorityMedium:
+		return "P2"
+	case PriorityLow:
+		return "P3"
+	case PriorityBacklog:
+		return "P4"
+	default:
+		return string(p)
+	}
+}
 
 // IssueType represents the category of an issue.
 type IssueType string

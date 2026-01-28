@@ -24,20 +24,21 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		labels      []string
 		assignee    string
 		description string
+		titleFlag   string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "create <title>",
+		Use:   "create [title]",
 		Short: "Create a new issue",
 		Long: `Create a new issue with the specified title.
 
 Examples:
   bd create "Fix login bug"
+  bd create --title "Fix login bug"
   bd create "Add OAuth support" --type feature --priority high
   bd create "Implement caching" --parent bd-a1b2
   bd create "Write tests" --depends-on bd-e5f6
   bd create "Task" --description -   # read description from stdin`,
-		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -45,7 +46,17 @@ Examples:
 			}
 
 			ctx := cmd.Context()
-			title := args[0]
+			if len(args) > 1 {
+				return fmt.Errorf("accepts at most 1 arg, received %d", len(args))
+			}
+
+			title := titleFlag
+			if len(args) == 1 {
+				title = args[0]
+			}
+			if strings.TrimSpace(title) == "" {
+				return fmt.Errorf("title is required (provide as argument or --title)")
+			}
 
 			// Parse and validate type
 			issueType := storage.TypeTask
@@ -69,18 +80,11 @@ Examples:
 			// Parse and validate priority
 			issuePriority := storage.PriorityMedium
 			if priority != "" {
-				switch strings.ToLower(priority) {
-				case "critical":
-					issuePriority = storage.PriorityCritical
-				case "high":
-					issuePriority = storage.PriorityHigh
-				case "medium":
-					issuePriority = storage.PriorityMedium
-				case "low":
-					issuePriority = storage.PriorityLow
-				default:
-					return fmt.Errorf("invalid priority %q: must be one of critical, high, medium, low", priority)
+				p, err := parsePriorityInput(priority)
+				if err != nil {
+					return err
 				}
+				issuePriority = p
 			}
 
 			// Handle description from stdin if "-"
@@ -132,13 +136,24 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintln(app.Out, id)
+			// Warn if no description provided
+			if desc == "" {
+				fmt.Fprintln(app.Out, "⚠ Creating issue without description.")
+				fmt.Fprintln(app.Out, "  Issues without descriptions lack context for future work.")
+				fmt.Fprintln(app.Out, "  Consider adding --description=\"Why this issue exists and what needs to be done\"")
+			}
+
+			fmt.Fprintf(app.Out, "✓ Created issue: %s\n", id)
+			fmt.Fprintf(app.Out, "  Title: %s\n", title)
+			fmt.Fprintf(app.Out, "  Priority: %s\n", issuePriority.Display())
+			fmt.Fprintf(app.Out, "  Status: %s\n", storage.StatusOpen)
 			return nil
 		},
 	}
 
+	cmd.Flags().StringVar(&titleFlag, "title", "", "Issue title (required if no positional title is provided)")
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "Issue type (task, bug, feature, epic, chore)")
-	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority (critical, high, medium, low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority (0-4 or P0-P4)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Parent issue ID")
 	cmd.Flags().StringSliceVarP(&dependsOn, "depends-on", "d", nil, "Issue ID this depends on (can repeat)")
 	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Add label (can repeat)")
@@ -146,4 +161,21 @@ Examples:
 	cmd.Flags().StringVar(&description, "description", "", "Full description (use - for stdin)")
 
 	return cmd
+}
+
+func parsePriorityInput(s string) (storage.Priority, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "0", "p0":
+		return storage.PriorityCritical, nil
+	case "1", "p1":
+		return storage.PriorityHigh, nil
+	case "2", "p2":
+		return storage.PriorityMedium, nil
+	case "3", "p3":
+		return storage.PriorityLow, nil
+	case "4", "p4":
+		return storage.PriorityBacklog, nil
+	default:
+		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
+	}
 }

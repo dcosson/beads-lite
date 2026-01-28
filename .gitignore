@@ -2,3 +2,6 @@
 .claude/
 .beads/
 .logs/
+
+# built binary
+bd
