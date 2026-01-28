@@ -783,6 +783,85 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
+func TestStaleLockCleanup(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	ctx := context.Background()
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create an issue
+	issue := &storage.Issue{Title: "Test issue"}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Manually create a stale lock file (simulating a killed process)
+	staleLockPath := filepath.Join(dir, "open", id+".lock")
+	f, err := os.Create(staleLockPath)
+	if err != nil {
+		t.Fatalf("Failed to create stale lock: %v", err)
+	}
+	f.Close() // Close without holding flock - this simulates a stale lock
+
+	// Verify stale lock exists
+	if !fileExists(staleLockPath) {
+		t.Fatal("Stale lock file should exist")
+	}
+
+	// Now perform an operation - it should clean up the stale lock
+	issue, _ = s.Get(ctx, id)
+	issue.Title = "Updated"
+	if err := s.Update(ctx, issue); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	// Lock file should be cleaned up after the operation
+	if fileExists(staleLockPath) {
+		t.Error("Stale lock file should be cleaned up after Update")
+	}
+}
+
+// TestStaleLockCleanupOnInit verifies that stale locks are cleaned up when Init is called.
+func TestStaleLockCleanupOnInit(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create directory structure manually
+	openDir := filepath.Join(dir, "open")
+	if err := os.MkdirAll(openDir, 0755); err != nil {
+		t.Fatalf("Failed to create open dir: %v", err)
+	}
+
+	// Create a stale lock file (simulating a killed process)
+	staleLockPath := filepath.Join(openDir, "bd-test.lock")
+	f, err := os.Create(staleLockPath)
+	if err != nil {
+		t.Fatalf("Failed to create stale lock: %v", err)
+	}
+	f.Close() // Close without holding flock - this simulates a stale lock
+
+	// Verify stale lock exists
+	if !fileExists(staleLockPath) {
+		t.Fatal("Stale lock file should exist before Init")
+	}
+
+	// Now call Init - it should clean up the stale lock
+	s := New(dir)
+	ctx := context.Background()
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Lock file should be cleaned up
+	if fileExists(staleLockPath) {
+		t.Error("Stale lock file should be cleaned up by Init")
+	}
+}
+
 // TestLockFileCleanupAfterUpdate verifies that lock files are removed after Update operations.
 func TestLockFileCleanupAfterUpdate(t *testing.T) {
 	dir := t.TempDir()

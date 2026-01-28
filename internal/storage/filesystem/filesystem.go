@@ -37,7 +37,43 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 	if err := os.MkdirAll(filepath.Join(fs.root, "closed"), 0755); err != nil {
 		return err
 	}
+	// Clean up any stale lock files from previous crashed processes
+	fs.CleanupStaleLocks()
 	return nil
+}
+
+// CleanupStaleLocks removes lock files that don't have an active flock.
+// This handles the case where a process was killed before it could clean up.
+func (fs *FilesystemStorage) CleanupStaleLocks() {
+	openDir := filepath.Join(fs.root, "open")
+	entries, err := os.ReadDir(openDir)
+	if err != nil {
+		return // Best effort cleanup
+	}
+
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".lock") {
+			continue
+		}
+
+		lockPath := filepath.Join(openDir, entry.Name())
+		f, err := os.OpenFile(lockPath, os.O_RDWR, 0644)
+		if err != nil {
+			continue // Can't open, skip
+		}
+
+		// Try non-blocking lock - if we get it, the lock is stale
+		err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			// We got the lock, meaning no other process holds it - it's stale
+			syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+			f.Close()
+			os.Remove(lockPath)
+		} else {
+			// Lock is held by another process, leave it alone
+			f.Close()
+		}
+	}
 }
 
 func (fs *FilesystemStorage) issuePath(id string, closed bool) string {

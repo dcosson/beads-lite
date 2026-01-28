@@ -54,6 +54,7 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	store := filesystem.New(paths.DataDir)
+	store.CleanupStaleLocks()
 
 	out := p.Out
 	if out == nil {
