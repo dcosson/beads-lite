@@ -142,6 +142,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newInitCmd(provider))
 	rootCmd.AddCommand(newCreateCmd(provider))
 	rootCmd.AddCommand(newUpdateCmd(provider))
+	rootCmd.AddCommand(newDeleteCmd(provider))
 	rootCmd.AddCommand(newDoctorCmd(provider))
 	rootCmd.AddCommand(newStatsCmd(provider))
 	rootCmd.AddCommand(newSearchCmd(provider))
