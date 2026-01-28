@@ -1,0 +1,35 @@
+=== search OAuth open only ===
+[
+  {
+    "id": "ISSUE_1",
+    "status": "open",
+    "title": "Fix authentication bug"
+  }
+]
+
+=== search OAuth all ===
+[
+  {
+    "id": "ISSUE_1",
+    "status": "open",
+    "title": "Fix authentication bug"
+  },
+  {
+    "id": "ISSUE_2",
+    "status": "closed",
+    "title": "Update OAuth library"
+  }
+]
+
+=== search OAuth title only ===
+[]
+
+=== search by description ===
+[
+  {
+    "id": "ISSUE_3",
+    "status": "open",
+    "title": "Add search feature"
+  }
+]
+

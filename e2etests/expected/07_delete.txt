@@ -1,0 +1,23 @@
+=== delete issue ===
+{
+  "id": "ISSUE_1",
+  "status": "deleted"
+}
+
+=== list after delete ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_2",
+    "priority": "medium",
+    "status": "open",
+    "title": "Keeper",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show deleted issue ===
+EXIT_CODE: 1
+

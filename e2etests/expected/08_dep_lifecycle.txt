@@ -1,0 +1,76 @@
+=== create issue A ===
+{
+  "id": "ISSUE_1"
+}
+
+=== create issue B ===
+{
+  "id": "ISSUE_2"
+}
+
+=== add dependency A depends on B ===
+{
+  "dependency": "ISSUE_2",
+  "issue": "ISSUE_1",
+  "status": "added"
+}
+
+=== show A has depends_on ===
+{
+  "created_at": "TIMESTAMP",
+  "depends_on": [
+    "ISSUE_2"
+  ],
+  "description": "",
+  "id": "ISSUE_1",
+  "priority": "medium",
+  "status": "open",
+  "title": "Issue A",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+
+=== show B has dependents ===
+{
+  "created_at": "TIMESTAMP",
+  "dependents": [
+    "ISSUE_1"
+  ],
+  "description": "",
+  "id": "ISSUE_2",
+  "priority": "medium",
+  "status": "open",
+  "title": "Issue B",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+
+=== dep list A ===
+{
+  "dependents": null,
+  "depends_on": [
+    "ISSUE_2"
+  ],
+  "id": "ISSUE_1",
+  "title": "Issue A"
+}
+
+=== remove dependency ===
+{
+  "dependency": "ISSUE_2",
+  "issue": "ISSUE_1",
+  "status": "removed"
+}
+
+=== show A after dep removal ===
+{
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_1",
+  "priority": "medium",
+  "status": "open",
+  "title": "Issue A",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+

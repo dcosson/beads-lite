@@ -1,0 +1,115 @@
+=== list open issues ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_2",
+    "priority": "low",
+    "status": "open",
+    "title": "Feature request",
+    "type": "feature",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_1",
+    "priority": "medium",
+    "status": "open",
+    "title": "Open task",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list all issues ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_2",
+    "priority": "low",
+    "status": "open",
+    "title": "Feature request",
+    "type": "feature",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_3",
+    "priority": "high",
+    "status": "closed",
+    "title": "High bug",
+    "type": "bug",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_1",
+    "priority": "medium",
+    "status": "open",
+    "title": "Open task",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list closed issues ===
+[
+  {
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_3",
+    "priority": "high",
+    "status": "closed",
+    "title": "High bug",
+    "type": "bug",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list by type feature ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_2",
+    "priority": "low",
+    "status": "open",
+    "title": "Feature request",
+    "type": "feature",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list by priority high ===
+null
+
+=== list format ids ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_1",
+    "priority": "medium",
+    "status": "open",
+    "title": "Open task",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_2",
+    "priority": "low",
+    "status": "open",
+    "title": "Feature request",
+    "type": "feature",
+    "updated_at": "TIMESTAMP"
+  }
+]
+

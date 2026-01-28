@@ -1,0 +1,64 @@
+=== update title ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== update description ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== update priority ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== update type ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== update status ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== add labels ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== remove label ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== update assignee ===
+{
+  "id": "ISSUE_1",
+  "status": "updated"
+}
+
+=== show after all updates ===
+{
+  "assignee": "charlie",
+  "created_at": "TIMESTAMP",
+  "description": "New description",
+  "id": "ISSUE_1",
+  "labels": [
+    "v2"
+  ],
+  "priority": "critical",
+  "status": "in-progress",
+  "title": "Updated title",
+  "type": "bug",
+  "updated_at": "TIMESTAMP"
+}
+

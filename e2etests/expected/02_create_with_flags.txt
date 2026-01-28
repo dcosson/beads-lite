@@ -1,0 +1,36 @@
+=== create dependency target ===
+{
+  "id": "ISSUE_1"
+}
+
+=== create parent issue ===
+{
+  "id": "ISSUE_2"
+}
+
+=== create with all flags ===
+{
+  "id": "ISSUE_3"
+}
+
+=== show the created issue ===
+{
+  "assignee": "alice",
+  "created_at": "TIMESTAMP",
+  "depends_on": [
+    "ISSUE_1"
+  ],
+  "description": "A detailed description",
+  "id": "ISSUE_3",
+  "labels": [
+    "urgent",
+    "v2"
+  ],
+  "parent": "ISSUE_2",
+  "priority": "high",
+  "status": "open",
+  "title": "Full featured issue",
+  "type": "feature",
+  "updated_at": "TIMESTAMP"
+}
+

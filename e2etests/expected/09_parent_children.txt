@@ -1,0 +1,58 @@
+=== create parent ===
+{
+  "id": "ISSUE_1"
+}
+
+=== create child ===
+{
+  "id": "ISSUE_2"
+}
+
+=== set parent ===
+{
+  "child": "ISSUE_2",
+  "parent": "ISSUE_1",
+  "status": "updated"
+}
+
+=== show child has parent ===
+{
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_2",
+  "parent": "ISSUE_1",
+  "priority": "medium",
+  "status": "open",
+  "title": "Child issue",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+
+=== list children of parent ===
+[
+  {
+    "id": "ISSUE_2",
+    "status": "open",
+    "title": "Child issue"
+  }
+]
+
+=== remove parent ===
+{
+  "child": "ISSUE_2",
+  "old_parent": "ISSUE_1",
+  "status": "removed"
+}
+
+=== show child after parent removal ===
+{
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_2",
+  "priority": "medium",
+  "status": "open",
+  "title": "Child issue",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+

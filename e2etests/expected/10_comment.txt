@@ -1,0 +1,64 @@
+=== add first comment ===
+{
+  "comment": {
+    "author": "",
+    "body": "First comment",
+    "created_at": "TIMESTAMP",
+    "id": "COMMENT_1"
+  },
+  "issue_id": "ISSUE_1"
+}
+
+=== add second comment ===
+{
+  "comment": {
+    "author": "",
+    "body": "Second comment",
+    "created_at": "TIMESTAMP",
+    "id": "COMMENT_2"
+  },
+  "issue_id": "ISSUE_1"
+}
+
+=== list comments ===
+[
+  {
+    "author": "",
+    "body": "First comment",
+    "created_at": "TIMESTAMP",
+    "id": "COMMENT_1"
+  },
+  {
+    "author": "",
+    "body": "Second comment",
+    "created_at": "TIMESTAMP",
+    "id": "COMMENT_2"
+  }
+]
+
+=== show issue with comments ===
+{
+  "comments": [
+    {
+      "author": "",
+      "body": "First comment",
+      "created_at": "TIMESTAMP",
+      "id": "COMMENT_1"
+    },
+    {
+      "author": "",
+      "body": "Second comment",
+      "created_at": "TIMESTAMP",
+      "id": "COMMENT_2"
+    }
+  ],
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_1",
+  "priority": "medium",
+  "status": "open",
+  "title": "Commentable task",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+

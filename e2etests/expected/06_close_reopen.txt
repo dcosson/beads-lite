@@ -1,0 +1,67 @@
+=== close issue ===
+{
+  "closed": [
+    "ISSUE_1"
+  ]
+}
+
+=== show closed issue ===
+{
+  "closed_at": "TIMESTAMP",
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_1",
+  "priority": "medium",
+  "status": "closed",
+  "title": "Closeable task",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+
+=== list closed ===
+[
+  {
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_1",
+    "priority": "medium",
+    "status": "closed",
+    "title": "Closeable task",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== reopen issue ===
+{
+  "id": "ISSUE_1",
+  "status": "reopened"
+}
+
+=== show reopened issue ===
+{
+  "created_at": "TIMESTAMP",
+  "description": "",
+  "id": "ISSUE_1",
+  "priority": "medium",
+  "status": "open",
+  "title": "Closeable task",
+  "type": "task",
+  "updated_at": "TIMESTAMP"
+}
+
+=== list open after reopen ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "description": "",
+    "id": "ISSUE_1",
+    "priority": "medium",
+    "status": "open",
+    "title": "Closeable task",
+    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
