@@ -33,7 +33,7 @@ func newUpdateCmd(provider *AppProvider) *cobra.Command {
 
 Examples:
   bd update bd-a1b2 --title "New title"
-  bd update bd-a1b2 --priority critical
+  bd update bd-a1b2 --priority 0
   bd update bd-a1b2 --status in-progress
   bd update bd-a1b2 --add-label urgent --remove-label backlog
   bd update bd-a1b2 --assignee alice
@@ -153,14 +153,14 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Updated %s\n", issueID)
+			fmt.Fprintf(app.Out, "%s Updated issue: %s\n", app.SuccessColor("✓"), issueID)
 			return nil
 		},
 	}
 
 	cmd.Flags().StringVar(&title, "title", "", "New title")
 	cmd.Flags().StringVar(&description, "description", "", "New description (use - for stdin)")
-	cmd.Flags().StringVarP(&priority, "priority", "p", "", "New priority (critical, high, medium, low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "New priority (0-4 or P0-P4)")
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, closed)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user (empty string to unassign)")
@@ -172,16 +172,18 @@ Examples:
 
 func parsePriority(s string) (storage.Priority, error) {
 	switch strings.ToLower(s) {
-	case "critical":
+	case "0", "p0":
 		return storage.PriorityCritical, nil
-	case "high":
+	case "1", "p1":
 		return storage.PriorityHigh, nil
-	case "medium":
+	case "2", "p2":
 		return storage.PriorityMedium, nil
-	case "low":
+	case "3", "p3":
 		return storage.PriorityLow, nil
+	case "4", "p4":
+		return storage.PriorityBacklog, nil
 	default:
-		return "", fmt.Errorf("invalid priority %q: must be one of critical, high, medium, low", s)
+		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
 	}
 }
 

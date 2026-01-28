@@ -53,6 +53,27 @@ func TestUpdateTitle(t *testing.T) {
 	}
 }
 
+func TestUpdateOutputFormat(t *testing.T) {
+	app, store := setupTestApp(t)
+	issueID := createTestIssue(t, store)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{issueID, "--title", "New title"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	output := out.String()
+	// Check for the checkmark (with ANSI color codes) and the message
+	if !strings.Contains(output, "✓") {
+		t.Errorf("expected output to contain checkmark, got %q", output)
+	}
+	if !strings.Contains(output, "Updated issue: "+issueID) {
+		t.Errorf("expected output to contain 'Updated issue: %s', got %q", issueID, output)
+	}
+}
+
 func TestUpdateDescription(t *testing.T) {
 	app, store := setupTestApp(t)
 	issueID := createTestIssue(t, store)
@@ -74,11 +95,17 @@ func TestUpdatePriority(t *testing.T) {
 		priority string
 		expected storage.Priority
 	}{
-		{"critical", storage.PriorityCritical},
-		{"high", storage.PriorityHigh},
-		{"medium", storage.PriorityMedium},
-		{"low", storage.PriorityLow},
-		{"HIGH", storage.PriorityHigh}, // test case insensitivity
+		{"0", storage.PriorityCritical},
+		{"p0", storage.PriorityCritical},
+		{"P0", storage.PriorityCritical}, // test case insensitivity
+		{"1", storage.PriorityHigh},
+		{"p1", storage.PriorityHigh},
+		{"2", storage.PriorityMedium},
+		{"p2", storage.PriorityMedium},
+		{"3", storage.PriorityLow},
+		{"p3", storage.PriorityLow},
+		{"4", storage.PriorityBacklog},
+		{"p4", storage.PriorityBacklog},
 	}
 
 	for _, tt := range tests {
@@ -313,7 +340,7 @@ func TestUpdateMultipleFields(t *testing.T) {
 	cmd.SetArgs([]string{
 		issueID,
 		"--title", "New title",
-		"--priority", "high",
+		"--priority", "1",
 		"--status", "in-progress",
 		"--assignee", "bob",
 	})
@@ -377,17 +404,27 @@ func TestUpdateNoChanges(t *testing.T) {
 }
 
 func TestUpdateInvalidPriority(t *testing.T) {
-	app, store := setupTestApp(t)
-	issueID := createTestIssue(t, store)
+	// Test that word priorities are rejected (must use 0-4 or P0-P4)
+	invalidPriorities := []string{"invalid", "medium", "high", "low", "critical"}
 
-	cmd := newUpdateCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{issueID, "--priority", "invalid"})
-	err := cmd.Execute()
-	if err == nil {
-		t.Error("expected error for invalid priority")
-	}
-	if !strings.Contains(err.Error(), "invalid priority") {
-		t.Errorf("expected error about invalid priority, got: %v", err)
+	for _, priority := range invalidPriorities {
+		t.Run(priority, func(t *testing.T) {
+			app, store := setupTestApp(t)
+			issueID := createTestIssue(t, store)
+
+			cmd := newUpdateCmd(NewTestProvider(app))
+			cmd.SetArgs([]string{issueID, "--priority", priority})
+			err := cmd.Execute()
+			if err == nil {
+				t.Errorf("expected error for priority %q", priority)
+			}
+			if !strings.Contains(err.Error(), "invalid priority") {
+				t.Errorf("expected error about invalid priority, got: %v", err)
+			}
+			if !strings.Contains(err.Error(), "not words like high/medium/low") {
+				t.Errorf("expected error message to mention word restriction, got: %v", err)
+			}
+		})
 	}
 }
 

@@ -138,12 +138,12 @@ Examples:
 
 			// Warn if no description provided
 			if desc == "" {
-				fmt.Fprintln(app.Out, "⚠ Creating issue without description.")
+				fmt.Fprintf(app.Out, "%s Creating issue without description.\n", app.WarnColor("⚠"))
 				fmt.Fprintln(app.Out, "  Issues without descriptions lack context for future work.")
 				fmt.Fprintln(app.Out, "  Consider adding --description=\"Why this issue exists and what needs to be done\"")
 			}
 
-			fmt.Fprintf(app.Out, "✓ Created issue: %s\n", id)
+			fmt.Fprintf(app.Out, "%s Created issue: %s\n", app.SuccessColor("✓"), id)
 			fmt.Fprintf(app.Out, "  Title: %s\n", title)
 			fmt.Fprintf(app.Out, "  Priority: %s\n", issuePriority.Display())
 			fmt.Fprintf(app.Out, "  Status: %s\n", storage.StatusOpen)
