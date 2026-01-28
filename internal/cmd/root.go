@@ -150,6 +150,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newReadyCmd(provider))
 	rootCmd.AddCommand(newBlockedCmd(provider))
 	rootCmd.AddCommand(newCloseCmd(provider))
+	rootCmd.AddCommand(newListCmd(provider))
 
 	return rootCmd
 }
