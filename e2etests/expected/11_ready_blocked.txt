@@ -2,25 +2,24 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "dependents": [
-      "ISSUE_1"
-    ],
-    "description": "",
-    "id": "ISSUE_2",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-twg",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Blocker task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   },
   {
     "created_at": "TIMESTAMP",
-    "description": "",
-    "id": "ISSUE_3",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-c90",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Independent task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]
@@ -28,22 +27,18 @@
 === blocked issues ===
 [
   {
-    "issue": {
-      "created_at": "TIMESTAMP",
-      "depends_on": [
-        "ISSUE_2"
-      ],
-      "description": "",
-      "id": "ISSUE_1",
-      "priority": "medium",
-      "status": "open",
-      "title": "Blocked task",
-      "type": "task",
-      "updated_at": "TIMESTAMP"
-    },
-    "waiting_on": [
-      "ISSUE_2"
-    ]
+    "blocked_by": [
+      "e2etests-twg"
+    ],
+    "blocked_by_count": 1,
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-30o",
+    "issue_type": "task",
+    "priority": 2,
+    "status": "open",
+    "title": "Blocked task",
+    "updated_at": "TIMESTAMP"
   }
 ]
 
@@ -51,29 +46,28 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "depends_on": [
-      "ISSUE_2"
-    ],
-    "description": "",
-    "id": "ISSUE_1",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-30o",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Blocked task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   },
   {
     "created_at": "TIMESTAMP",
-    "description": "",
-    "id": "ISSUE_3",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-c90",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Independent task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]
 
 === blocked after closing blocker ===
-null
+[]
 

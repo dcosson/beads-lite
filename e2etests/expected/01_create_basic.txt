@@ -1,30 +1,44 @@
 === create basic task ===
 {
-  "id": "ISSUE_1"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "e2etests-btp",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Fix login bug",
+  "updated_at": "TIMESTAMP"
 }
 
 === show the created issue ===
-{
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_1",
-  "priority": "medium",
-  "status": "open",
-  "title": "Fix login bug",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-btp",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix login bug",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === list all issues ===
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
-    "id": "ISSUE_1",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "e2etests-btp",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Fix login bug",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]

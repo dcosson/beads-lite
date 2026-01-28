@@ -1,23 +1,27 @@
 === delete issue ===
 {
-  "id": "ISSUE_1",
-  "status": "deleted"
+  "deleted": "e2etests-zrg",
+  "dependencies_removed": 0,
+  "references_updated": 0
 }
 
 === list after delete ===
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
-    "id": "ISSUE_2",
-    "priority": "medium",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "e2etests-xu3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Keeper",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]
 
 === show deleted issue ===
-EXIT_CODE: 1
+EXIT_CODE: 0
 

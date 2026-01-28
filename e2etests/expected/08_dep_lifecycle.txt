@@ -1,76 +1,130 @@
 === create issue A ===
 {
-  "id": "ISSUE_1"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "e2etests-efj",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue A",
+  "updated_at": "TIMESTAMP"
 }
 
 === create issue B ===
 {
-  "id": "ISSUE_2"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "e2etests-08h",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue B",
+  "updated_at": "TIMESTAMP"
 }
 
 === add dependency A depends on B ===
 {
-  "dependency": "ISSUE_2",
-  "issue": "ISSUE_1",
-  "status": "added"
+  "depends_on_id": "e2etests-08h",
+  "issue_id": "e2etests-efj",
+  "status": "added",
+  "type": "blocks"
 }
 
 === show A has depends_on ===
-{
-  "created_at": "TIMESTAMP",
-  "depends_on": [
-    "ISSUE_2"
-  ],
-  "description": "",
-  "id": "ISSUE_1",
-  "priority": "medium",
-  "status": "open",
-  "title": "Issue A",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "e2etests-08h",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue B",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "e2etests-efj",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === show B has dependents ===
-{
-  "created_at": "TIMESTAMP",
-  "dependents": [
-    "ISSUE_1"
-  ],
-  "description": "",
-  "id": "ISSUE_2",
-  "priority": "medium",
-  "status": "open",
-  "title": "Issue B",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "e2etests-efj",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue A",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "e2etests-08h",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === dep list A ===
-{
-  "dependents": null,
-  "depends_on": [
-    "ISSUE_2"
-  ],
-  "id": "ISSUE_1",
-  "title": "Issue A"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_type": "blocks",
+    "id": "e2etests-08h",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === remove dependency ===
 {
-  "dependency": "ISSUE_2",
-  "issue": "ISSUE_1",
+  "depends_on_id": "e2etests-08h",
+  "issue_id": "e2etests-efj",
   "status": "removed"
 }
 
 === show A after dep removal ===
-{
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_1",
-  "priority": "medium",
-  "status": "open",
-  "title": "Issue A",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-efj",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  }
+]
 

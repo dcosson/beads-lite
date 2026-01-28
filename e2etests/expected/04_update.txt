@@ -1,64 +1,145 @@
 === update title ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "e2etests-217",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update description ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update priority ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update type ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update status ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+
 
 === add labels ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "bug",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === remove label ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update assignee ===
-{
-  "id": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "assignee": "charlie",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === show after all updates ===
-{
-  "assignee": "charlie",
-  "created_at": "TIMESTAMP",
-  "description": "New description",
-  "id": "ISSUE_1",
-  "labels": [
-    "v2"
-  ],
-  "priority": "critical",
-  "status": "in-progress",
-  "title": "Updated title",
-  "type": "bug",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "assignee": "charlie",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "e2etests-217",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
