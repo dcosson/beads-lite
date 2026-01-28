@@ -168,4 +168,63 @@ func TestInit(t *testing.T) {
 			t.Error(".beads/work directory was not created")
 		}
 	})
+
+	t.Run("BEADS_DIR env var", func(t *testing.T) {
+		targetDir := t.TempDir()
+		t.Setenv("BEADS_DIR", targetDir)
+
+		// cd to a different temp dir
+		otherDir := t.TempDir()
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+		if err := os.Chdir(otherDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		// .beads should be created in targetDir, not otherDir
+		beadsPath := filepath.Join(targetDir, ".beads")
+		if _, err := os.Stat(beadsPath); os.IsNotExist(err) {
+			t.Error(".beads directory was not created in BEADS_DIR target")
+		}
+		// Verify not created in otherDir
+		otherBeads := filepath.Join(otherDir, ".beads")
+		if _, err := os.Stat(otherBeads); err == nil {
+			t.Error(".beads directory should NOT be created in cwd when BEADS_DIR is set")
+		}
+	})
+
+	t.Run("path flag overrides BEADS_DIR", func(t *testing.T) {
+		envDir := t.TempDir()
+		flagDir := t.TempDir()
+		t.Setenv("BEADS_DIR", envDir)
+
+		provider := &AppProvider{BeadsPath: flagDir}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		// .beads should be created in flagDir, not envDir
+		flagBeads := filepath.Join(flagDir, ".beads")
+		if _, err := os.Stat(flagBeads); os.IsNotExist(err) {
+			t.Error(".beads directory was not created at --path location")
+		}
+		envBeads := filepath.Join(envDir, ".beads")
+		if _, err := os.Stat(envBeads); err == nil {
+			t.Error(".beads directory should NOT be created in BEADS_DIR when --path is set")
+		}
+	})
 }

@@ -2,8 +2,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"gopkg.in/yaml.v3"
 )
@@ -67,6 +69,76 @@ func Load(path string) (Config, error) {
 	return cfg, nil
 }
 
+// LoadWithFallback loads config from primaryPath, then merges in values
+// from fallback locations for any fields that remain at their zero value.
+// Fallback locations: ~/.config/bd/config.yaml, ~/.beads/config.yaml
+func LoadWithFallback(primaryPath string) (Config, error) {
+	cfg, err := Load(primaryPath)
+	if err != nil {
+		return Config{}, err
+	}
+
+	for _, fallbackPath := range configFallbackPaths() {
+		if fallbackPath == primaryPath {
+			continue
+		}
+		fallback, fErr := Load(fallbackPath)
+		if fErr != nil {
+			continue // fallback files are optional
+		}
+		cfg = mergeConfig(cfg, fallback)
+	}
+
+	return cfg, nil
+}
+
+// configFallbackPaths returns the ordered list of fallback config file paths.
+// It respects XDG_CONFIG_HOME for the first path.
+func configFallbackPaths() []string {
+	var paths []string
+
+	xdgConfig := os.Getenv("XDG_CONFIG_HOME")
+	if xdgConfig == "" {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			xdgConfig = filepath.Join(home, ".config")
+		}
+	}
+	if xdgConfig != "" {
+		paths = append(paths, filepath.Join(xdgConfig, "bd", "config.yaml"))
+	}
+
+	home, err := os.UserHomeDir()
+	if err == nil {
+		paths = append(paths, filepath.Join(home, ".beads", "config.yaml"))
+	}
+
+	return paths
+}
+
+// mergeConfig fills zero-value fields in primary from fallback.
+func mergeConfig(primary, fallback Config) Config {
+	if primary.Actor == "" {
+		primary.Actor = fallback.Actor
+	}
+	if primary.Defaults.Priority == "" {
+		primary.Defaults.Priority = fallback.Defaults.Priority
+	}
+	if primary.Defaults.Type == "" {
+		primary.Defaults.Type = fallback.Defaults.Type
+	}
+	if primary.ID.Prefix == "" {
+		primary.ID.Prefix = fallback.ID.Prefix
+	}
+	if primary.ID.Length == 0 {
+		primary.ID.Length = fallback.ID.Length
+	}
+	if primary.Project.Name == "" {
+		primary.Project.Name = fallback.Project.Name
+	}
+	return primary
+}
+
 // Write writes the provided configuration to path.
 func Write(path string, cfg Config) error {
 	data, err := yaml.Marshal(cfg)
@@ -82,4 +154,17 @@ func Write(path string, cfg Config) error {
 // WriteDefault writes the default configuration to path.
 func WriteDefault(path string) error {
 	return Write(path, Default())
+}
+
+// loadOptional loads a config file, returning an empty Config and nil error
+// if the file does not exist.
+func loadOptional(path string) (Config, error) {
+	cfg, err := Load(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return Config{}, nil
+		}
+		return Config{}, err
+	}
+	return cfg, nil
 }

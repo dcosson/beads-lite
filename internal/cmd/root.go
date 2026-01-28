@@ -2,10 +2,9 @@
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"os"
-	"path/filepath"
+	"strings"
 	"sync"
 
 	"beads-lite/internal/config"
@@ -53,6 +52,8 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, err
 	}
 
+	config.ApplyEnvOverrides(&cfg)
+
 	store := filesystem.New(paths.DataDir)
 	store.CleanupStaleLocks()
 
@@ -72,46 +73,6 @@ func (p *AppProvider) init() (*App, error) {
 		Err:     errOut,
 		JSON:    p.JSONOutput,
 	}, nil
-}
-
-// FindBeadsDir locates the .beads directory.
-// If path is provided, it uses that directly.
-// Otherwise, it walks up from the current directory looking for .beads.
-func FindBeadsDir(path string) (string, error) {
-	if path != "" {
-		// Use the provided path directly
-		info, err := os.Stat(path)
-		if err != nil {
-			return "", fmt.Errorf("cannot access beads directory %s: %w", path, err)
-		}
-		if !info.IsDir() {
-			return "", fmt.Errorf("beads path is not a directory: %s", path)
-		}
-		return path, nil
-	}
-
-	// Walk up from current directory looking for .beads
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("cannot get current directory: %w", err)
-	}
-
-	dir := cwd
-	for {
-		beadsDir := filepath.Join(dir, ".beads")
-		info, err := os.Stat(beadsDir)
-		if err == nil && info.IsDir() {
-			return beadsDir, nil
-		}
-
-		// Move up one directory
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root without finding .beads
-			return "", fmt.Errorf("no .beads directory found (searched from %s to /)", cwd)
-		}
-		dir = parent
-	}
 }
 
 // Execute runs the CLI.
@@ -135,11 +96,23 @@ Issues are stored in .beads/<project>/open/ and .beads/<project>/closed/ directo
 making them easy to review, diff, and track alongside your code.`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Apply BD_JSON env var if --json flag was not explicitly passed
+			if !cmd.Flags().Changed("json") {
+				if envJSON := os.Getenv(config.EnvJSON); envJSON != "" {
+					envJSON = strings.ToLower(envJSON)
+					if envJSON == "1" || envJSON == "true" {
+						provider.JSONOutput = true
+					}
+				}
+			}
+			return nil
+		},
 	}
 
 	// Global flags - these populate the provider config
-	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format")
-	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to repo or .beads directory (default: search from cwd)")
+	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format (env: BD_JSON)")
+	rootCmd.PersistentFlags().StringVar(&provider.BeadsPath, "path", "", "Path to repo or .beads directory (env: BEADS_DIR)")
 
 	// Register all commands
 	rootCmd.AddCommand(newInitCmd(provider))

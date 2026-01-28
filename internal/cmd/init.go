@@ -41,8 +41,13 @@ func runInit(path string, force bool, projectName string) error {
 	if projectName == "" {
 		return errors.New("project name cannot be empty")
 	}
-	// Default to current directory
+	// Path resolution: --path flag > BEADS_DIR env var > CWD
 	basePath := path
+	if basePath == "" {
+		if envDir := os.Getenv(config.EnvBeadsDir); envDir != "" {
+			basePath = envDir
+		}
+	}
 	if basePath == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
