@@ -782,3 +782,73 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
+
+// TestLockFileCleanupAfterUpdate verifies that lock files are removed after Update operations.
+func TestLockFileCleanupAfterUpdate(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	ctx := context.Background()
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create an issue
+	issue := &storage.Issue{Title: "Test issue"}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Update the issue
+	issue, _ = s.Get(ctx, id)
+	issue.Title = "Updated title"
+	if err := s.Update(ctx, issue); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	// Check that no lock file remains
+	lockPath := filepath.Join(dir, "open", id+".lock")
+	if fileExists(lockPath) {
+		t.Errorf("Lock file should be cleaned up after Update, but %s still exists", lockPath)
+	}
+}
+
+// TestLockFileCleanupAfterAddDependency verifies that lock files are removed after AddDependency.
+func TestLockFileCleanupAfterAddDependency(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir)
+	ctx := context.Background()
+
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create two issues
+	issue1 := &storage.Issue{Title: "Issue 1"}
+	id1, err := s.Create(ctx, issue1)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	issue2 := &storage.Issue{Title: "Issue 2"}
+	id2, err := s.Create(ctx, issue2)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Add dependency
+	if err := s.AddDependency(ctx, id1, id2); err != nil {
+		t.Fatalf("AddDependency failed: %v", err)
+	}
+
+	// Check that no lock files remain
+	lockPath1 := filepath.Join(dir, "open", id1+".lock")
+	lockPath2 := filepath.Join(dir, "open", id2+".lock")
+	if fileExists(lockPath1) {
+		t.Errorf("Lock file should be cleaned up after AddDependency, but %s still exists", lockPath1)
+	}
+	if fileExists(lockPath2) {
+		t.Errorf("Lock file should be cleaned up after AddDependency, but %s still exists", lockPath2)
+	}
+}

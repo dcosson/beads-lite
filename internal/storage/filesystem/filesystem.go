@@ -52,8 +52,20 @@ func (fs *FilesystemStorage) lockPath(id string) string {
 	return filepath.Join(fs.root, "open", id+".lock")
 }
 
+// issueLock holds a file lock and its path for cleanup.
+type issueLock struct {
+	file *os.File
+	path string
+}
+
+// release closes the lock file and removes it from disk.
+func (l *issueLock) release() {
+	l.file.Close()
+	os.Remove(l.path)
+}
+
 // acquireLock gets an exclusive flock on the issue.
-func (fs *FilesystemStorage) acquireLock(id string) (*os.File, error) {
+func (fs *FilesystemStorage) acquireLock(id string) (*issueLock, error) {
 	lockPath := fs.lockPath(id)
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
@@ -65,22 +77,22 @@ func (fs *FilesystemStorage) acquireLock(id string) (*os.File, error) {
 		return nil, err
 	}
 
-	return f, nil
+	return &issueLock{file: f, path: lockPath}, nil
 }
 
 // acquireLocksOrdered acquires locks on multiple issues in sorted order to prevent deadlocks.
-func (fs *FilesystemStorage) acquireLocksOrdered(ids []string) ([]*os.File, error) {
+func (fs *FilesystemStorage) acquireLocksOrdered(ids []string) ([]*issueLock, error) {
 	sorted := make([]string, len(ids))
 	copy(sorted, ids)
 	sort.Strings(sorted)
 
-	locks := make([]*os.File, 0, len(sorted))
+	locks := make([]*issueLock, 0, len(sorted))
 	for _, id := range sorted {
 		lock, err := fs.acquireLock(id)
 		if err != nil {
 			// Release already-acquired locks
 			for _, l := range locks {
-				l.Close()
+				l.release()
 			}
 			return nil, err
 		}
@@ -90,9 +102,9 @@ func (fs *FilesystemStorage) acquireLocksOrdered(ids []string) ([]*os.File, erro
 	return locks, nil
 }
 
-func releaseLocks(locks []*os.File) {
+func releaseLocks(locks []*issueLock) {
 	for i := len(locks) - 1; i >= 0; i-- {
-		locks[i].Close()
+		locks[i].release()
 	}
 }
 
@@ -209,7 +221,7 @@ func (fs *FilesystemStorage) Update(ctx context.Context, issue *storage.Issue) e
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
+	defer lock.release()
 
 	// Check if issue exists
 	path := fs.issuePath(issue.ID, false)
@@ -230,7 +242,7 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
+	defer lock.release()
 
 	path := fs.issuePath(id, false)
 	err = os.Remove(path)
@@ -370,7 +382,7 @@ func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
+	defer lock.release()
 
 	issue, err := fs.Get(ctx, id)
 	if err != nil {
@@ -408,7 +420,7 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
+	defer lock.release()
 
 	issue, err := fs.Get(ctx, id)
 	if err != nil {
@@ -715,7 +727,7 @@ func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, com
 	if err != nil {
 		return err
 	}
-	defer lock.Close()
+	defer lock.release()
 
 	issue, err := fs.Get(ctx, issueID)
 	if err != nil {
