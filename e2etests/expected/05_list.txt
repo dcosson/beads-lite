@@ -1,12 +1,27 @@
 === list open issues ===
 [
   {
+    "assignee": "alice",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_2.1",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_2",
+    "description": "This is a detailed description",
+    "id": "ISSUE_2.1",
     "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
     "owner": "dcosson@gmail.com",
     "priority": 3,
     "status": "open",
@@ -25,18 +40,46 @@
     "status": "open",
     "title": "Open task",
     "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Parent epic",
+    "updated_at": "TIMESTAMP"
   }
 ]
 
 === list all issues ===
 [
   {
+    "assignee": "alice",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_2.1",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_2",
+    "description": "This is a detailed description",
+    "id": "ISSUE_2.1",
     "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
     "owner": "dcosson@gmail.com",
     "priority": 3,
     "status": "open",
@@ -44,6 +87,8 @@
     "updated_at": "TIMESTAMP"
   },
   {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "dependency_count": 0,
@@ -68,12 +113,27 @@
     "status": "open",
     "title": "Open task",
     "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Parent epic",
+    "updated_at": "TIMESTAMP"
   }
 ]
 
 === list closed issues ===
 [
   {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "dependency_count": 0,
@@ -91,12 +151,27 @@
 === list by type feature ===
 [
   {
+    "assignee": "alice",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_2.1",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_2",
+    "description": "This is a detailed description",
+    "id": "ISSUE_2.1",
     "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
     "owner": "dcosson@gmail.com",
     "priority": 3,
     "status": "open",
@@ -105,36 +180,9 @@
   }
 ]
 
-=== list by priority high ===
+=== list by priority P1 ===
 []
 
 === list format ids ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "dependency_count": 0,
-    "dependent_count": 0,
-    "id": "ISSUE_1",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "open",
-    "title": "Open task",
-    "updated_at": "TIMESTAMP"
-  },
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "dependency_count": 0,
-    "dependent_count": 0,
-    "id": "ISSUE_2",
-    "issue_type": "feature",
-    "owner": "dcosson@gmail.com",
-    "priority": 3,
-    "status": "open",
-    "title": "Feature request",
-    "updated_at": "TIMESTAMP"
-  }
-]
+ids
 
