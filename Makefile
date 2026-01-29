@@ -15,7 +15,7 @@ pre-test-e2e:
 test-e2e: pre-test-e2e
 	BD_CMD=$(realpath $(BD_LITE_CMD)) go test ./e2etests -v -count=1
 
-e2e-update:
+update-e2e:
 	@test -n "$(BD_REF_CMD)" || (echo "error: reference bd not found in PATH" && echo "Install bd or set BD_REF_CMD" && exit 1)
 	@test -x "$(BD_REF_CMD)" || (echo "error: $(BD_REF_CMD) is not executable" && exit 1)
 	BD_CMD=$(BD_REF_CMD) go test ./e2etests -update -v -count=1
