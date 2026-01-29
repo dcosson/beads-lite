@@ -94,10 +94,10 @@ Examples:
 			// Output the result
 			if app.JSON {
 				result := map[string]string{
-					"issue":           issue.ID,
-					"dependency":      dependency.ID,
-					"dependency_type": depType,
-					"status":          "added",
+					"issue_id":      issue.ID,
+					"depends_on_id": dependency.ID,
+					"type":          depType,
+					"status":        "added",
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -154,9 +154,9 @@ Examples:
 			// Output the result
 			if app.JSON {
 				result := map[string]string{
-					"issue":      issue.ID,
-					"dependency": dependency.ID,
-					"status":     "removed",
+					"issue_id":      issue.ID,
+					"depends_on_id": dependency.ID,
+					"status":        "removed",
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -255,27 +255,27 @@ func filterDeps(deps []storage.Dependency, typeFilter *storage.DependencyType) [
 }
 
 // outputDepListJSON outputs dependency list in JSON format.
+// Returns an array of enriched dependency objects (matching show --json format).
 func outputDepListJSON(app *App, ctx context.Context, issue *storage.Issue, tree bool, direction string, typeFilter *storage.DependencyType) error {
-	result := make(map[string]interface{})
-	result["id"] = issue.ID
-	result["title"] = issue.Title
-
 	showDown := direction == "" || direction == "down"
 	showUp := direction == "" || direction == "up"
 
-	if showDown {
-		deps := filterDeps(issue.Dependencies, typeFilter)
-		result["dependencies"] = deps
-	}
-	if showUp {
-		deps := filterDeps(issue.Dependents, typeFilter)
-		result["dependents"] = deps
+	// Default to "down" (dependencies) when no direction specified and both would show
+	// For original beads compatibility, dep list returns dependencies by default
+	if direction == "" {
+		showDown = true
+		showUp = false
 	}
 
-	if tree {
-		depTree := buildDepTree(app.Storage, ctx, issue, make(map[string]bool))
-		result["tree"] = depTree
+	var deps []storage.Dependency
+	if showDown {
+		deps = filterDeps(issue.Dependencies, typeFilter)
+	} else if showUp {
+		deps = filterDeps(issue.Dependents, typeFilter)
 	}
+
+	// Return array of enriched dependencies (like show --json format)
+	result := enrichDependencies(ctx, app.Storage, deps)
 
 	return json.NewEncoder(app.Out).Encode(result)
 }

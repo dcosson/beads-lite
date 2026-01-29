@@ -301,12 +301,12 @@ func TestCreateWithJSONOutput(t *testing.T) {
 		t.Fatalf("create failed: %v", err)
 	}
 
-	var result map[string]string
+	var result map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	id := result["id"]
+	id := result["id"].(string)
 	if !strings.HasPrefix(id, "bd-") {
 		t.Errorf("expected id to start with bd-, got %q", id)
 	}

@@ -119,7 +119,11 @@ Examples:
 
 			// JSON output
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(issues)
+				result := make([]IssueListJSON, len(issues))
+				for i, issue := range issues {
+					result[i] = ToIssueListJSON(issue)
+				}
+				return json.NewEncoder(app.Out).Encode(result)
 			}
 
 			// Format output

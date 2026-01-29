@@ -6,29 +6,34 @@
 }
 
 === show closed issue ===
-{
-  "closed_at": "TIMESTAMP",
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_1",
-  "priority": "medium",
-  "status": "closed",
-  "title": "Closeable task",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
-
-=== list closed ===
 [
   {
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
     "id": "ISSUE_1",
-    "priority": "medium",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "closed",
     "title": "Closeable task",
-    "type": "task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list closed ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "closed",
+    "title": "Closeable task",
     "updated_at": "TIMESTAMP"
   }
 ]
@@ -40,27 +45,33 @@
 }
 
 === show reopened issue ===
-{
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_1",
-  "priority": "medium",
-  "status": "open",
-  "title": "Closeable task",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Closeable task",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === list open after reopen ===
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_1",
-    "priority": "medium",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Closeable task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]

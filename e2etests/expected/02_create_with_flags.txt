@@ -1,36 +1,94 @@
 === create dependency target ===
 {
-  "id": "ISSUE_1"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_1",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Dependency target",
+  "updated_at": "TIMESTAMP"
 }
 
 === create parent issue ===
 {
-  "id": "ISSUE_2"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_2",
+  "issue_type": "epic",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Parent issue",
+  "updated_at": "TIMESTAMP"
 }
 
 === create with all flags ===
 {
-  "id": "ISSUE_3"
-}
-
-=== show the created issue ===
-{
   "assignee": "alice",
   "created_at": "TIMESTAMP",
-  "depends_on": [
-    "ISSUE_1"
-  ],
+  "created_by": "Danny Cosson",
   "description": "A detailed description",
   "id": "ISSUE_3",
+  "issue_type": "feature",
   "labels": [
     "urgent",
     "v2"
   ],
+  "owner": "dcosson@gmail.com",
   "parent": "ISSUE_2",
-  "priority": "high",
+  "priority": 1,
   "status": "open",
   "title": "Full featured issue",
-  "type": "feature",
   "updated_at": "TIMESTAMP"
 }
+
+=== show the created issue ===
+[
+  {
+    "assignee": "alice",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_2",
+        "issue_type": "epic",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Parent issue",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_1",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Dependency target",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "description": "A detailed description",
+    "id": "ISSUE_3",
+    "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_2",
+    "priority": 1,
+    "status": "open",
+    "title": "Full featured issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
 

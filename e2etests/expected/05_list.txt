@@ -2,22 +2,28 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_2",
-    "priority": "low",
+    "issue_type": "feature",
+    "owner": "dcosson@gmail.com",
+    "priority": 3,
     "status": "open",
     "title": "Feature request",
-    "type": "feature",
     "updated_at": "TIMESTAMP"
   },
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_1",
-    "priority": "medium",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Open task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]
@@ -26,33 +32,41 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_2",
-    "priority": "low",
+    "issue_type": "feature",
+    "owner": "dcosson@gmail.com",
+    "priority": 3,
     "status": "open",
     "title": "Feature request",
-    "type": "feature",
     "updated_at": "TIMESTAMP"
   },
   {
-    "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_3",
-    "priority": "high",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 1,
     "status": "closed",
     "title": "High bug",
-    "type": "bug",
     "updated_at": "TIMESTAMP"
   },
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_1",
-    "priority": "medium",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Open task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   }
 ]
@@ -60,14 +74,16 @@
 === list closed issues ===
 [
   {
-    "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_3",
-    "priority": "high",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 1,
     "status": "closed",
     "title": "High bug",
-    "type": "bug",
     "updated_at": "TIMESTAMP"
   }
 ]
@@ -76,39 +92,48 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_2",
-    "priority": "low",
+    "issue_type": "feature",
+    "owner": "dcosson@gmail.com",
+    "priority": 3,
     "status": "open",
     "title": "Feature request",
-    "type": "feature",
     "updated_at": "TIMESTAMP"
   }
 ]
 
 === list by priority high ===
-null
+[]
 
 === list format ids ===
 [
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_1",
-    "priority": "medium",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
     "title": "Open task",
-    "type": "task",
     "updated_at": "TIMESTAMP"
   },
   {
     "created_at": "TIMESTAMP",
-    "description": "",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
     "id": "ISSUE_2",
-    "priority": "low",
+    "issue_type": "feature",
+    "owner": "dcosson@gmail.com",
+    "priority": 3,
     "status": "open",
     "title": "Feature request",
-    "type": "feature",
     "updated_at": "TIMESTAMP"
   }
 ]

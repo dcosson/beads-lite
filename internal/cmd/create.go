@@ -132,7 +132,12 @@ Examples:
 
 			// Output the result
 			if app.JSON {
-				result := map[string]string{"id": id}
+				// Fetch the created issue to get all fields including timestamps
+				createdIssue, err := app.Storage.Get(ctx, id)
+				if err != nil {
+					return fmt.Errorf("fetching created issue: %w", err)
+				}
+				result := ToIssueJSON(ctx, app.Storage, createdIssue, false, false)
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 

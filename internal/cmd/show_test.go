@@ -231,11 +231,16 @@ func TestShowJSON(t *testing.T) {
 		t.Fatalf("show command JSON failed: %v", err)
 	}
 
-	// Verify output is valid JSON (show outputs issueJSONOutput, not storage.Issue)
-	var result map[string]interface{}
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+	// Verify output is valid JSON array (show returns array to match original beads)
+	var results []map[string]interface{}
+	if err := json.Unmarshal(out.Bytes(), &results); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
+
+	if len(results) != 1 {
+		t.Fatalf("expected 1 issue in output, got %d", len(results))
+	}
+	result := results[0]
 
 	if result["id"] != id {
 		t.Errorf("expected ID %s, got %v", id, result["id"])

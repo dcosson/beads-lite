@@ -9,10 +9,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BlockedIssue represents an issue and what it's blocked by.
-type BlockedIssue struct {
-	Issue     *storage.Issue `json:"issue"`
-	WaitingOn []string       `json:"waiting_on"`
+// BlockedIssueJSON represents a blocked issue with blocked_by info for JSON output.
+type BlockedIssueJSON struct {
+	BlockedBy      []string `json:"blocked_by"`
+	BlockedByCount int      `json:"blocked_by_count"`
+	CreatedAt      string   `json:"created_at"`
+	CreatedBy      string   `json:"created_by,omitempty"`
+	ID             string   `json:"id"`
+	IssueType      string   `json:"issue_type"`
+	Priority       int      `json:"priority"`
+	Status         string   `json:"status"`
+	Title          string   `json:"title"`
+	UpdatedAt      string   `json:"updated_at"`
 }
 
 // newBlockedCmd creates the blocked command.
@@ -59,13 +67,22 @@ An issue is blocked if:
 			}
 
 			// Find blocked issues and what they're waiting on
-			var blocked []BlockedIssue
+			var blocked []BlockedIssueJSON
+			name, _ := getGitUser()
 			for _, issue := range issues {
 				waitingOn := getWaitingOn(issue, closedSet)
 				if len(waitingOn) > 0 {
-					blocked = append(blocked, BlockedIssue{
-						Issue:     issue,
-						WaitingOn: waitingOn,
+					blocked = append(blocked, BlockedIssueJSON{
+						BlockedBy:      waitingOn,
+						BlockedByCount: len(waitingOn),
+						CreatedAt:      formatTime(issue.CreatedAt),
+						CreatedBy:      name,
+						ID:             issue.ID,
+						IssueType:      string(issue.Type),
+						Priority:       priorityToInt(issue.Priority),
+						Status:         string(issue.Status),
+						Title:          issue.Title,
+						UpdatedAt:      formatTime(issue.UpdatedAt),
 					})
 				}
 			}
@@ -81,8 +98,8 @@ An issue is blocked if:
 
 			fmt.Fprintf(app.Out, "Blocked issues (%d):\n\n", len(blocked))
 			for _, bi := range blocked {
-				fmt.Fprintf(app.Out, "  %s  %s\n", bi.Issue.ID, bi.Issue.Title)
-				fmt.Fprintf(app.Out, "    Waiting on: %v\n\n", bi.WaitingOn)
+				fmt.Fprintf(app.Out, "  %s  %s\n", bi.ID, bi.Title)
+				fmt.Fprintf(app.Out, "    Waiting on: %v\n\n", bi.BlockedBy)
 			}
 
 			return nil

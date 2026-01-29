@@ -69,7 +69,12 @@ An issue is "ready" if:
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(ready)
+				// Use IssueListJSON format for consistency
+				result := make([]IssueListJSON, len(ready))
+				for i, issue := range ready {
+					result[i] = ToIssueListJSON(issue)
+				}
+				return json.NewEncoder(app.Out).Encode(result)
 			}
 
 			if len(ready) == 0 {

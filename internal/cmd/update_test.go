@@ -375,16 +375,21 @@ func TestUpdateWithJSONOutput(t *testing.T) {
 		t.Fatalf("update failed: %v", err)
 	}
 
-	var result map[string]string
-	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+	// Update now returns array of full issue objects to match original beads
+	var results []IssueJSON
+	if err := json.Unmarshal(out.Bytes(), &results); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	if result["id"] != issueID {
-		t.Errorf("expected id %q, got %q", issueID, result["id"])
+	if len(results) != 1 {
+		t.Fatalf("expected 1 issue in result, got %d", len(results))
 	}
-	if result["status"] != "updated" {
-		t.Errorf("expected status 'updated', got %q", result["status"])
+
+	if results[0].ID != issueID {
+		t.Errorf("expected id %q, got %q", issueID, results[0].ID)
+	}
+	if results[0].Title != "New title" {
+		t.Errorf("expected title 'New title', got %q", results[0].Title)
 	}
 }
 

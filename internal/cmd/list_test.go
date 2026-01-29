@@ -616,6 +616,7 @@ func TestListCommand_JSON(t *testing.T) {
 	_, err := store.Create(ctx, &storage.Issue{
 		Title:    "Test issue",
 		Priority: storage.PriorityHigh,
+		Type:     storage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -634,7 +635,7 @@ func TestListCommand_JSON(t *testing.T) {
 	}
 
 	output := out.String()
-	var issues []*storage.Issue
+	var issues []IssueListJSON
 	if err := json.Unmarshal([]byte(output), &issues); err != nil {
 		t.Errorf("expected valid JSON output, got parse error: %v, output: %s", err, output)
 	}
@@ -643,6 +644,13 @@ func TestListCommand_JSON(t *testing.T) {
 	}
 	if issues[0].Title != "Test issue" {
 		t.Errorf("expected title 'Test issue', got '%s'", issues[0].Title)
+	}
+	// Verify new format fields
+	if issues[0].IssueType != "task" {
+		t.Errorf("expected issue_type 'task', got '%s'", issues[0].IssueType)
+	}
+	if issues[0].Priority != 1 {
+		t.Errorf("expected priority 1, got %d", issues[0].Priority)
 	}
 }
 

@@ -184,8 +184,14 @@ Examples:
 
 			// Output the result
 			if app.JSON {
-				result := map[string]string{"id": issueID, "status": "updated"}
-				return json.NewEncoder(app.Out).Encode(result)
+				// Fetch the updated issue to return full details
+				updatedIssue, err := app.Storage.Get(ctx, issueID)
+				if err != nil {
+					return fmt.Errorf("fetching updated issue: %w", err)
+				}
+				result := ToIssueJSON(ctx, app.Storage, updatedIssue, false, false)
+				// Return as array to match original beads format
+				return json.NewEncoder(app.Out).Encode([]IssueJSON{result})
 			}
 
 			fmt.Fprintf(app.Out, "%s Updated issue: %s\n", app.SuccessColor("✓"), issueID)

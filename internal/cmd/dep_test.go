@@ -136,11 +136,11 @@ func TestDepAddJSON(t *testing.T) {
 		t.Fatalf("failed to parse JSON: %v", err)
 	}
 
-	if result["issue"] != idA {
-		t.Errorf("expected issue %q, got %q", idA, result["issue"])
+	if result["issue_id"] != idA {
+		t.Errorf("expected issue_id %q, got %q", idA, result["issue_id"])
 	}
-	if result["dependency"] != idB {
-		t.Errorf("expected dependency %q, got %q", idB, result["dependency"])
+	if result["depends_on_id"] != idB {
+		t.Errorf("expected depends_on_id %q, got %q", idB, result["depends_on_id"])
 	}
 	if result["status"] != "added" {
 		t.Errorf("expected status 'added', got %q", result["status"])
@@ -276,31 +276,21 @@ func TestDepListJSON(t *testing.T) {
 		t.Fatalf("dep list failed: %v", err)
 	}
 
-	var result map[string]interface{}
+	// dep list now returns an array of enriched dependencies
+	var result []map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON: %v", err)
 	}
 
-	if result["id"] != idA {
-		t.Errorf("expected id %q, got %q", idA, result["id"])
+	if len(result) != 1 {
+		t.Fatalf("expected 1 dependency, got %d", len(result))
 	}
-
-	deps, ok := result["dependencies"].([]interface{})
-	if !ok {
-		t.Fatalf("expected dependencies to be array, got %T", result["dependencies"])
-	}
-	if len(deps) != 1 {
-		t.Fatalf("expected 1 dependency, got %d", len(deps))
-	}
-	depObj, ok := deps[0].(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected dependency to be object, got %T", deps[0])
-	}
+	depObj := result[0]
 	if depObj["id"] != idB {
 		t.Errorf("expected dependency id %q, got %q", idB, depObj["id"])
 	}
-	if depObj["type"] != "blocks" {
-		t.Errorf("expected dependency type %q, got %q", "blocks", depObj["type"])
+	if depObj["dependency_type"] != "blocks" {
+		t.Errorf("expected dependency_type %q, got %q", "blocks", depObj["dependency_type"])
 	}
 }
 

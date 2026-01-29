@@ -1,32 +1,74 @@
 === create parent ===
 {
-  "id": "ISSUE_1"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_1",
+  "issue_type": "epic",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Parent issue",
+  "updated_at": "TIMESTAMP"
 }
 
 === create child ===
 {
-  "id": "ISSUE_2"
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_2",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Child issue",
+  "updated_at": "TIMESTAMP"
 }
 
 === set parent ===
-{
-  "child": "ISSUE_2",
-  "parent": "ISSUE_1",
-  "status": "updated"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_1",
+    "priority": 2,
+    "status": "open",
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === show child has parent ===
-{
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_2",
-  "parent": "ISSUE_1",
-  "priority": "medium",
-  "status": "open",
-  "title": "Child issue",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_1",
+        "issue_type": "epic",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Parent issue",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_1",
+    "priority": 2,
+    "status": "open",
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === list children of parent ===
 [
@@ -38,21 +80,32 @@
 ]
 
 === remove parent ===
-{
-  "child": "ISSUE_2",
-  "old_parent": "ISSUE_1",
-  "status": "removed"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === show child after parent removal ===
-{
-  "created_at": "TIMESTAMP",
-  "description": "",
-  "id": "ISSUE_2",
-  "priority": "medium",
-  "status": "open",
-  "title": "Child issue",
-  "type": "task",
-  "updated_at": "TIMESTAMP"
-}
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
 

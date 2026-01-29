@@ -3,7 +3,7 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -19,7 +19,7 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -35,7 +35,7 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 0,
@@ -51,7 +51,7 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "bug",
     "owner": "dcosson@gmail.com",
     "priority": 0,
@@ -62,7 +62,20 @@
 ]
 
 === update status ===
-
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in-progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === add labels ===
 [
@@ -70,7 +83,7 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "bug",
     "labels": [
       "urgent",
@@ -78,7 +91,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "open",
+    "status": "in-progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -90,14 +103,14 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "bug",
     "labels": [
       "v2"
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "open",
+    "status": "in-progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -110,14 +123,14 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "bug",
     "labels": [
       "v2"
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "open",
+    "status": "in-progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -130,14 +143,14 @@
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "description": "New description",
-    "id": "e2etests-rhz",
+    "id": "ISSUE_1",
     "issue_type": "bug",
     "labels": [
       "v2"
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "open",
+    "status": "in-progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }

@@ -282,8 +282,8 @@ func TestBlockedJSONOutput(t *testing.T) {
 	if !containsString(output, depID) {
 		t.Errorf("expected JSON output to contain dependency ID %s, got: %s", depID, output)
 	}
-	if !containsString(output, "waiting_on") {
-		t.Errorf("expected JSON output to contain 'waiting_on' field, got: %s", output)
+	if !containsString(output, "blocked_by") {
+		t.Errorf("expected JSON output to contain 'blocked_by' field, got: %s", output)
 	}
 }
 

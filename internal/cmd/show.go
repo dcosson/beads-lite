@@ -60,40 +60,6 @@ Examples:
 	return cmd
 }
 
-// enrichedDep represents a dependency enriched with full issue details for JSON output.
-type enrichedDep struct {
-	ID             string                `json:"id"`
-	Title          string                `json:"title"`
-	Status         storage.Status        `json:"status"`
-	Priority       storage.Priority      `json:"priority"`
-	Type           storage.IssueType     `json:"type"`
-	DependencyType storage.DependencyType `json:"dependency_type"`
-}
-
-// enrichDeps fetches full issue details for each dependency entry.
-func enrichDeps(ctx context.Context, store storage.Storage, deps []storage.Dependency) []enrichedDep {
-	result := make([]enrichedDep, 0, len(deps))
-	for _, dep := range deps {
-		issue, err := store.Get(ctx, dep.ID)
-		if err != nil {
-			// Include even if we can't load the issue
-			result = append(result, enrichedDep{
-				ID:             dep.ID,
-				DependencyType: dep.Type,
-			})
-			continue
-		}
-		result = append(result, enrichedDep{
-			ID:             issue.ID,
-			Title:          issue.Title,
-			Status:         issue.Status,
-			Priority:       issue.Priority,
-			Type:           issue.Type,
-			DependencyType: dep.Type,
-		})
-	}
-	return result
-}
 
 // outputIssue formats and outputs the issue details.
 func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
@@ -172,47 +138,10 @@ func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	return nil
 }
 
-// issueJSONOutput is the JSON output format for show command, with enriched deps.
-type issueJSONOutput struct {
-	ID          string              `json:"id"`
-	Title       string              `json:"title"`
-	Description string              `json:"description"`
-	Status      storage.Status      `json:"status"`
-	Priority    storage.Priority    `json:"priority"`
-	Type        storage.IssueType   `json:"type"`
-	Parent      string              `json:"parent,omitempty"`
-	Dependencies []enrichedDep      `json:"dependencies"`
-	Dependents   []enrichedDep      `json:"dependents"`
-	Labels      []string            `json:"labels,omitempty"`
-	Assignee    string              `json:"assignee,omitempty"`
-	Comments    []storage.Comment   `json:"comments,omitempty"`
-	CreatedAt   string              `json:"created_at"`
-	UpdatedAt   string              `json:"updated_at"`
-	ClosedAt    *string             `json:"closed_at,omitempty"`
-}
-
-// outputIssueJSON outputs the issue in JSON format with enriched dependencies.
+// outputIssueJSON outputs the issue in JSON format matching original beads.
+// Returns an array with the single issue, with enriched dependencies.
 func outputIssueJSON(app *App, ctx context.Context, issue *storage.Issue) error {
-	out := issueJSONOutput{
-		ID:           issue.ID,
-		Title:        issue.Title,
-		Description:  issue.Description,
-		Status:       issue.Status,
-		Priority:     issue.Priority,
-		Type:         issue.Type,
-		Parent:       issue.Parent,
-		Dependencies: enrichDeps(ctx, app.Storage, issue.Dependencies),
-		Dependents:   enrichDeps(ctx, app.Storage, issue.Dependents),
-		Labels:       issue.Labels,
-		Assignee:     issue.Assignee,
-		Comments:     issue.Comments,
-		CreatedAt:    issue.CreatedAt.Format("2006-01-02T15:04:05.999999999-07:00"),
-		UpdatedAt:    issue.UpdatedAt.Format("2006-01-02T15:04:05.999999999-07:00"),
-	}
-	if issue.ClosedAt != nil {
-		closedStr := issue.ClosedAt.Format("2006-01-02T15:04:05.999999999-07:00")
-		out.ClosedAt = &closedStr
-	}
-
-	return json.NewEncoder(app.Out).Encode(out)
+	out := ToIssueJSON(ctx, app.Storage, issue, true, false)
+	// Original beads returns an array for show
+	return json.NewEncoder(app.Out).Encode([]IssueJSON{out})
 }

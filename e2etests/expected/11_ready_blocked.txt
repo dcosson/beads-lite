@@ -3,7 +3,9 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-5so",
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -14,7 +16,9 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-j6a",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -28,12 +32,12 @@
 [
   {
     "blocked_by": [
-      "e2etests-5so"
+      "ISSUE_1"
     ],
     "blocked_by_count": 1,
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-upq",
+    "id": "ISSUE_3",
     "issue_type": "task",
     "priority": 2,
     "status": "open",
@@ -47,7 +51,9 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-upq",
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -58,7 +64,9 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "e2etests-j6a",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -69,5 +77,5 @@
 ]
 
 === blocked after closing blocker ===
-[]
+null
 

@@ -1,8 +1,7 @@
 === delete issue ===
 {
-  "deleted": "e2etests-x0r",
-  "dependencies_removed": 0,
-  "references_updated": 0
+  "id": "ISSUE_1",
+  "status": "deleted"
 }
 
 === list after delete ===
@@ -12,7 +11,7 @@
     "created_by": "Danny Cosson",
     "dependency_count": 0,
     "dependent_count": 0,
-    "id": "e2etests-u37",
+    "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -23,5 +22,5 @@
 ]
 
 === show deleted issue ===
-EXIT_CODE: 0
+EXIT_CODE: 1
 
