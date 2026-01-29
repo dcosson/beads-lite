@@ -26,8 +26,7 @@ var knownCommands = map[string]bool{
 	"dep remove":   true,
 	"dep list":     true,
 	"children":     true,
-	"comment add":  true,
-	"comment list": true,
+	"comments add": true,
 	"compact":      true,
 	"doctor":       true,
 }
