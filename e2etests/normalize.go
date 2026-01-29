@@ -26,8 +26,9 @@ func NewNormalizer() *Normalizer {
 }
 
 var (
-	// Match issue IDs: letters/numbers/dashes ending with a short alphanumeric hash
-	issueIDPattern   = regexp.MustCompile(`[a-zA-Z0-9][-a-zA-Z0-9]*-[0-9a-zA-Z]{3,8}`)
+	// Match beads-lite IDs (bd-XXXX), original beads IDs (e2etests-XXX),
+	// or sandbox IDs (beads-sandbox-XXXXXXXX-XXX)
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}|e2etests-[0-9a-z]{3}|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3})`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
@@ -120,6 +121,11 @@ func (n *Normalizer) NormalizeJSONSorted(input []byte) string {
 	return string(output)
 }
 
+// Keys whose values should be replaced with "FLOAT" for deterministic comparison
+var floatKeys = map[string]bool{
+	"average_lead_time_hours": true,
+}
+
 // walkAndNormalize recursively walks a JSON value and replaces IDs and timestamps.
 // Map keys are visited in sorted order to ensure deterministic ID assignment.
 func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
@@ -134,7 +140,11 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 
 		result := make(map[string]interface{})
 		for _, k := range keys {
-			result[k] = n.walkAndNormalize(val[k])
+			if floatKeys[k] {
+				result[k] = "FLOAT"
+			} else {
+				result[k] = n.walkAndNormalize(val[k])
+			}
 		}
 		return result
 
