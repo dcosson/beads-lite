@@ -783,6 +783,105 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
+// TestGetNextChildID_Sequential verifies sequential counter increments.
+func TestGetNextChildID_Sequential(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	for i := 1; i <= 5; i++ {
+		n, err := s.GetNextChildID(ctx, "parent-1")
+		if err != nil {
+			t.Fatalf("GetNextChildID call %d failed: %v", i, err)
+		}
+		if n != i {
+			t.Errorf("Call %d: got %d, want %d", i, n, i)
+		}
+	}
+}
+
+// TestGetNextChildID_Concurrent verifies atomic increments under concurrency.
+func TestGetNextChildID_Concurrent(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	const numWorkers = 10
+	const callsPerWorker = 10
+	total := numWorkers * callsPerWorker
+
+	results := make(chan int, total)
+	errs := make(chan error, total)
+
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < callsPerWorker; i++ {
+				n, err := s.GetNextChildID(ctx, "concurrent-parent")
+				if err != nil {
+					errs <- err
+					return
+				}
+				results <- n
+			}
+		}()
+	}
+	wg.Wait()
+	close(results)
+	close(errs)
+
+	for err := range errs {
+		t.Fatalf("Concurrent GetNextChildID error: %v", err)
+	}
+
+	// All returned values should be unique and in range [1, total]
+	seen := make(map[int]bool)
+	for n := range results {
+		if n < 1 || n > total {
+			t.Errorf("Counter value %d out of expected range [1, %d]", n, total)
+		}
+		if seen[n] {
+			t.Errorf("Duplicate counter value: %d", n)
+		}
+		seen[n] = true
+	}
+
+	if len(seen) != total {
+		t.Errorf("Expected %d unique values, got %d", total, len(seen))
+	}
+}
+
+// TestGetNextChildID_Persistence verifies counters survive re-initialization.
+func TestGetNextChildID_Persistence(t *testing.T) {
+	dir := t.TempDir()
+	ctx := context.Background()
+
+	// Create storage and increment counter
+	s1 := New(dir)
+	if err := s1.Init(ctx); err != nil {
+		t.Fatalf("Init 1 failed: %v", err)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := s1.GetNextChildID(ctx, "persist-parent"); err != nil {
+			t.Fatalf("GetNextChildID failed: %v", err)
+		}
+	}
+
+	// Create new storage instance on same directory
+	s2 := New(dir)
+	if err := s2.Init(ctx); err != nil {
+		t.Fatalf("Init 2 failed: %v", err)
+	}
+
+	n, err := s2.GetNextChildID(ctx, "persist-parent")
+	if err != nil {
+		t.Fatalf("GetNextChildID after reinit failed: %v", err)
+	}
+	if n != 4 {
+		t.Errorf("Counter after reinit: got %d, want 4", n)
+	}
+}
+
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()
