@@ -145,13 +145,13 @@ func TestStatsCmd_JSON(t *testing.T) {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	if result.Open != 2 {
-		t.Errorf("expected open=2, got %d", result.Open)
+	if result.Summary.OpenIssues != 2 {
+		t.Errorf("expected open_issues=2, got %d", result.Summary.OpenIssues)
 	}
-	if result.Closed != 1 {
-		t.Errorf("expected closed=1, got %d", result.Closed)
+	if result.Summary.ClosedIssues != 1 {
+		t.Errorf("expected closed_issues=1, got %d", result.Summary.ClosedIssues)
 	}
-	if result.Total != 3 {
-		t.Errorf("expected total=3, got %d", result.Total)
+	if result.Summary.TotalIssues != 3 {
+		t.Errorf("expected total_issues=3, got %d", result.Summary.TotalIssues)
 	}
 }

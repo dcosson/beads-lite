@@ -67,7 +67,7 @@ An issue is blocked if:
 			}
 
 			// Find blocked issues and what they're waiting on
-			var blocked []BlockedIssueJSON
+			blocked := []BlockedIssueJSON{} // Initialize as empty slice (marshals to [] not null)
 			name, _ := getGitUser()
 			for _, issue := range issues {
 				waitingOn := getWaitingOn(issue, closedSet)

@@ -71,6 +71,36 @@ type IssueListJSON struct {
 	UpdatedAt       string `json:"updated_at"`
 }
 
+// IssueSimpleJSON is a simpler JSON output format for ready/blocked commands (no counts).
+type IssueSimpleJSON struct {
+	CreatedAt string `json:"created_at"`
+	CreatedBy string `json:"created_by,omitempty"`
+	ID        string `json:"id"`
+	IssueType string `json:"issue_type"`
+	Owner     string `json:"owner,omitempty"`
+	Priority  int    `json:"priority"`
+	Status    string `json:"status"`
+	Title     string `json:"title"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+// ToIssueSimpleJSON converts a storage.Issue to IssueSimpleJSON format.
+func ToIssueSimpleJSON(issue *storage.Issue) IssueSimpleJSON {
+	name, email := getGitUser()
+
+	return IssueSimpleJSON{
+		CreatedAt: formatTime(issue.CreatedAt),
+		CreatedBy: name,
+		ID:        issue.ID,
+		IssueType: string(issue.Type),
+		Owner:     email,
+		Priority:  priorityToInt(issue.Priority),
+		Status:    string(issue.Status),
+		Title:     issue.Title,
+		UpdatedAt: formatTime(issue.UpdatedAt),
+	}
+}
+
 // priorityToInt converts storage.Priority to numeric value (0-4).
 func priorityToInt(p storage.Priority) int {
 	switch p {

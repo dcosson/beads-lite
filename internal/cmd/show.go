@@ -48,6 +48,11 @@ Examples:
 			issue, err = findByPrefix(app.Storage, ctx, query)
 			if err != nil {
 				if err == storage.ErrNotFound {
+					// In JSON mode, return null with exit 0 (matches original beads behavior)
+					if app.JSON {
+						fmt.Fprintln(app.Out, "null")
+						return nil
+					}
 					return fmt.Errorf("no issue found matching %q", query)
 				}
 				return err

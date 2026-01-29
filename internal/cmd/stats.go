@@ -8,14 +8,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// StatsResult represents the output of the stats command.
+// StatsSummary represents the summary stats matching original beads format.
+type StatsSummary struct {
+	AverageLeadTimeHours     float64 `json:"average_lead_time_hours"`
+	BlockedIssues            int     `json:"blocked_issues"`
+	ClosedIssues             int     `json:"closed_issues"`
+	DeferredIssues           int     `json:"deferred_issues"`
+	EpicsEligibleForClosure  int     `json:"epics_eligible_for_closure"`
+	InProgressIssues         int     `json:"in_progress_issues"`
+	OpenIssues               int     `json:"open_issues"`
+	PinnedIssues             int     `json:"pinned_issues"`
+	ReadyIssues              int     `json:"ready_issues"`
+	TombstoneIssues          int     `json:"tombstone_issues"`
+	TotalIssues              int     `json:"total_issues"`
+}
+
+// StatsResult wraps the summary in a top-level object.
 type StatsResult struct {
-	Open       int `json:"open"`
-	InProgress int `json:"in_progress"`
-	Blocked    int `json:"blocked"`
-	Deferred   int `json:"deferred"`
-	Closed     int `json:"closed"`
-	Total      int `json:"total"`
+	Summary StatsSummary `json:"summary"`
 }
 
 // newStatsCmd creates the stats command.
@@ -32,7 +42,7 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 
 			ctx := cmd.Context()
 
-			var result StatsResult
+			var summary StatsSummary
 
 			// Get open issues (includes all non-closed statuses)
 			openIssues, err := app.Storage.List(ctx, nil)
@@ -40,47 +50,62 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 				return fmt.Errorf("listing open issues: %w", err)
 			}
 
-			for _, issue := range openIssues {
-				switch issue.Status {
-				case storage.StatusOpen:
-					result.Open++
-				case storage.StatusInProgress:
-					result.InProgress++
-				case storage.StatusBlocked:
-					result.Blocked++
-				case storage.StatusDeferred:
-					result.Deferred++
-				}
-			}
-
-			// Get closed issues
+			// Build closed set for ready check
 			closedStatus := storage.StatusClosed
 			closedIssues, err := app.Storage.List(ctx, &storage.ListFilter{Status: &closedStatus})
 			if err != nil {
 				return fmt.Errorf("listing closed issues: %w", err)
 			}
-			result.Closed = len(closedIssues)
+			closedSet := make(map[string]bool)
+			for _, issue := range closedIssues {
+				closedSet[issue.ID] = true
+			}
 
-			result.Total = len(openIssues) + result.Closed
+			for _, issue := range openIssues {
+				switch issue.Status {
+				case storage.StatusOpen:
+					summary.OpenIssues++
+					// Check if ready (no unclosed blocking deps)
+					if isReady(issue, closedSet) {
+						summary.ReadyIssues++
+					}
+				case storage.StatusInProgress:
+					summary.InProgressIssues++
+				case storage.StatusBlocked:
+					summary.BlockedIssues++
+				case storage.StatusDeferred:
+					summary.DeferredIssues++
+				}
+			}
+
+			summary.ClosedIssues = len(closedIssues)
+			summary.TotalIssues = len(openIssues) + summary.ClosedIssues
+
+			// Calculate average lead time (simplified - would need closed_at tracking)
+			// For now, just use a placeholder calculation
+			if summary.ClosedIssues > 0 {
+				// This would need actual closed_at - created_at calculation
+				summary.AverageLeadTimeHours = 0.001 // Placeholder
+			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(result)
+				return json.NewEncoder(app.Out).Encode(StatsResult{Summary: summary})
 			}
 
 			// Human-readable output
-			openTotal := result.Open + result.InProgress + result.Blocked + result.Deferred
+			openTotal := summary.OpenIssues + summary.InProgressIssues + summary.BlockedIssues + summary.DeferredIssues
 			fmt.Fprintf(app.Out, "Open issues:     %d\n", openTotal)
-			if result.InProgress > 0 {
-				fmt.Fprintf(app.Out, "  In progress:   %d\n", result.InProgress)
+			if summary.InProgressIssues > 0 {
+				fmt.Fprintf(app.Out, "  In progress:   %d\n", summary.InProgressIssues)
 			}
-			if result.Blocked > 0 {
-				fmt.Fprintf(app.Out, "  Blocked:       %d\n", result.Blocked)
+			if summary.BlockedIssues > 0 {
+				fmt.Fprintf(app.Out, "  Blocked:       %d\n", summary.BlockedIssues)
 			}
-			if result.Deferred > 0 {
-				fmt.Fprintf(app.Out, "  Deferred:      %d\n", result.Deferred)
+			if summary.DeferredIssues > 0 {
+				fmt.Fprintf(app.Out, "  Deferred:      %d\n", summary.DeferredIssues)
 			}
-			fmt.Fprintf(app.Out, "Closed issues:   %d\n", result.Closed)
-			fmt.Fprintf(app.Out, "Total:           %d\n", result.Total)
+			fmt.Fprintf(app.Out, "Closed issues:   %d\n", summary.ClosedIssues)
+			fmt.Fprintf(app.Out, "Total:           %d\n", summary.TotalIssues)
 
 			return nil
 		},

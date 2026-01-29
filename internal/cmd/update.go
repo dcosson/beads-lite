@@ -190,6 +190,8 @@ Examples:
 					return fmt.Errorf("fetching updated issue: %w", err)
 				}
 				result := ToIssueJSON(ctx, app.Storage, updatedIssue, false, false)
+				// Original beads doesn't include parent field in update output
+				result.Parent = ""
 				// Return as array to match original beads format
 				return json.NewEncoder(app.Out).Encode([]IssueJSON{result})
 			}

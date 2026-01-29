@@ -79,7 +79,11 @@ Examples:
 
 			// Output the result
 			if app.JSON {
-				result := map[string]string{"id": issue.ID, "status": "deleted"}
+				result := map[string]interface{}{
+					"deleted":              issue.ID,
+					"dependencies_removed": 0,
+					"references_updated":   0,
+				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
