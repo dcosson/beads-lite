@@ -2,12 +2,15 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/config/yamlstore"
 	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -56,6 +59,19 @@ func (p *AppProvider) init() (*App, error) {
 	store := filesystem.New(paths.DataDir)
 	store.CleanupStaleLocks()
 
+	// Initialize config key-value store
+	configStorePath := filepath.Join(paths.ConfigDir, "store.yaml")
+	_, statErr := os.Stat(configStorePath)
+	configStore, err := yamlstore.New(configStorePath)
+	if err != nil {
+		return nil, fmt.Errorf("loading config store: %w", err)
+	}
+	if os.IsNotExist(statErr) {
+		if err := config.ApplyDefaults(configStore); err != nil {
+			return nil, fmt.Errorf("applying config defaults: %w", err)
+		}
+	}
+
 	out := p.Out
 	if out == nil {
 		out = os.Stdout
@@ -66,11 +82,12 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage: store,
-		Config:  cfg,
-		Out:     out,
-		Err:     errOut,
-		JSON:    p.JSONOutput,
+		Storage:     store,
+		Config:      cfg,
+		ConfigStore: configStore,
+		Out:         out,
+		Err:         errOut,
+		JSON:        p.JSONOutput,
 	}, nil
 }
 
@@ -130,6 +147,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newChildrenCmd(provider))
 	rootCmd.AddCommand(newDepCmd(provider))
 	rootCmd.AddCommand(newCompactCmd(provider))
+	rootCmd.AddCommand(newConfigCmd(provider))
 
 	return rootCmd
 }

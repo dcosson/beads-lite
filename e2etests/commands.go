@@ -26,9 +26,14 @@ var knownCommands = map[string]bool{
 	"dep remove":   true,
 	"dep list":     true,
 	"children":     true,
-	"comments add": true,
-	"compact":      true,
-	"doctor":       true,
+	"comments add":      true,
+	"compact":           true,
+	"config get":        true,
+	"config list":       true,
+	"config set":        true,
+	"config unset":      true,
+	"config validate":   true,
+	"doctor":            true,
 }
 
 // nonParentCommands are commands that do NOT have subcommands.

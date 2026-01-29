@@ -1,0 +1,41 @@
+=== config set ===
+{
+  "key": "defaults.priority",
+  "status": "set",
+  "value": "high"
+}
+
+=== config get ===
+{
+  "key": "defaults.priority",
+  "value": "high"
+}
+
+=== config list ===
+{
+  "actor": "${USER}",
+  "defaults.priority": "high",
+  "defaults.type": "task",
+  "id.length": "4",
+  "id.prefix": "bd-",
+  "project.name": "issues"
+}
+
+=== config set custom ===
+{
+  "key": "custom.key",
+  "status": "set",
+  "value": "myval"
+}
+
+=== config unset ===
+{
+  "key": "custom.key",
+  "status": "unset"
+}
+
+=== config validate ===
+{
+  "valid": true
+}
+

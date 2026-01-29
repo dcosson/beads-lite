@@ -13,11 +13,12 @@ import (
 
 // App holds application state shared across commands.
 type App struct {
-	Storage storage.Storage
-	Config  config.Config
-	Out     io.Writer
-	Err     io.Writer
-	JSON    bool // output in JSON format
+	Storage     storage.Storage
+	Config      config.Config
+	ConfigStore config.Store
+	Out         io.Writer
+	Err         io.Writer
+	JSON        bool // output in JSON format
 }
 
 // SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,
