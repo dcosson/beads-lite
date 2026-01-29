@@ -68,13 +68,18 @@ type ListDepJSON struct {
 
 // IssueListJSON is the JSON output format for list command.
 type IssueListJSON struct {
+	Assignee        string        `json:"assignee,omitempty"`
+	CloseReason     string        `json:"close_reason,omitempty"`
+	ClosedAt        string        `json:"closed_at,omitempty"`
 	CreatedAt       string        `json:"created_at"`
 	CreatedBy       string        `json:"created_by,omitempty"`
 	Dependencies    []ListDepJSON `json:"dependencies,omitempty"`
 	DependencyCount int           `json:"dependency_count"`
 	DependentCount  int           `json:"dependent_count"`
+	Description     string        `json:"description,omitempty"`
 	ID              string        `json:"id"`
 	IssueType       string        `json:"issue_type"`
+	Labels          []string      `json:"labels,omitempty"`
 	Owner           string        `json:"owner,omitempty"`
 	Priority        int           `json:"priority"`
 	Status          string        `json:"status"`
@@ -230,20 +235,32 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 		}
 	}
 
-	return IssueListJSON{
+	out := IssueListJSON{
+		Assignee:        issue.Assignee,
 		CreatedAt:       formatTime(issue.CreatedAt),
 		CreatedBy:       name,
 		Dependencies:    deps,
 		DependencyCount: len(issue.Dependencies),
 		DependentCount:  len(issue.Dependents),
+		Description:     issue.Description,
 		ID:              issue.ID,
 		IssueType:       string(issue.Type),
+		Labels:          issue.Labels,
 		Owner:           email,
 		Priority:        priorityToInt(issue.Priority),
 		Status:          string(issue.Status),
 		Title:           issue.Title,
 		UpdatedAt:       formatTime(issue.UpdatedAt),
 	}
+
+	if issue.CloseReason != "" {
+		out.CloseReason = issue.CloseReason
+	}
+	if issue.ClosedAt != nil {
+		out.ClosedAt = formatTime(*issue.ClosedAt)
+	}
+
+	return out
 }
 
 // enrichDependencies fetches full issue details for each dependency.

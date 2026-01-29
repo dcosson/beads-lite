@@ -1,15 +1,15 @@
 === stats ===
 {
   "summary": {
-    "average_lead_time_hours": 0.0014361105859279633,
+    "average_lead_time_hours": 0.001,
     "blocked_issues": 0,
     "closed_issues": 1,
     "deferred_issues": 0,
     "epics_eligible_for_closure": 0,
-    "in_progress_issues": 0,
-    "open_issues": 3,
+    "in_progress_issues": 1,
+    "open_issues": 2,
     "pinned_issues": 0,
-    "ready_issues": 3,
+    "ready_issues": 2,
     "tombstone_issues": 0,
     "total_issues": 4
   }

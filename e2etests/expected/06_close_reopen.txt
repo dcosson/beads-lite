@@ -24,6 +24,8 @@
 === list closed ===
 [
   {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
     "dependency_count": 0,

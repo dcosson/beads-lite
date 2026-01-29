@@ -62,9 +62,10 @@ type Issue struct {
 	Labels    []string  `json:"labels,omitempty"`
 	Assignee  string    `json:"assignee,omitempty"`
 	Comments  []Comment `json:"comments,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	ClosedAt  *time.Time `json:"closed_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	ClosedAt    *time.Time `json:"closed_at,omitempty"`
+	CloseReason string     `json:"close_reason,omitempty"`
 }
 
 // Children returns the IDs of child issues (dependents with type parent-child).

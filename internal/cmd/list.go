@@ -119,6 +119,14 @@ Examples:
 
 			// JSON output
 			if app.JSON {
+				// For --format ids --json, output just the IDs as a JSON array
+				if format == "ids" {
+					ids := make([]string, len(issues))
+					for i, issue := range issues {
+						ids[i] = issue.ID
+					}
+					return json.NewEncoder(app.Out).Encode(ids)
+				}
 				result := make([]IssueListJSON, len(issues))
 				for i, issue := range issues {
 					result[i] = ToIssueListJSON(issue)

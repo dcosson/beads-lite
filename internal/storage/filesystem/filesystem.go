@@ -428,6 +428,7 @@ func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
 	issue.Status = storage.StatusClosed
 	now := time.Now()
 	issue.ClosedAt = &now
+	issue.CloseReason = "Closed"
 	issue.UpdatedAt = now
 
 	// Write to closed/ first
@@ -465,6 +466,7 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 
 	issue.Status = storage.StatusOpen
 	issue.ClosedAt = nil
+	issue.CloseReason = ""
 	issue.UpdatedAt = time.Now()
 
 	// Write to open/ first
