@@ -66,11 +66,12 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage: store,
-		Config:  cfg,
-		Out:     out,
-		Err:     errOut,
-		JSON:    p.JSONOutput,
+		Storage:   store,
+		Config:    cfg,
+		ConfigDir: paths.ConfigDir,
+		Out:       out,
+		Err:       errOut,
+		JSON:      p.JSONOutput,
 	}, nil
 }
 
@@ -130,6 +131,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newChildrenCmd(provider))
 	rootCmd.AddCommand(newDepCmd(provider))
 	rootCmd.AddCommand(newCompactCmd(provider))
+	rootCmd.AddCommand(newConfigCmd(provider))
 
 	return rootCmd
 }

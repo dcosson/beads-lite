@@ -26,6 +26,7 @@ var testCases = []TestCase{
 	{"11_ready_blocked", caseReadyBlocked},
 	{"12_search", caseSearch},
 	{"13_stats", caseStats},
+	{"14_config", caseConfig},
 }
 
 // section writes a section header and normalized JSON content to the builder.
