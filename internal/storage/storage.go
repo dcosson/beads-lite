@@ -134,7 +134,7 @@ type Status string
 
 const (
 	StatusOpen       Status = "open"
-	StatusInProgress Status = "in-progress"
+	StatusInProgress Status = "in_progress"
 	StatusBlocked    Status = "blocked"
 	StatusDeferred   Status = "deferred"
 	StatusClosed     Status = "closed"

@@ -25,7 +25,7 @@ func caseStats(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	_, err = mustRun(r, sandbox, "update", ipID, "--status", "in-progress", "--json")
+	_, err = mustRun(r, sandbox, "update", ipID, "--status", "in_progress", "--json")
 	if err != nil {
 		return "", err
 	}

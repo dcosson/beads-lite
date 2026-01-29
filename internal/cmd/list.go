@@ -63,7 +63,10 @@ Examples:
 				s := storage.StatusClosed
 				filter.Status = &s
 			} else if status != "" {
-				s := storage.Status(status)
+				s, err := parseStatus(status)
+				if err != nil {
+					return err
+				}
 				filter.Status = &s
 			} else {
 				// Default: list open issues

@@ -45,7 +45,7 @@ func caseUpdate(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	section(&out, "update type", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Update status
-	result, err = mustRun(r, sandbox, "update", id, "--status", "in-progress", "--json")
+	result, err = mustRun(r, sandbox, "update", id, "--status", "in_progress", "--json")
 	if err != nil {
 		return "", err
 	}

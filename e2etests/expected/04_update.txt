@@ -71,7 +71,7 @@
     "issue_type": "bug",
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "in_progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -91,7 +91,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "in_progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -110,7 +110,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "in_progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -130,7 +130,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "in_progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -150,7 +150,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "in_progress",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
