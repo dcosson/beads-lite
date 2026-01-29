@@ -4,7 +4,9 @@ package storage
 
 import (
 	"context"
+	"strings"
 	"time"
+	"unicode"
 )
 
 // DependencyType represents the type of relationship between two issues.
@@ -244,3 +246,32 @@ type Storage interface {
 	Doctor(ctx context.Context, fix bool) ([]string, error)
 }
 
+// IsHierarchicalID reports whether id is a hierarchical child ID.
+// An ID is hierarchical if it contains a dot and the suffix after the last
+// dot is purely numeric (e.g. "bd-a3f8.1" is hierarchical, but
+// "my.project-abc" is not).
+func IsHierarchicalID(id string) bool {
+	dot := strings.LastIndex(id, ".")
+	if dot < 0 || dot == len(id)-1 {
+		return false
+	}
+	suffix := id[dot+1:]
+	for _, r := range suffix {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// RootParentID returns the root parent portion of a (possibly hierarchical) ID.
+// For hierarchical IDs this is everything before the first dot
+// (e.g. "bd-a3f8.1.2" → "bd-a3f8"). For non-hierarchical IDs the full ID
+// is returned unchanged.
+func RootParentID(id string) string {
+	dot := strings.Index(id, ".")
+	if dot < 0 {
+		return id
+	}
+	return id[:dot]
+}
