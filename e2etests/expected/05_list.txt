@@ -9,14 +9,14 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "depends_on_id": "ISSUE_1",
-        "issue_id": "ISSUE_3",
+        "issue_id": "ISSUE_2",
         "type": "parent-child"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
     "description": "This is a detailed description",
-    "id": "ISSUE_3",
+    "id": "ISSUE_2",
     "issue_type": "feature",
     "labels": [
       "urgent",
@@ -33,7 +33,7 @@
     "created_by": "Danny Cosson",
     "dependency_count": 0,
     "dependent_count": 0,
-    "id": "ISSUE_2",
+    "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -67,14 +67,14 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "depends_on_id": "ISSUE_1",
-        "issue_id": "ISSUE_3",
+        "issue_id": "ISSUE_2",
         "type": "parent-child"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
     "description": "This is a detailed description",
-    "id": "ISSUE_3",
+    "id": "ISSUE_2",
     "issue_type": "feature",
     "labels": [
       "urgent",
@@ -106,7 +106,7 @@
     "created_by": "Danny Cosson",
     "dependency_count": 0,
     "dependent_count": 0,
-    "id": "ISSUE_2",
+    "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -159,14 +159,14 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "depends_on_id": "ISSUE_1",
-        "issue_id": "ISSUE_3",
+        "issue_id": "ISSUE_2",
         "type": "parent-child"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
     "description": "This is a detailed description",
-    "id": "ISSUE_3",
+    "id": "ISSUE_2",
     "issue_type": "feature",
     "labels": [
       "urgent",
@@ -182,11 +182,4 @@
 
 === list by priority P1 ===
 []
-
-=== list format ids ===
-[
-  "ISSUE_1",
-  "ISSUE_2",
-  "ISSUE_3"
-]
 

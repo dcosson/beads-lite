@@ -511,7 +511,8 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	}
 }
 
-func TestListCommand_FormatIds(t *testing.T) {
+func TestListCommand_FormatIsNoop(t *testing.T) {
+	// --format flag is accepted but not implemented (matching original beads)
 	dir := t.TempDir()
 	store := filesystem.New(dir)
 	ctx := context.Background()
@@ -519,59 +520,7 @@ func TestListCommand_FormatIds(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	id1, err := store.Create(ctx, &storage.Issue{
-		Title:    "Issue 1",
-		Priority: storage.PriorityHigh,
-	})
-	if err != nil {
-		t.Fatalf("failed to create issue: %v", err)
-	}
-
-	id2, err := store.Create(ctx, &storage.Issue{
-		Title:    "Issue 2",
-		Priority: storage.PriorityMedium,
-	})
-	if err != nil {
-		t.Fatalf("failed to create issue: %v", err)
-	}
-
-	var out bytes.Buffer
-	app := &App{
-		Storage: store,
-		Out:     &out,
-		JSON:    false,
-	}
-
-	cmd := newListCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"--format=ids"})
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("list command failed: %v", err)
-	}
-
-	output := out.String()
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	if len(lines) != 2 {
-		t.Errorf("expected 2 lines for ids format, got %d: %s", len(lines), output)
-	}
-	// Check that output contains only IDs
-	if !strings.Contains(output, id1) || !strings.Contains(output, id2) {
-		t.Errorf("expected output to contain both IDs, got: %s", output)
-	}
-	// Check that titles are NOT in output
-	if strings.Contains(output, "Issue 1") || strings.Contains(output, "Issue 2") {
-		t.Errorf("expected ids format NOT to include titles, got: %s", output)
-	}
-}
-
-func TestListCommand_FormatShort(t *testing.T) {
-	dir := t.TempDir()
-	store := filesystem.New(dir)
-	ctx := context.Background()
-	if err := store.Init(ctx); err != nil {
-		t.Fatalf("failed to init storage: %v", err)
-	}
-
-	id, err := store.Create(ctx, &storage.Issue{
+	_, err := store.Create(ctx, &storage.Issue{
 		Title:    "Test issue",
 		Priority: storage.PriorityHigh,
 	})
@@ -586,22 +535,20 @@ func TestListCommand_FormatShort(t *testing.T) {
 		JSON:    false,
 	}
 
+	// Test that --format is accepted with any value but produces default output
 	cmd := newListCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"--format=short"})
+	cmd.SetArgs([]string{"--format=anyvalue"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("list command failed: %v", err)
 	}
 
 	output := out.String()
-	if !strings.Contains(output, id) {
-		t.Errorf("expected output to contain ID %s, got: %s", id, output)
+	// Should produce default output (full format with status/type/priority)
+	if !strings.Contains(output, "[open]") {
+		t.Errorf("expected default format with status brackets, got: %s", output)
 	}
 	if !strings.Contains(output, "Test issue") {
 		t.Errorf("expected output to contain title, got: %s", output)
-	}
-	// Short format should NOT include status/type/priority brackets
-	if strings.Contains(output, "[open]") {
-		t.Errorf("expected short format NOT to include status, got: %s", output)
 	}
 }
 

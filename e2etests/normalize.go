@@ -26,9 +26,10 @@ func NewNormalizer() *Normalizer {
 }
 
 var (
-	// Match beads-lite IDs (bd-XXXX), original beads IDs (e2etests-XXX),
-	// or sandbox IDs (beads-sandbox-XXXXXXXX-XXX)
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}|e2etests-[0-9a-z]{3}|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3})`)
+	// Match beads-lite IDs (bd-XXXX), original beads IDs (e2etests-XXX with optional .N suffix),
+	// or sandbox IDs (beads-sandbox-XXXXXXXX-XXX with optional .N suffix).
+	// The (\.\d+)? captures hierarchical child IDs like e2etests-abc.1
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}|e2etests-[0-9a-z]{3}(\.\d+)?|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(\.\d+)?)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
@@ -85,6 +86,8 @@ func (n *Normalizer) NormalizeJSON(input []byte) string {
 
 // NormalizeJSONSorted is like NormalizeJSON but also sorts arrays of objects
 // by their "title" field for deterministic ordering.
+// IMPORTANT: Sorting happens BEFORE normalization so that IDs are encountered
+// in a deterministic order regardless of the binary's output order.
 func (n *Normalizer) NormalizeJSONSorted(input []byte) string {
 	input = []byte(strings.TrimSpace(string(input)))
 	if len(input) == 0 {
@@ -96,10 +99,9 @@ func (n *Normalizer) NormalizeJSONSorted(input []byte) string {
 		return n.normalizeText(string(input))
 	}
 
-	normalized := n.walkAndNormalize(data)
-
-	// Sort top-level array by title if it's an array of objects
-	if arr, ok := normalized.([]interface{}); ok {
+	// Sort top-level array by title BEFORE normalization so IDs are
+	// encountered in a deterministic order
+	if arr, ok := data.([]interface{}); ok {
 		sort.SliceStable(arr, func(i, j int) bool {
 			mi, oki := arr[i].(map[string]interface{})
 			mj, okj := arr[j].(map[string]interface{})
@@ -110,8 +112,10 @@ func (n *Normalizer) NormalizeJSONSorted(input []byte) string {
 			tj, _ := mj["title"].(string)
 			return ti < tj
 		})
-		normalized = arr
+		data = arr
 	}
+
+	normalized := n.walkAndNormalize(data)
 
 	output, err := json.MarshalIndent(normalized, "", "  ")
 	if err != nil {

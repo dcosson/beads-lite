@@ -43,8 +43,7 @@ Examples:
   bd list --labels=urgent,v2   # List issues with both labels
   bd list --parent=be-abc      # List children of issue be-abc
   bd list --roots              # List root issues (no parent)
-  bd list --assignee=alice     # List issues assigned to alice
-  bd list --format=ids         # Output only issue IDs`,
+  bd list --assignee=alice     # List issues assigned to alice`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -119,14 +118,6 @@ Examples:
 
 			// JSON output
 			if app.JSON {
-				// For --format ids --json, output just the IDs as a JSON array
-				if format == "ids" {
-					ids := make([]string, len(issues))
-					for i, issue := range issues {
-						ids[i] = issue.ID
-					}
-					return json.NewEncoder(app.Out).Encode(ids)
-				}
 				result := make([]IssueListJSON, len(issues))
 				for i, issue := range issues {
 					result[i] = ToIssueListJSON(issue)
@@ -134,40 +125,29 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			// Format output
-			switch format {
-			case "ids":
-				for _, issue := range issues {
-					fmt.Fprintln(app.Out, issue.ID)
-				}
-			case "short":
-				for _, issue := range issues {
-					fmt.Fprintf(app.Out, "%s  %s\n", issue.ID, issue.Title)
-				}
-			default: // "full" or empty
-				if len(issues) == 0 {
-					fmt.Fprintln(app.Out, "No issues found.")
-					return nil
-				}
+			// Text output (--format is accepted but not implemented, matching original beads)
+			if len(issues) == 0 {
+				fmt.Fprintln(app.Out, "No issues found.")
+				return nil
+			}
 
-				fmt.Fprintf(app.Out, "Issues (%d):\n\n", len(issues))
-				for _, issue := range issues {
-					statusStr := string(issue.Status)
-					typeStr := string(issue.Type)
-					priorityStr := string(issue.Priority)
+			fmt.Fprintf(app.Out, "Issues (%d):\n\n", len(issues))
+			for _, issue := range issues {
+				statusStr := string(issue.Status)
+				typeStr := string(issue.Type)
+				priorityStr := string(issue.Priority)
 
-					fmt.Fprintf(app.Out, "  %s  [%s] [%s] [%s] %s\n",
-						issue.ID, statusStr, typeStr, priorityStr, issue.Title)
+				fmt.Fprintf(app.Out, "  %s  [%s] [%s] [%s] %s\n",
+					issue.ID, statusStr, typeStr, priorityStr, issue.Title)
 
-					if issue.Assignee != "" {
-						fmt.Fprintf(app.Out, "       Assignee: %s\n", issue.Assignee)
-					}
-					if len(issue.Labels) > 0 {
-						fmt.Fprintf(app.Out, "       Labels: %s\n", strings.Join(issue.Labels, ", "))
-					}
-					if issue.Parent != "" {
-						fmt.Fprintf(app.Out, "       Parent: %s\n", issue.Parent)
-					}
+				if issue.Assignee != "" {
+					fmt.Fprintf(app.Out, "       Assignee: %s\n", issue.Assignee)
+				}
+				if len(issue.Labels) > 0 {
+					fmt.Fprintf(app.Out, "       Labels: %s\n", strings.Join(issue.Labels, ", "))
+				}
+				if issue.Parent != "" {
+					fmt.Fprintf(app.Out, "       Parent: %s\n", issue.Parent)
 				}
 			}
 
@@ -184,7 +164,7 @@ Examples:
 	cmd.Flags().BoolVar(&all, "all", false, "List all issues (open and closed)")
 	cmd.Flags().BoolVar(&closed, "closed", false, "List only closed issues")
 	cmd.Flags().BoolVar(&roots, "roots", false, "List only root issues (no parent)")
-	cmd.Flags().StringVarP(&format, "format", "f", "", "Output format: full (default), short, ids")
+	cmd.Flags().StringVarP(&format, "format", "f", "", "Output format (not implemented, accepts any value)")
 
 	return cmd
 }
