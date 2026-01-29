@@ -31,7 +31,7 @@ func verifyReferenceBeads(t *testing.T, runner *Runner) {
 func TestE2E(t *testing.T) {
 	bdCmd := os.Getenv("BD_CMD")
 	if bdCmd == "" {
-		t.Skip("BD_CMD environment variable not set; skipping e2e tests")
+		t.Fatal("BD_CMD environment variable not set")
 	}
 
 	runner := &Runner{BdCmd: bdCmd}
@@ -76,25 +76,6 @@ func TestE2E(t *testing.T) {
 				t.Errorf("output mismatch for %s:\n%s", tc.Name, lineDiff(string(expected), actual))
 			}
 		})
-	}
-}
-
-func TestCommandDiscovery(t *testing.T) {
-	bdCmd := os.Getenv("BD_CMD")
-	if bdCmd == "" {
-		t.Skip("BD_CMD environment variable not set; skipping e2e tests")
-	}
-
-	runner := &Runner{BdCmd: bdCmd}
-
-	unknown, err := DiscoverCommands(runner)
-	if err != nil {
-		t.Fatalf("command discovery failed: %v", err)
-	}
-
-	if len(unknown) > 0 {
-		t.Errorf("discovered commands not in knownCommands registry:\n  %s\n\nAdd these to knownCommands in commands.go and create test cases for them.",
-			strings.Join(unknown, "\n  "))
 	}
 }
 

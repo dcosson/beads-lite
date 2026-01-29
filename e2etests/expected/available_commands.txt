@@ -1,0 +1,170 @@
+activity
+admin cleanup
+admin compact
+admin reset
+agent dead
+agent done
+agent heartbeat
+agent idle
+agent running
+agent show
+agent spawning
+agent state
+agent stopped
+agent stuck
+agent working
+audit label
+audit record
+blocked
+branch
+children
+close
+comments add
+config get
+config list
+config set
+config unset
+config validate
+cook
+count
+create
+create-form
+daemon health
+daemon killall
+daemon list
+daemon logs
+daemon restart
+daemon start
+daemon status
+daemon stop
+defer
+delete
+dep add
+dep cycles
+dep list
+dep relate
+dep remove
+dep tree
+dep unrelate
+diff
+doctor
+duplicate
+duplicates
+edit
+epic status
+export jsonl
+export obsidian
+federation add-peer
+federation list-peers
+federation status
+federation sync
+formula convert
+formula list
+formula show
+gate add-waiter
+gate bead
+gate check
+gate discover
+gate human
+gate list
+gate resolve
+gate show
+gate timer
+graph
+history
+hook
+hooks install
+hooks list
+hooks run
+hooks uninstall
+human
+import
+info
+init
+jira JIRA_USERNAME
+jira status
+jira sync
+label add
+label list
+label list-all
+label remove
+linear status
+linear sync
+linear teams
+lint
+list
+mail
+merge
+merge-slot acquire
+merge-slot check
+merge-slot create
+merge-slot release
+migrate hash-ids
+migrate issues
+migrate sync
+migrate tombstones
+mol bond
+mol burn
+mol current
+mol distill
+mol pour
+mol progress
+mol ready
+mol seed
+mol show
+mol squash
+mol stale
+mol wisp
+move
+onboard
+orphans
+preflight
+prime
+q
+quickstart
+ready
+refile
+rename
+rename-prefix
+reopen
+repair
+repo add
+repo list
+repo remove
+repo sync
+resolve-conflicts interactive
+restore
+search
+set-state
+setup
+ship
+show
+slot clear
+slot hook
+slot role
+slot set
+slot show
+stale
+state list
+status
+supersede
+swarm create
+swarm list
+swarm status
+swarm validate
+sync
+types
+undefer
+update
+upgrade ack
+upgrade review
+upgrade status
+vc commit
+vc merge
+vc status
+version
+where
+worktree create
+worktree info
+worktree list
+worktree remove
