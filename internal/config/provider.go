@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Paths captures resolved locations for config and data.
@@ -19,12 +21,12 @@ type Paths struct {
 
 // ResolvePaths resolves config and data paths.
 // Discovery order: BEADS_DIR env var > walk up from CWD (stopping at git root, with worktree fallback).
-func ResolvePaths() (Paths, Config, error) {
+func ResolvePaths() (Paths, error) {
 	// 1. BEADS_DIR env var
 	if envDir := os.Getenv(EnvBeadsDir); envDir != "" {
 		normalized, err := normalizeBasePath(envDir)
 		if err != nil {
-			return Paths{}, Config{}, err
+			return Paths{}, err
 		}
 		return resolveFromBase(normalized)
 	}
@@ -32,12 +34,12 @@ func ResolvePaths() (Paths, Config, error) {
 	// 2. Walk up from CWD, stopping at git root
 	cwd, err := os.Getwd()
 	if err != nil {
-		return Paths{}, Config{}, fmt.Errorf("cannot get current directory: %w", err)
+		return Paths{}, fmt.Errorf("cannot get current directory: %w", err)
 	}
 
 	configDir, configFile, found, err := findConfigUpward(cwd)
 	if err != nil {
-		return Paths{}, Config{}, err
+		return Paths{}, err
 	}
 
 	// 3. If not found and in a git worktree, check the main repo root
@@ -46,7 +48,7 @@ func ResolvePaths() (Paths, Config, error) {
 		if wtErr == nil && worktreeRoot != "" {
 			configDir, configFile, found, err = findConfigUpward(worktreeRoot)
 			if err != nil {
-				return Paths{}, Config{}, err
+				return Paths{}, err
 			}
 		}
 	}
@@ -58,35 +60,21 @@ func ResolvePaths() (Paths, Config, error) {
 			// Check if a .beads dir exists but isn't valid beads-lite
 			if _, dirErr := os.Stat(configDir); dirErr == nil {
 				if vErr := validateBeadsDir(configDir); vErr != nil {
-					return Paths{}, Config{}, vErr
+					return Paths{}, vErr
 				}
 			}
-			return Paths{}, Config{}, missingConfigErr(configFile)
+			return Paths{}, missingConfigErr(configFile)
 		}
 	}
 
-	cfg, err := Load(configFile)
-	if err != nil {
-		return Paths{}, Config{}, err
-	}
-
-	dataDir := filepath.Join(configDir, cfg.Project.Name)
-	if err := ensureDirExists(dataDir); err != nil {
-		return Paths{}, Config{}, missingDataErr(dataDir)
-	}
-
-	return Paths{
-		ConfigDir:  configDir,
-		ConfigFile: configFile,
-		DataDir:    dataDir,
-	}, cfg, nil
+	return buildPaths(configDir, configFile)
 }
 
-func resolveFromBase(basePath string) (Paths, Config, error) {
+func resolveFromBase(basePath string) (Paths, error) {
 	// Check for redirect
 	redirected, err := readRedirect(basePath)
 	if err != nil {
-		return Paths{}, Config{}, err
+		return Paths{}, err
 	}
 	if redirected != "" {
 		basePath = redirected
@@ -95,38 +83,62 @@ func resolveFromBase(basePath string) (Paths, Config, error) {
 	info, err := os.Stat(basePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return Paths{}, Config{}, missingConfigErr(filepath.Join(basePath, "config.yaml"))
+			return Paths{}, missingConfigErr(filepath.Join(basePath, "config.yaml"))
 		}
-		return Paths{}, Config{}, fmt.Errorf("cannot access beads directory %s: %w", basePath, err)
+		return Paths{}, fmt.Errorf("cannot access beads directory %s: %w", basePath, err)
 	}
 	if !info.IsDir() {
-		return Paths{}, Config{}, fmt.Errorf("beads path is not a directory: %s", basePath)
+		return Paths{}, fmt.Errorf("beads path is not a directory: %s", basePath)
 	}
 
 	configFile := filepath.Join(basePath, "config.yaml")
 	if _, err := os.Stat(configFile); err != nil {
 		// The directory exists but has no config.yaml — check if it's an original beads dir
 		if vErr := validateBeadsDir(basePath); vErr != nil {
-			return Paths{}, Config{}, vErr
+			return Paths{}, vErr
 		}
-		return Paths{}, Config{}, missingConfigErr(configFile)
+		return Paths{}, missingConfigErr(configFile)
 	}
 
-	cfg, err := Load(configFile)
+	return buildPaths(basePath, configFile)
+}
+
+// buildPaths reads project.name from a config file and constructs Paths.
+func buildPaths(configDir, configFile string) (Paths, error) {
+	projectName, err := readProjectName(configFile)
 	if err != nil {
-		return Paths{}, Config{}, err
+		return Paths{}, err
 	}
 
-	dataDir := filepath.Join(basePath, cfg.Project.Name)
+	dataDir := filepath.Join(configDir, projectName)
 	if err := ensureDirExists(dataDir); err != nil {
-		return Paths{}, Config{}, missingDataErr(dataDir)
+		return Paths{}, missingDataErr(dataDir)
 	}
 
 	return Paths{
-		ConfigDir:  basePath,
+		ConfigDir:  configDir,
 		ConfigFile: configFile,
 		DataDir:    dataDir,
-	}, cfg, nil
+	}, nil
+}
+
+// readProjectName reads the project.name value from a flat YAML config file.
+// Returns "issues" as default if the key is not present.
+func readProjectName(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading config: %w", err)
+	}
+
+	var m map[string]string
+	if err := yaml.Unmarshal(data, &m); err != nil {
+		return "", fmt.Errorf("parsing config: %w", err)
+	}
+
+	if name, ok := m["project.name"]; ok && name != "" {
+		return name, nil
+	}
+	return "issues", nil
 }
 
 func normalizeBasePath(path string) (string, error) {

@@ -13,12 +13,12 @@ import (
 
 // App holds application state shared across commands.
 type App struct {
-	Storage   storage.Storage
-	Config    config.Config
-	ConfigDir string // path to .beads directory (for config store)
-	Out       io.Writer
-	Err       io.Writer
-	JSON      bool // output in JSON format
+	Storage     storage.Storage
+	ConfigStore config.Store
+	ConfigDir   string // path to .beads directory
+	Out         io.Writer
+	Err         io.Writer
+	JSON        bool // output in JSON format
 }
 
 // SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/config/yamlstore"
 	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -46,12 +47,21 @@ func NewTestProvider(app *App) *AppProvider {
 }
 
 func (p *AppProvider) init() (*App, error) {
-	paths, cfg, err := config.ResolvePaths()
+	paths, err := config.ResolvePaths()
 	if err != nil {
 		return nil, err
 	}
 
-	config.ApplyEnvOverrides(&cfg)
+	configStore, err := yamlstore.New(paths.ConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	if err := config.ApplyDefaults(configStore); err != nil {
+		return nil, err
+	}
+	if err := config.ApplyEnvOverrides(configStore); err != nil {
+		return nil, err
+	}
 
 	store := filesystem.New(paths.DataDir)
 	store.CleanupStaleLocks()
@@ -66,12 +76,12 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage:   store,
-		Config:    cfg,
-		ConfigDir: paths.ConfigDir,
-		Out:       out,
-		Err:       errOut,
-		JSON:      p.JSONOutput,
+		Storage:     store,
+		ConfigStore: configStore,
+		ConfigDir:   paths.ConfigDir,
+		Out:         out,
+		Err:         errOut,
+		JSON:        p.JSONOutput,
 	}, nil
 }
 

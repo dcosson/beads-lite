@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 )
 
 func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
@@ -19,13 +17,11 @@ func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 
 	t.Setenv(EnvBeadsDir, beadsDir)
 
-	paths, cfg, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -39,9 +35,6 @@ func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	if gotData != wantData {
 		t.Errorf("DataDir = %q, want %q", paths.DataDir, filepath.Join(beadsDir, "issues"))
 	}
-	if cfg.Project.Name != "issues" {
-		t.Errorf("Project.Name = %q, want %q", cfg.Project.Name, "issues")
-	}
 }
 
 func TestResolvePaths_SearchUpward(t *testing.T) {
@@ -53,9 +46,7 @@ func TestResolvePaths_SearchUpward(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 
 	deepDir := filepath.Join(tmpDir, "a", "b", "c")
 	if err := os.MkdirAll(deepDir, 0755); err != nil {
@@ -72,7 +63,7 @@ func TestResolvePaths_SearchUpward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -107,27 +98,19 @@ func TestResolvePaths_CustomProjectName(t *testing.T) {
 		t.Fatal(err)
 	}
 	configPath := filepath.Join(beadsDir, "config.yaml")
-	cfg := Default()
-	cfg.Project.Name = "work"
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeFlatConfig(t, configPath, map[string]string{
+		"project.name": "work",
+	})
 
 	t.Setenv(EnvBeadsDir, beadsDir)
 
-	paths, loaded, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
-	if loaded.Project.Name != "work" {
-		t.Errorf("Project.Name = %q, want %q", loaded.Project.Name, "work")
-	}
-	if paths.DataDir != filepath.Join(beadsDir, "work") {
-		t.Errorf("DataDir = %q, want %q", paths.DataDir, filepath.Join(beadsDir, "work"))
+	wantData := filepath.Join(beadsDir, "work")
+	if paths.DataDir != wantData {
+		t.Errorf("DataDir = %q, want %q", paths.DataDir, wantData)
 	}
 }
 
@@ -148,7 +131,7 @@ func TestResolvePaths_MissingConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths()
+	_, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when config is missing")
 	}
@@ -163,13 +146,11 @@ func TestResolvePaths_MissingDataDir(t *testing.T) {
 	if err := os.MkdirAll(beadsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 
 	t.Setenv(EnvBeadsDir, beadsDir)
 
-	_, _, err := ResolvePaths()
+	_, err := ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when data dir is missing")
 	}
@@ -190,9 +171,7 @@ func setupBeadsDir(t *testing.T, parentDir string) string {
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 	return beadsDir
 }
 
@@ -214,7 +193,7 @@ func TestResolvePaths_BEADS_DIR(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -248,9 +227,7 @@ func TestResolvePaths_StopsAtGitRoot(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(parentBeads, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(parentBeads, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(parentBeads, "config.yaml"))
 
 	// Create a subdirectory inside the repo
 	subDir := filepath.Join(repoDir, "sub", "dir")
@@ -267,7 +244,7 @@ func TestResolvePaths_StopsAtGitRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths()
+	_, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should not find .beads above git root")
 	}
@@ -288,9 +265,7 @@ func TestResolvePaths_RedirectFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Write config.yaml so findConfigUpward finds it
-	if err := WriteDefault(filepath.Join(localBeads, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(localBeads, "config.yaml"))
 	// Write redirect file pointing to external location
 	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte(externalBeads+"\n"), 0644); err != nil {
 		t.Fatal(err)
@@ -305,7 +280,7 @@ func TestResolvePaths_RedirectFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -329,9 +304,7 @@ func TestResolvePaths_RedirectRelativePath(t *testing.T) {
 	if err := os.MkdirAll(localBeads, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(localBeads, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(localBeads, "config.yaml"))
 	// Relative path from local/.beads to external/.beads
 	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte("../../external/.beads\n"), 0644); err != nil {
 		t.Fatal(err)
@@ -346,7 +319,7 @@ func TestResolvePaths_RedirectRelativePath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	paths, _, err := ResolvePaths()
+	paths, err := ResolvePaths()
 	if err != nil {
 		t.Fatalf("ResolvePaths error: %v", err)
 	}
@@ -364,9 +337,7 @@ func TestResolvePaths_RedirectInvalid(t *testing.T) {
 	if err := os.MkdirAll(beadsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
-		t.Fatal(err)
-	}
+	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 	// Write redirect to a nonexistent directory
 	if err := os.WriteFile(filepath.Join(beadsDir, "redirect"), []byte("/nonexistent/path\n"), 0644); err != nil {
 		t.Fatal(err)
@@ -381,7 +352,7 @@ func TestResolvePaths_RedirectInvalid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, _, err = ResolvePaths()
+	_, err = ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error when redirect target doesn't exist")
 	}
@@ -620,7 +591,7 @@ func TestResolvePaths_OriginalBeadsDir(t *testing.T) {
 
 	t.Setenv(EnvBeadsDir, beadsDir)
 
-	_, _, err := ResolvePaths()
+	_, err := ResolvePaths()
 	if err == nil {
 		t.Fatal("ResolvePaths should error for original beads dir")
 	}
@@ -647,5 +618,33 @@ func TestFindGitWorktreeRoot_NotWorktree(t *testing.T) {
 	}
 	if root != "" {
 		t.Errorf("findGitWorktreeRoot in non-worktree should return empty, got %q", root)
+	}
+}
+
+// writeDefaultConfig writes a flat key-value config file with default values.
+func writeDefaultConfig(t *testing.T, path string) {
+	t.Helper()
+	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.length: \"4\"\nid.prefix: bd-\nproject.name: issues\n"
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeFlatConfig writes a flat key-value YAML config file.
+func writeFlatConfig(t *testing.T, path string, values map[string]string) {
+	t.Helper()
+	var lines []string
+	for k, v := range values {
+		lines = append(lines, k+": "+v)
+	}
+	content := strings.Join(lines, "\n") + "\n"
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
 	}
 }

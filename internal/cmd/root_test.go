@@ -5,8 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"beads-lite/internal/config"
 )
 
 func TestAppProvider_Get(t *testing.T) {
@@ -40,8 +38,8 @@ func TestAppProvider_Get(t *testing.T) {
 	if !app.JSON {
 		t.Error("App.JSON should be true")
 	}
-	if app.Config.Project.Name != "issues" {
-		t.Errorf("App.Config.Project.Name = %q, want %q", app.Config.Project.Name, "issues")
+	if v, _ := app.ConfigStore.Get("project.name"); v != "issues" {
+		t.Errorf("ConfigStore project.name = %q, want %q", v, "issues")
 	}
 
 	// Second call should return same app (lazy init)
@@ -91,7 +89,9 @@ func setupBeadsDir(t *testing.T, parentDir string) string {
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := config.WriteDefault(filepath.Join(beadsDir, "config.yaml")); err != nil {
+	// Write flat key-value config
+	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.length: \"4\"\nid.prefix: bd-\nproject.name: issues\n"
+	if err := os.WriteFile(filepath.Join(beadsDir, "config.yaml"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
 	return beadsDir
@@ -116,8 +116,8 @@ func TestAppProvider_Get_WithBEADS_DIR(t *testing.T) {
 	if app.Storage == nil {
 		t.Error("App.Storage should not be nil")
 	}
-	if app.Config.Project.Name != "issues" {
-		t.Errorf("App.Config.Project.Name = %q, want %q", app.Config.Project.Name, "issues")
+	if v, _ := app.ConfigStore.Get("project.name"); v != "issues" {
+		t.Errorf("ConfigStore project.name = %q, want %q", v, "issues")
 	}
 }
 
@@ -139,8 +139,8 @@ func TestAppProvider_Get_EnvOverrides(t *testing.T) {
 	if err != nil {
 		t.Fatalf("provider.Get() error: %v", err)
 	}
-	if app.Config.Actor != "env-actor" {
-		t.Errorf("App.Config.Actor = %q, want %q", app.Config.Actor, "env-actor")
+	if v, _ := app.ConfigStore.Get("actor"); v != "env-actor" {
+		t.Errorf("ConfigStore actor = %q, want %q", v, "env-actor")
 	}
 }
 

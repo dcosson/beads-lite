@@ -7,39 +7,46 @@ import (
 func TestApplyEnvOverrides_Actor(t *testing.T) {
 	t.Setenv(EnvActor, "test-actor")
 
-	cfg := Default()
-	ApplyEnvOverrides(&cfg)
+	s := &memStore{data: map[string]string{"actor": "${USER}"}}
+	if err := ApplyEnvOverrides(s); err != nil {
+		t.Fatalf("ApplyEnvOverrides: %v", err)
+	}
 
-	if cfg.Actor != "test-actor" {
-		t.Errorf("Actor = %q, want %q", cfg.Actor, "test-actor")
+	if v, _ := s.Get("actor"); v != "test-actor" {
+		t.Errorf("actor = %q, want %q", v, "test-actor")
 	}
 }
 
 func TestApplyEnvOverrides_Project(t *testing.T) {
 	t.Setenv(EnvProject, "test-project")
 
-	cfg := Default()
-	ApplyEnvOverrides(&cfg)
+	s := &memStore{data: map[string]string{"project.name": "issues"}}
+	if err := ApplyEnvOverrides(s); err != nil {
+		t.Fatalf("ApplyEnvOverrides: %v", err)
+	}
 
-	if cfg.Project.Name != "test-project" {
-		t.Errorf("Project.Name = %q, want %q", cfg.Project.Name, "test-project")
+	if v, _ := s.Get("project.name"); v != "test-project" {
+		t.Errorf("project.name = %q, want %q", v, "test-project")
 	}
 }
 
 func TestApplyEnvOverrides_NoOverride(t *testing.T) {
-	// Ensure env vars are not set
 	t.Setenv(EnvActor, "")
 	t.Setenv(EnvProject, "")
 
-	cfg := Default()
-	original := cfg
-	ApplyEnvOverrides(&cfg)
-
-	if cfg.Actor != original.Actor {
-		t.Errorf("Actor = %q, want %q (should not change)", cfg.Actor, original.Actor)
+	s := &memStore{data: map[string]string{
+		"actor":        "${USER}",
+		"project.name": "issues",
+	}}
+	if err := ApplyEnvOverrides(s); err != nil {
+		t.Fatalf("ApplyEnvOverrides: %v", err)
 	}
-	if cfg.Project.Name != original.Project.Name {
-		t.Errorf("Project.Name = %q, want %q (should not change)", cfg.Project.Name, original.Project.Name)
+
+	if v, _ := s.Get("actor"); v != "${USER}" {
+		t.Errorf("actor = %q, want %q (should not change)", v, "${USER}")
+	}
+	if v, _ := s.Get("project.name"); v != "issues" {
+		t.Errorf("project.name = %q, want %q (should not change)", v, "issues")
 	}
 }
 
@@ -47,17 +54,23 @@ func TestApplyEnvOverrides_Both(t *testing.T) {
 	t.Setenv(EnvActor, "env-actor")
 	t.Setenv(EnvProject, "env-project")
 
-	cfg := Default()
-	ApplyEnvOverrides(&cfg)
+	s := &memStore{data: map[string]string{
+		"actor":             "${USER}",
+		"project.name":      "issues",
+		"defaults.priority": "medium",
+	}}
+	if err := ApplyEnvOverrides(s); err != nil {
+		t.Fatalf("ApplyEnvOverrides: %v", err)
+	}
 
-	if cfg.Actor != "env-actor" {
-		t.Errorf("Actor = %q, want %q", cfg.Actor, "env-actor")
+	if v, _ := s.Get("actor"); v != "env-actor" {
+		t.Errorf("actor = %q, want %q", v, "env-actor")
 	}
-	if cfg.Project.Name != "env-project" {
-		t.Errorf("Project.Name = %q, want %q", cfg.Project.Name, "env-project")
+	if v, _ := s.Get("project.name"); v != "env-project" {
+		t.Errorf("project.name = %q, want %q", v, "env-project")
 	}
-	// Other fields should remain defaults
-	if cfg.Defaults.Priority != "medium" {
-		t.Errorf("Defaults.Priority = %q, want %q", cfg.Defaults.Priority, "medium")
+	// Other keys should remain unchanged
+	if v, _ := s.Get("defaults.priority"); v != "medium" {
+		t.Errorf("defaults.priority = %q, want %q", v, "medium")
 	}
 }

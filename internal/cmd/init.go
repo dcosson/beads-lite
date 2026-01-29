@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/config/yamlstore"
 	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -78,13 +79,18 @@ func runInit(force bool, projectName string) error {
 	}
 
 	configPath := filepath.Join(beadsPath, "config.yaml")
-	cfg := config.Default()
-	cfg.Project.Name = projectName
-	if err := config.Write(configPath, cfg); err != nil {
-		return err
+	store, err := yamlstore.New(configPath)
+	if err != nil {
+		return fmt.Errorf("creating config store: %w", err)
+	}
+	if err := config.ApplyDefaults(store); err != nil {
+		return fmt.Errorf("writing default config: %w", err)
+	}
+	if err := store.Set("project.name", projectName); err != nil {
+		return fmt.Errorf("setting project name: %w", err)
 	}
 
-	dataPath := filepath.Join(beadsPath, cfg.Project.Name)
+	dataPath := filepath.Join(beadsPath, projectName)
 
 	// Create the storage
 	storage := filesystem.New(dataPath)

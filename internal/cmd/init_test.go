@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"beads-lite/internal/config"
+	"beads-lite/internal/config/yamlstore"
 )
 
 func TestInit(t *testing.T) {
@@ -155,17 +155,52 @@ func TestInit(t *testing.T) {
 		}
 
 		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
-		cfg, err := config.Load(configPath)
+		store, err := yamlstore.New(configPath)
 		if err != nil {
-			t.Fatalf("loading config: %v", err)
+			t.Fatalf("loading config store: %v", err)
 		}
-		if cfg.Project.Name != "work" {
-			t.Errorf("config project name = %q, want %q", cfg.Project.Name, "work")
+		if v, _ := store.Get("project.name"); v != "work" {
+			t.Errorf("config project.name = %q, want %q", v, "work")
 		}
 
 		dataPath := filepath.Join(tmpDir, ".beads", "work")
 		if _, err := os.Stat(dataPath); os.IsNotExist(err) {
 			t.Error(".beads/work directory was not created")
+		}
+	})
+
+	t.Run("creates flat config format", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
+		store, err := yamlstore.New(configPath)
+		if err != nil {
+			t.Fatalf("loading config store: %v", err)
+		}
+
+		// Verify all default keys are present as flat key-value pairs
+		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "id.prefix", "id.length", "project.name"} {
+			if _, ok := store.Get(key); !ok {
+				t.Errorf("config missing key %q", key)
+			}
 		}
 	})
 
