@@ -1686,3 +1686,105 @@ func BenchmarkConcurrentReads(b *testing.B) {
     })
 }
 ```
+
+---
+
+# Gas Town Compatibility Checklist
+
+Commands and flags required by Gas Town (see `GAS_TOWN_REQUIREMENTS.md`). Checked items are already implemented and passing in e2e tests.
+
+## Global Flags
+
+- [x] `--json` — JSON output
+- [ ] `--no-daemon` — No-op flag (beads-lite is daemonless by design, but Gas Town passes it)
+- [ ] `-q`, `--quiet` — Quiet mode, minimal output
+- [ ] `--allow-stale` — No-op flag (no daemon/cache, but Gas Town passes it)
+
+## Core Commands
+
+- [x] `init` — Initialize bead database
+  - [x] `--project` (our equivalent of project naming)
+  - [ ] `--prefix <prefix>` — Set issue prefix
+  - [ ] `--quiet` — Quiet mode (or covered by global `-q`)
+- [x] `create` — Create new beads
+  - [x] `--type`, `--title`, `--priority`, `--label`
+  - [ ] `--labels <labels>` — Alias for `--label` (Gas Town uses `--labels`)
+- [x] `show` — Show bead details (with `--json` via global flag)
+- [x] `list` — List beads/issues
+  - [x] `--status`, `--type`, `--json`
+  - [ ] `--tag=<tag>` — Filter by tag (Gas Town uses `--tag`, we have `--labels`)
+- [x] `update` — Update bead status/properties
+  - [x] `--status`, `--assignee`
+- [x] `close` — Close beads
+- [ ] `version` — Return semver version string (Gas Town checks for minimum `0.43.0`)
+
+## `config` — Configuration Management
+
+- [ ] `config get <key>` — Get configuration value
+- [ ] `config set <key> <value>` — Set configuration value
+- Known keys: `issue_prefix`, `allowed_prefixes`, `types.custom`, `routing.mode`
+
+## `slot` — Slot Operations
+
+- [ ] `slot show <bead-id>` — Show slot data for a bead
+- [ ] `slot set <bead-id> <name> <value>` — Set a slot value
+- [ ] `slot clear <bead-id> <name>` — Clear a slot value
+
+## `gate` — Gate Operations
+
+- [ ] `gate show <gate-id>` — Show gate details
+- [ ] `gate wait <gate-id> --notify <agent-id>` — Wait on a gate with notification
+
+## `swarm` — Swarm Operations
+
+- [ ] `swarm status <swarm-id>` — Get swarm status
+
+## `mol` — Molecule Operations (has sub-sub-commands)
+
+- [ ] `mol current <molecule-id>` — Get current molecule state
+- [ ] `mol seed --patrol` — Seed a molecule with patrol
+- [ ] `mol wisp create <proto-id> --actor <role>` — Create a wisp (sub-sub-command of `mol wisp`)
+- [ ] `mol wisp gc` — Garbage collect wisps (sub-sub-command of `mol wisp`)
+
+## `formula` — Formula Operations
+
+- [ ] `formula show <name>` — Show formula details
+  - [ ] `--allow-stale` flag
+- [ ] `formula list` — List all formulas
+
+## `agent` — Agent Operations
+
+- [ ] `agent state <bead-id> <state>` — Set agent state
+- [ ] `agent heartbeat <agent-bead>` — Send agent heartbeat
+
+## `dep` — Dependency Operations
+
+- [x] `dep list <bead-id>` — List dependencies
+  - [x] `--direction=<up|down>`
+  - [x] `--type=<type>`
+  - [x] `--json` (via global flag)
+- [x] `dep add` — Add dependency
+- [x] `dep remove` — Remove dependency
+
+## Other Commands
+
+- [ ] `cook <formula-name>` — Cook/execute a formula
+- [ ] `import` — Import data
+- [ ] `migrate` — Run database migrations
+- [ ] `sync --import-only` — Sync operations (import only)
+- [ ] `prime` — Prime operations
+- [x] `stats` — Show statistics
+- [x] `ready` — Ready check
+- [ ] `label` — Label operations (standalone command; currently labels are managed via `update --add-label`/`--remove-label`)
+- [x] `doctor` — Health/diagnostic checks
+- [x] `blocked` — Check blocked status
+
+## Already Implemented (not in Gas Town requirements)
+
+These commands exist in beads-lite but are not required by Gas Town:
+- `reopen` — Reopen a closed issue
+- `delete` — Permanently delete an issue
+- `comment add` / `comment list` — Manage issue comments
+- `compact` — Remove old closed issues
+- `children` — List an issue's children
+- `search` — Search issue titles and descriptions
