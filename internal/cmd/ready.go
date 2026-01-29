@@ -92,11 +92,12 @@ An issue is "ready" if:
 }
 
 // isReady returns true if an issue is ready to work on.
-// An issue is ready if all its dependencies (depends_on) are closed.
+// An issue is ready if all its "blocks" type dependencies are closed.
+// Other dependency types (tracks, related, etc.) do not block readiness.
 func isReady(issue *storage.Issue, closedSet map[string]bool) bool {
-	for _, dep := range issue.DependsOn {
-		if !closedSet[dep] {
-			return false // Dependency not closed
+	for _, dep := range issue.Dependencies {
+		if dep.Type == storage.DepTypeBlocks && !closedSet[dep.ID] {
+			return false // Blocking dependency not closed
 		}
 	}
 	return true

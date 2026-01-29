@@ -484,10 +484,15 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 	return nil
 }
 
-// AddDependency creates a dependency relationship (A depends on B).
-func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dependencyID string) error {
+// AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
+// When depType is parent-child, also sets issueID.Parent and handles reparenting.
+func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, dependsOnID string, depType storage.DependencyType) error {
+	if depType == storage.DepTypeParentChild {
+		return fs.addParentChildDep(ctx, issueID, dependsOnID)
+	}
+
 	// Check for cycle before acquiring locks
-	hasCycle, err := fs.hasDependencyCycle(ctx, dependentID, dependencyID)
+	hasCycle, err := fs.hasDependencyCycle(ctx, issueID, dependsOnID)
 	if err != nil {
 		return err
 	}
@@ -495,23 +500,23 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dep
 		return storage.ErrCycle
 	}
 
-	locks, err := fs.acquireLocksOrdered([]string{dependentID, dependencyID})
+	locks, err := fs.acquireLocksOrdered([]string{issueID, dependsOnID})
 	if err != nil {
 		return err
 	}
 	defer releaseLocks(locks)
 
-	dependent, err := fs.Get(ctx, dependentID)
+	issue, err := fs.Get(ctx, issueID)
 	if err != nil {
 		return err
 	}
-	dependency, err := fs.Get(ctx, dependencyID)
+	dependsOn, err := fs.Get(ctx, dependsOnID)
 	if err != nil {
 		return err
 	}
 
 	// Re-check for cycle after acquiring locks (data may have changed)
-	hasCycle, err = fs.hasDependencyCycle(ctx, dependentID, dependencyID)
+	hasCycle, err = fs.hasDependencyCycle(ctx, issueID, dependsOnID)
 	if err != nil {
 		return err
 	}
@@ -519,136 +524,28 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, dependentID, dep
 		return storage.ErrCycle
 	}
 
-	// Add to dependent's depends_on
-	if !contains(dependent.DependsOn, dependencyID) {
-		dependent.DependsOn = append(dependent.DependsOn, dependencyID)
+	// Add to issue's dependencies
+	if !issue.HasDependency(dependsOnID) {
+		issue.Dependencies = append(issue.Dependencies, storage.Dependency{ID: dependsOnID, Type: depType})
 	}
-	// Add to dependency's dependents
-	if !contains(dependency.Dependents, dependentID) {
-		dependency.Dependents = append(dependency.Dependents, dependentID)
+	// Add to dependsOn's dependents
+	if !dependsOn.HasDependent(issueID) {
+		dependsOn.Dependents = append(dependsOn.Dependents, storage.Dependency{ID: issueID, Type: depType})
 	}
 
-	dependent.UpdatedAt = time.Now()
-	dependency.UpdatedAt = time.Now()
+	issue.UpdatedAt = time.Now()
+	dependsOn.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(dependentID, false), dependent); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == storage.StatusClosed), issue); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(dependencyID, false), dependency)
+	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == storage.StatusClosed), dependsOn)
 }
 
-// RemoveDependency removes a dependency relationship.
-func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, dependentID, dependencyID string) error {
-	locks, err := fs.acquireLocksOrdered([]string{dependentID, dependencyID})
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	dependent, err := fs.Get(ctx, dependentID)
-	if err != nil {
-		return err
-	}
-	dependency, err := fs.Get(ctx, dependencyID)
-	if err != nil {
-		return err
-	}
-
-	dependent.DependsOn = remove(dependent.DependsOn, dependencyID)
-	dependency.Dependents = remove(dependency.Dependents, dependentID)
-
-	dependent.UpdatedAt = time.Now()
-	dependency.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(dependentID, false), dependent); err != nil {
-		return err
-	}
-	return atomicWriteJSON(fs.issuePath(dependencyID, false), dependency)
-}
-
-// AddBlock creates a blocking relationship (A blocks B).
-func (fs *FilesystemStorage) AddBlock(ctx context.Context, blockerID, blockedID string) error {
-	// Check for cycle before acquiring locks
-	hasCycle, err := fs.hasBlockCycle(ctx, blockerID, blockedID)
-	if err != nil {
-		return err
-	}
-	if hasCycle {
-		return storage.ErrCycle
-	}
-
-	locks, err := fs.acquireLocksOrdered([]string{blockerID, blockedID})
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	blocker, err := fs.Get(ctx, blockerID)
-	if err != nil {
-		return err
-	}
-	blocked, err := fs.Get(ctx, blockedID)
-	if err != nil {
-		return err
-	}
-
-	// Re-check for cycle after acquiring locks (data may have changed)
-	hasCycle, err = fs.hasBlockCycle(ctx, blockerID, blockedID)
-	if err != nil {
-		return err
-	}
-	if hasCycle {
-		return storage.ErrCycle
-	}
-
-	if !contains(blocker.Blocks, blockedID) {
-		blocker.Blocks = append(blocker.Blocks, blockedID)
-	}
-	if !contains(blocked.BlockedBy, blockerID) {
-		blocked.BlockedBy = append(blocked.BlockedBy, blockerID)
-	}
-
-	blocker.UpdatedAt = time.Now()
-	blocked.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(blockerID, false), blocker); err != nil {
-		return err
-	}
-	return atomicWriteJSON(fs.issuePath(blockedID, false), blocked)
-}
-
-// RemoveBlock removes a blocking relationship.
-func (fs *FilesystemStorage) RemoveBlock(ctx context.Context, blockerID, blockedID string) error {
-	locks, err := fs.acquireLocksOrdered([]string{blockerID, blockedID})
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	blocker, err := fs.Get(ctx, blockerID)
-	if err != nil {
-		return err
-	}
-	blocked, err := fs.Get(ctx, blockedID)
-	if err != nil {
-		return err
-	}
-
-	blocker.Blocks = remove(blocker.Blocks, blockedID)
-	blocked.BlockedBy = remove(blocked.BlockedBy, blockerID)
-
-	blocker.UpdatedAt = time.Now()
-	blocked.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(blockerID, false), blocker); err != nil {
-		return err
-	}
-	return atomicWriteJSON(fs.issuePath(blockedID, false), blocked)
-}
-
-// SetParent sets the parent of an issue.
-func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID string) error {
-	// Check for cycle before acquiring locks
+// addParentChildDep handles AddDependency with parent-child type.
+// Sets the Parent field and handles reparenting (removing old parent).
+func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, parentID string) error {
+	// Check for hierarchy cycle before acquiring locks
 	hasCycle, err := fs.hasHierarchyCycle(ctx, childID, parentID)
 	if err != nil {
 		return err
@@ -684,7 +581,7 @@ func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID st
 		return err
 	}
 
-	// Re-check for cycle after acquiring locks (data may have changed)
+	// Re-check for cycle after acquiring locks
 	hasCycle, err = fs.hasHierarchyCycle(ctx, childID, parentID)
 	if err != nil {
 		return err
@@ -697,64 +594,68 @@ func (fs *FilesystemStorage) SetParent(ctx context.Context, childID, parentID st
 	if child.Parent != "" && child.Parent != parentID {
 		oldParent, err := fs.Get(ctx, child.Parent)
 		if err == nil {
-			oldParent.Children = remove(oldParent.Children, childID)
+			oldParent.Dependents = removeDep(oldParent.Dependents, childID)
 			oldParent.UpdatedAt = time.Now()
-			atomicWriteJSON(fs.issuePath(child.Parent, false), oldParent)
+			atomicWriteJSON(fs.issuePath(child.Parent, oldParent.Status == storage.StatusClosed), oldParent)
 		}
+		child.Dependencies = removeDep(child.Dependencies, child.Parent)
 	}
 
 	child.Parent = parentID
-	if !contains(parent.Children, childID) {
-		parent.Children = append(parent.Children, childID)
+
+	// Add parent-child typed dependency
+	if !child.HasDependency(parentID) {
+		child.Dependencies = append(child.Dependencies, storage.Dependency{ID: parentID, Type: storage.DepTypeParentChild})
+	}
+	if !parent.HasDependent(childID) {
+		parent.Dependents = append(parent.Dependents, storage.Dependency{ID: childID, Type: storage.DepTypeParentChild})
 	}
 
 	child.UpdatedAt = time.Now()
 	parent.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(childID, false), child); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(childID, child.Status == storage.StatusClosed), child); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(parentID, false), parent)
+	return atomicWriteJSON(fs.issuePath(parentID, parent.Status == storage.StatusClosed), parent)
 }
 
-// RemoveParent removes the parent relationship.
-func (fs *FilesystemStorage) RemoveParent(ctx context.Context, childID string) error {
-	child, err := fs.Get(ctx, childID)
-	if err != nil {
-		return err
-	}
-
-	if child.Parent == "" {
-		return nil // No parent to remove
-	}
-
-	locks, err := fs.acquireLocksOrdered([]string{childID, child.Parent})
+// RemoveDependency removes a dependency relationship by ID from both sides.
+// If the removed dep was parent-child, also clears issueID.Parent.
+func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, issueID, dependsOnID string) error {
+	locks, err := fs.acquireLocksOrdered([]string{issueID, dependsOnID})
 	if err != nil {
 		return err
 	}
 	defer releaseLocks(locks)
 
-	// Re-read after locking
-	child, err = fs.Get(ctx, childID)
+	issue, err := fs.Get(ctx, issueID)
+	if err != nil {
+		return err
+	}
+	dependsOn, err := fs.Get(ctx, dependsOnID)
 	if err != nil {
 		return err
 	}
 
-	parent, err := fs.Get(ctx, child.Parent)
-	if err != nil {
-		return err
+	// Check if this is a parent-child dep — clear Parent field
+	for _, dep := range issue.Dependencies {
+		if dep.ID == dependsOnID && dep.Type == storage.DepTypeParentChild {
+			issue.Parent = ""
+			break
+		}
 	}
 
-	parent.Children = remove(parent.Children, childID)
-	child.Parent = ""
+	issue.Dependencies = removeDep(issue.Dependencies, dependsOnID)
+	dependsOn.Dependents = removeDep(dependsOn.Dependents, issueID)
 
-	child.UpdatedAt = time.Now()
-	parent.UpdatedAt = time.Now()
+	issue.UpdatedAt = time.Now()
+	dependsOn.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(childID, false), child); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == storage.StatusClosed), issue); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(parent.ID, false), parent)
+	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == storage.StatusClosed), dependsOn)
 }
 
 // AddComment adds a comment to an issue.
@@ -962,127 +863,59 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 				problems = append(problems, fmt.Sprintf("broken parent reference: %s references non-existent parent %s", id, issue.Parent))
 				if fix {
 					issue.Parent = ""
+					issue.Dependencies = removeDep(issue.Dependencies, issue.Parent)
 					issuesNeedingUpdate[id] = true
 				}
 			} else {
-				// Check asymmetry: parent should have this issue in children
+				// Check asymmetry: parent should have this issue as a parent-child dependent
 				parent := allIssues[issue.Parent]
-				if !contains(parent.Children, id) {
-					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s has parent %s but parent doesn't list it as child", id, issue.Parent))
+				if !parent.HasDependent(id) {
+					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s has parent %s but parent doesn't list it as dependent", id, issue.Parent))
 					if fix {
-						parent.Children = append(parent.Children, id)
+						parent.Dependents = append(parent.Dependents, storage.Dependency{ID: id, Type: storage.DepTypeParentChild})
 						issuesNeedingUpdate[issue.Parent] = true
 					}
 				}
 			}
 		}
 
-		// Check children references
-		for _, childID := range issue.Children {
-			if _, exists := allIssues[childID]; !exists {
-				problems = append(problems, fmt.Sprintf("broken child reference: %s references non-existent child %s", id, childID))
+		// Check dependencies references
+		for _, dep := range issue.Dependencies {
+			if _, exists := allIssues[dep.ID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken dependency: %s depends on non-existent %s", id, dep.ID))
 				if fix {
-					issue.Children = remove(issue.Children, childID)
+					issue.Dependencies = removeDep(issue.Dependencies, dep.ID)
 					issuesNeedingUpdate[id] = true
 				}
 			} else {
-				// Check asymmetry: child should have this issue as parent
-				child := allIssues[childID]
-				if child.Parent != id {
-					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s lists %s as child but child's parent is %q", id, childID, child.Parent))
+				// Check asymmetry: dependency target should have this issue in dependents
+				target := allIssues[dep.ID]
+				if !target.HasDependent(id) {
+					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s depends on %s but %s doesn't list it as dependent", id, dep.ID, dep.ID))
 					if fix {
-						if child.Parent == "" {
-							child.Parent = id
-							issuesNeedingUpdate[childID] = true
-						} else {
-							// Child has a different parent, remove from our children
-							issue.Children = remove(issue.Children, childID)
-							issuesNeedingUpdate[id] = true
-						}
-					}
-				}
-			}
-		}
-
-		// Check depends_on references
-		for _, depID := range issue.DependsOn {
-			if _, exists := allIssues[depID]; !exists {
-				problems = append(problems, fmt.Sprintf("broken dependency: %s depends on non-existent %s", id, depID))
-				if fix {
-					issue.DependsOn = remove(issue.DependsOn, depID)
-					issuesNeedingUpdate[id] = true
-				}
-			} else {
-				// Check asymmetry: dependency should have this issue in dependents
-				dep := allIssues[depID]
-				if !contains(dep.Dependents, id) {
-					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s depends on %s but %s doesn't list it as dependent", id, depID, depID))
-					if fix {
-						dep.Dependents = append(dep.Dependents, id)
-						issuesNeedingUpdate[depID] = true
+						target.Dependents = append(target.Dependents, storage.Dependency{ID: id, Type: dep.Type})
+						issuesNeedingUpdate[dep.ID] = true
 					}
 				}
 			}
 		}
 
 		// Check dependents references
-		for _, depID := range issue.Dependents {
-			if _, exists := allIssues[depID]; !exists {
-				problems = append(problems, fmt.Sprintf("broken dependent reference: %s has non-existent dependent %s", id, depID))
+		for _, dep := range issue.Dependents {
+			if _, exists := allIssues[dep.ID]; !exists {
+				problems = append(problems, fmt.Sprintf("broken dependent reference: %s has non-existent dependent %s", id, dep.ID))
 				if fix {
-					issue.Dependents = remove(issue.Dependents, depID)
+					issue.Dependents = removeDep(issue.Dependents, dep.ID)
 					issuesNeedingUpdate[id] = true
 				}
 			} else {
-				// Check asymmetry: dependent should have this issue in depends_on
-				dep := allIssues[depID]
-				if !contains(dep.DependsOn, id) {
-					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s lists %s as dependent but %s doesn't depend on it", id, depID, depID))
+				// Check asymmetry: dependent should have this issue in dependencies
+				dependent := allIssues[dep.ID]
+				if !dependent.HasDependency(id) {
+					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s lists %s as dependent but %s doesn't depend on it", id, dep.ID, dep.ID))
 					if fix {
-						dep.DependsOn = append(dep.DependsOn, id)
-						issuesNeedingUpdate[depID] = true
-					}
-				}
-			}
-		}
-
-		// Check blocks references
-		for _, blockedID := range issue.Blocks {
-			if _, exists := allIssues[blockedID]; !exists {
-				problems = append(problems, fmt.Sprintf("broken blocks reference: %s blocks non-existent %s", id, blockedID))
-				if fix {
-					issue.Blocks = remove(issue.Blocks, blockedID)
-					issuesNeedingUpdate[id] = true
-				}
-			} else {
-				// Check asymmetry: blocked issue should have this issue in blocked_by
-				blocked := allIssues[blockedID]
-				if !contains(blocked.BlockedBy, id) {
-					problems = append(problems, fmt.Sprintf("asymmetric blocks: %s blocks %s but %s doesn't list it in blocked_by", id, blockedID, blockedID))
-					if fix {
-						blocked.BlockedBy = append(blocked.BlockedBy, id)
-						issuesNeedingUpdate[blockedID] = true
-					}
-				}
-			}
-		}
-
-		// Check blocked_by references
-		for _, blockerID := range issue.BlockedBy {
-			if _, exists := allIssues[blockerID]; !exists {
-				problems = append(problems, fmt.Sprintf("broken blocked_by reference: %s blocked by non-existent %s", id, blockerID))
-				if fix {
-					issue.BlockedBy = remove(issue.BlockedBy, blockerID)
-					issuesNeedingUpdate[id] = true
-				}
-			} else {
-				// Check asymmetry: blocker should have this issue in blocks
-				blocker := allIssues[blockerID]
-				if !contains(blocker.Blocks, id) {
-					problems = append(problems, fmt.Sprintf("asymmetric blocked_by: %s blocked by %s but %s doesn't list it in blocks", id, blockerID, blockerID))
-					if fix {
-						blocker.Blocks = append(blocker.Blocks, id)
-						issuesNeedingUpdate[blockerID] = true
+						dependent.Dependencies = append(dependent.Dependencies, storage.Dependency{ID: id, Type: dep.Type})
+						issuesNeedingUpdate[dep.ID] = true
 					}
 				}
 			}
@@ -1121,59 +954,28 @@ func remove(slice []string, item string) []string {
 	return result
 }
 
-// hasDependencyCycle checks if adding a dependency from dependent to dependency would create a cycle.
-// It walks the dependency graph from 'dependency' to see if 'dependent' is reachable.
-func (fs *FilesystemStorage) hasDependencyCycle(ctx context.Context, dependent, dependency string) (bool, error) {
-	// Self-reference is always a cycle
-	if dependent == dependency {
-		return true, nil
-	}
-
-	// BFS to check if dependent is reachable from dependency via DependsOn
-	visited := make(map[string]bool)
-	queue := []string{dependency}
-
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-
-		if visited[current] {
-			continue
-		}
-		visited[current] = true
-
-		issue, err := fs.Get(ctx, current)
-		if err != nil {
-			if err == storage.ErrNotFound {
-				continue
-			}
-			return false, err
-		}
-
-		for _, dep := range issue.DependsOn {
-			if dep == dependent {
-				return true, nil
-			}
-			if !visited[dep] {
-				queue = append(queue, dep)
-			}
+// removeDep removes a dependency entry by ID from a Dependency slice.
+func removeDep(deps []storage.Dependency, id string) []storage.Dependency {
+	result := make([]storage.Dependency, 0, len(deps))
+	for _, d := range deps {
+		if d.ID != id {
+			result = append(result, d)
 		}
 	}
-
-	return false, nil
+	return result
 }
 
-// hasBlockCycle checks if adding a block relationship (blocker blocks blocked) would create a cycle.
-// It walks the block graph from 'blocked' to see if 'blocker' is reachable via Blocks.
-func (fs *FilesystemStorage) hasBlockCycle(ctx context.Context, blocker, blocked string) (bool, error) {
+// hasDependencyCycle checks if adding a dependency from issueID to dependsOnID would create a cycle.
+// It walks the dependency graph from 'dependsOnID' to see if 'issueID' is reachable.
+func (fs *FilesystemStorage) hasDependencyCycle(ctx context.Context, issueID, dependsOnID string) (bool, error) {
 	// Self-reference is always a cycle
-	if blocker == blocked {
+	if issueID == dependsOnID {
 		return true, nil
 	}
 
-	// BFS to check if blocker is reachable from blocked via Blocks
+	// BFS to check if issueID is reachable from dependsOnID via Dependencies
 	visited := make(map[string]bool)
-	queue := []string{blocked}
+	queue := []string{dependsOnID}
 
 	for len(queue) > 0 {
 		current := queue[0]
@@ -1192,12 +994,12 @@ func (fs *FilesystemStorage) hasBlockCycle(ctx context.Context, blocker, blocked
 			return false, err
 		}
 
-		for _, b := range issue.Blocks {
-			if b == blocker {
+		for _, dep := range issue.Dependencies {
+			if dep.ID == issueID {
 				return true, nil
 			}
-			if !visited[b] {
-				queue = append(queue, b)
+			if !visited[dep.ID] {
+				queue = append(queue, dep.ID)
 			}
 		}
 	}

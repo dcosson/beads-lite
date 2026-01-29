@@ -54,15 +54,15 @@ func TestDepAddBasic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get issue A: %v", err)
 	}
-	if !contains(gotA.DependsOn, idB) {
-		t.Errorf("expected A.DependsOn to contain B; got %v", gotA.DependsOn)
+	if !gotA.HasDependency(idB) {
+		t.Errorf("expected A.Dependencies to contain B; got %v", gotA.Dependencies)
 	}
 
 	gotB, err := store.Get(context.Background(), idB)
 	if err != nil {
 		t.Fatalf("failed to get issue B: %v", err)
 	}
-	if !contains(gotB.Dependents, idA) {
+	if !gotB.HasDependent(idA) {
 		t.Errorf("expected B.Dependents to contain A; got %v", gotB.Dependents)
 	}
 }
@@ -88,7 +88,7 @@ func TestDepAddCycle(t *testing.T) {
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Add A depends on B
-	if err := store.AddDependency(context.Background(), idA, idB); err != nil {
+	if err := store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add initial dependency: %v", err)
 	}
 
@@ -169,7 +169,7 @@ func TestDepRemoveBasic(t *testing.T) {
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Add dependency
-	if err := store.AddDependency(context.Background(), idA, idB); err != nil {
+	if err := store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -187,12 +187,12 @@ func TestDepRemoveBasic(t *testing.T) {
 
 	// Verify the dependency was removed
 	gotA, _ := store.Get(context.Background(), idA)
-	if contains(gotA.DependsOn, idB) {
-		t.Errorf("expected A.DependsOn to NOT contain B; got %v", gotA.DependsOn)
+	if gotA.HasDependency(idB) {
+		t.Errorf("expected A.Dependencies to NOT contain B; got %v", gotA.Dependencies)
 	}
 
 	gotB, _ := store.Get(context.Background(), idB)
-	if contains(gotB.Dependents, idA) {
+	if gotB.HasDependent(idA) {
 		t.Errorf("expected B.Dependents to NOT contain A; got %v", gotB.Dependents)
 	}
 }
@@ -227,8 +227,8 @@ func TestDepListBasic(t *testing.T) {
 	idC, _ := store.Create(context.Background(), issueC)
 
 	// A depends on B, C depends on A
-	store.AddDependency(context.Background(), idA, idB)
-	store.AddDependency(context.Background(), idC, idA)
+	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idC, idA, storage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA})
@@ -268,7 +268,7 @@ func TestDepListJSON(t *testing.T) {
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
-	store.AddDependency(context.Background(), idA, idB)
+	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA})
@@ -285,12 +285,22 @@ func TestDepListJSON(t *testing.T) {
 		t.Errorf("expected id %q, got %q", idA, result["id"])
 	}
 
-	depsOn, ok := result["depends_on"].([]interface{})
+	deps, ok := result["dependencies"].([]interface{})
 	if !ok {
-		t.Fatalf("expected depends_on to be array, got %T", result["depends_on"])
+		t.Fatalf("expected dependencies to be array, got %T", result["dependencies"])
 	}
-	if len(depsOn) != 1 || depsOn[0].(string) != idB {
-		t.Errorf("expected depends_on [%s], got %v", idB, depsOn)
+	if len(deps) != 1 {
+		t.Fatalf("expected 1 dependency, got %d", len(deps))
+	}
+	depObj, ok := deps[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected dependency to be object, got %T", deps[0])
+	}
+	if depObj["id"] != idB {
+		t.Errorf("expected dependency id %q, got %q", idB, depObj["id"])
+	}
+	if depObj["type"] != "blocks" {
+		t.Errorf("expected dependency type %q, got %q", "blocks", depObj["type"])
 	}
 }
 
@@ -323,8 +333,8 @@ func TestDepListTree(t *testing.T) {
 	}
 	idC, _ := store.Create(context.Background(), issueC)
 
-	store.AddDependency(context.Background(), idA, idB)
-	store.AddDependency(context.Background(), idB, idC)
+	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idB, idC, storage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA, "--tree"})
@@ -396,8 +406,8 @@ func TestDepPrefixMatching(t *testing.T) {
 
 	// Verify the dependency was created with full IDs
 	gotA, _ := store.Get(context.Background(), idA)
-	if !contains(gotA.DependsOn, idB) {
-		t.Errorf("expected A.DependsOn to contain B; got %v", gotA.DependsOn)
+	if !gotA.HasDependency(idB) {
+		t.Errorf("expected A.Dependencies to contain B; got %v", gotA.Dependencies)
 	}
 }
 

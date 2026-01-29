@@ -17,7 +17,6 @@ func RunContractTests(t *testing.T, factory func() Storage) {
 	t.Run("List", func(t *testing.T) { testList(t, factory()) })
 	t.Run("Close", func(t *testing.T) { testClose(t, factory()) })
 	t.Run("Dependencies", func(t *testing.T) { testDependencies(t, factory()) })
-	t.Run("Blocking", func(t *testing.T) { testBlocking(t, factory()) })
 	t.Run("Hierarchy", func(t *testing.T) { testHierarchy(t, factory()) })
 	t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
 	t.Run("Comments", func(t *testing.T) { testComments(t, factory()) })
@@ -401,8 +400,8 @@ func testDependencies(t *testing.T, s Storage) {
 		t.Fatalf("Create B failed: %v", err)
 	}
 
-	// Add dependency: A depends on B
-	if err := s.AddDependency(ctx, idA, idB); err != nil {
+	// Add dependency: A depends on B (type: blocks)
+	if err := s.AddDependency(ctx, idA, idB, DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency failed: %v", err)
 	}
 
@@ -411,16 +410,23 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A failed: %v", err)
 	}
-	if !containsStr(gotA.DependsOn, idB) {
-		t.Errorf("A.DependsOn should contain B; got %v", gotA.DependsOn)
+	if !gotA.HasDependency(idB) {
+		t.Errorf("A.Dependencies should contain B; got %v", gotA.Dependencies)
 	}
 
 	gotB, err := s.Get(ctx, idB)
 	if err != nil {
 		t.Fatalf("Get B failed: %v", err)
 	}
-	if !containsStr(gotB.Dependents, idA) {
+	if !gotB.HasDependent(idA) {
 		t.Errorf("B.Dependents should contain A; got %v", gotB.Dependents)
+	}
+
+	// Verify dependency type
+	for _, dep := range gotA.Dependencies {
+		if dep.ID == idB && dep.Type != DepTypeBlocks {
+			t.Errorf("expected dependency type %q, got %q", DepTypeBlocks, dep.Type)
+		}
 	}
 
 	// Remove dependency
@@ -433,80 +439,16 @@ func testDependencies(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get A after remove failed: %v", err)
 	}
-	if containsStr(gotA.DependsOn, idB) {
-		t.Errorf("A.DependsOn should not contain B after remove; got %v", gotA.DependsOn)
+	if gotA.HasDependency(idB) {
+		t.Errorf("A.Dependencies should not contain B after remove; got %v", gotA.Dependencies)
 	}
 
 	gotB, err = s.Get(ctx, idB)
 	if err != nil {
 		t.Fatalf("Get B after remove failed: %v", err)
 	}
-	if containsStr(gotB.Dependents, idA) {
+	if gotB.HasDependent(idA) {
 		t.Errorf("B.Dependents should not contain A after remove; got %v", gotB.Dependents)
-	}
-}
-
-func testBlocking(t *testing.T, s Storage) {
-	ctx := context.Background()
-	if err := s.Init(ctx); err != nil {
-		t.Fatalf("Init failed: %v", err)
-	}
-
-	// Create two issues
-	issueA := &Issue{Title: "Blocker", Status: StatusOpen, Priority: PriorityMedium, Type: TypeTask}
-	issueB := &Issue{Title: "Blocked", Status: StatusOpen, Priority: PriorityMedium, Type: TypeTask}
-
-	idA, err := s.Create(ctx, issueA)
-	if err != nil {
-		t.Fatalf("Create A failed: %v", err)
-	}
-	idB, err := s.Create(ctx, issueB)
-	if err != nil {
-		t.Fatalf("Create B failed: %v", err)
-	}
-
-	// Add block: A blocks B
-	if err := s.AddBlock(ctx, idA, idB); err != nil {
-		t.Fatalf("AddBlock failed: %v", err)
-	}
-
-	// Verify both sides were updated
-	gotA, err := s.Get(ctx, idA)
-	if err != nil {
-		t.Fatalf("Get A failed: %v", err)
-	}
-	if !containsStr(gotA.Blocks, idB) {
-		t.Errorf("A.Blocks should contain B; got %v", gotA.Blocks)
-	}
-
-	gotB, err := s.Get(ctx, idB)
-	if err != nil {
-		t.Fatalf("Get B failed: %v", err)
-	}
-	if !containsStr(gotB.BlockedBy, idA) {
-		t.Errorf("B.BlockedBy should contain A; got %v", gotB.BlockedBy)
-	}
-
-	// Remove block
-	if err := s.RemoveBlock(ctx, idA, idB); err != nil {
-		t.Fatalf("RemoveBlock failed: %v", err)
-	}
-
-	// Verify both sides were updated
-	gotA, err = s.Get(ctx, idA)
-	if err != nil {
-		t.Fatalf("Get A after remove failed: %v", err)
-	}
-	if containsStr(gotA.Blocks, idB) {
-		t.Errorf("A.Blocks should not contain B after remove; got %v", gotA.Blocks)
-	}
-
-	gotB, err = s.Get(ctx, idB)
-	if err != nil {
-		t.Fatalf("Get B after remove failed: %v", err)
-	}
-	if containsStr(gotB.BlockedBy, idA) {
-		t.Errorf("B.BlockedBy should not contain A after remove; got %v", gotB.BlockedBy)
 	}
 }
 
@@ -529,9 +471,9 @@ func testHierarchy(t *testing.T, s Storage) {
 		t.Fatalf("Create child failed: %v", err)
 	}
 
-	// Set parent
-	if err := s.SetParent(ctx, childID, parentID); err != nil {
-		t.Fatalf("SetParent failed: %v", err)
+	// Set parent via AddDependency with parent-child type
+	if err := s.AddDependency(ctx, childID, parentID, DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency (parent-child) failed: %v", err)
 	}
 
 	// Verify both sides
@@ -547,8 +489,16 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get parent failed: %v", err)
 	}
-	if !containsStr(gotParent.Children, childID) {
-		t.Errorf("Parent.Children should contain child; got %v", gotParent.Children)
+	if !containsStr(gotParent.Children(), childID) {
+		t.Errorf("Parent.Children should contain child; got %v", gotParent.Children())
+	}
+
+	// Verify parent-child typed dependency exists
+	if !gotChild.HasDependency(parentID) {
+		t.Errorf("Child should have parent-child dependency on parent; got %v", gotChild.Dependencies)
+	}
+	if !gotParent.HasDependent(childID) {
+		t.Errorf("Parent should have child as dependent; got %v", gotParent.Dependents)
 	}
 
 	// Create another parent and re-parent the child
@@ -558,8 +508,8 @@ func testHierarchy(t *testing.T, s Storage) {
 		t.Fatalf("Create new parent failed: %v", err)
 	}
 
-	if err := s.SetParent(ctx, childID, newParentID); err != nil {
-		t.Fatalf("SetParent (reparent) failed: %v", err)
+	if err := s.AddDependency(ctx, childID, newParentID, DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency (reparent) failed: %v", err)
 	}
 
 	// Verify old parent no longer has child
@@ -567,8 +517,8 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get old parent failed: %v", err)
 	}
-	if containsStr(gotOldParent.Children, childID) {
-		t.Errorf("Old parent should not have child; got %v", gotOldParent.Children)
+	if containsStr(gotOldParent.Children(), childID) {
+		t.Errorf("Old parent should not have child; got %v", gotOldParent.Children())
 	}
 
 	// Verify new parent has child
@@ -576,8 +526,8 @@ func testHierarchy(t *testing.T, s Storage) {
 	if err != nil {
 		t.Fatalf("Get new parent failed: %v", err)
 	}
-	if !containsStr(gotNewParent.Children, childID) {
-		t.Errorf("New parent should have child; got %v", gotNewParent.Children)
+	if !containsStr(gotNewParent.Children(), childID) {
+		t.Errorf("New parent should have child; got %v", gotNewParent.Children())
 	}
 
 	// Verify child points to new parent
@@ -589,27 +539,27 @@ func testHierarchy(t *testing.T, s Storage) {
 		t.Errorf("Child.Parent after reparent: got %q, want %q", gotChild.Parent, newParentID)
 	}
 
-	// Remove parent
-	if err := s.RemoveParent(ctx, childID); err != nil {
-		t.Fatalf("RemoveParent failed: %v", err)
+	// Remove parent via RemoveDependency
+	if err := s.RemoveDependency(ctx, childID, newParentID); err != nil {
+		t.Fatalf("RemoveDependency (remove parent) failed: %v", err)
 	}
 
 	// Verify child has no parent
 	gotChild, err = s.Get(ctx, childID)
 	if err != nil {
-		t.Fatalf("Get child after RemoveParent failed: %v", err)
+		t.Fatalf("Get child after remove parent failed: %v", err)
 	}
 	if gotChild.Parent != "" {
-		t.Errorf("Child.Parent after RemoveParent: got %q, want empty", gotChild.Parent)
+		t.Errorf("Child.Parent after remove parent: got %q, want empty", gotChild.Parent)
 	}
 
 	// Verify new parent no longer has child
 	gotNewParent, err = s.Get(ctx, newParentID)
 	if err != nil {
-		t.Fatalf("Get new parent after RemoveParent failed: %v", err)
+		t.Fatalf("Get new parent after remove parent failed: %v", err)
 	}
-	if containsStr(gotNewParent.Children, childID) {
-		t.Errorf("New parent should not have child after RemoveParent; got %v", gotNewParent.Children)
+	if containsStr(gotNewParent.Children(), childID) {
+		t.Errorf("New parent should not have child after remove parent; got %v", gotNewParent.Children())
 	}
 }
 
@@ -638,25 +588,25 @@ func testCycleDetection(t *testing.T, s Storage) {
 	}
 
 	// Test self-dependency cycle
-	err = s.AddDependency(ctx, idA, idA)
+	err = s.AddDependency(ctx, idA, idA, DepTypeBlocks)
 	if err != ErrCycle {
 		t.Errorf("Self-dependency should return ErrCycle; got %v", err)
 	}
 
 	// Test direct cycle: A depends on B, then B depends on A
-	if err := s.AddDependency(ctx, idA, idB); err != nil {
+	if err := s.AddDependency(ctx, idA, idB, DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency A->B failed: %v", err)
 	}
-	err = s.AddDependency(ctx, idB, idA)
+	err = s.AddDependency(ctx, idB, idA, DepTypeBlocks)
 	if err != ErrCycle {
 		t.Errorf("Direct cycle B->A should return ErrCycle; got %v", err)
 	}
 
 	// Test transitive cycle: A->B, B->C, then C->A
-	if err := s.AddDependency(ctx, idB, idC); err != nil {
+	if err := s.AddDependency(ctx, idB, idC, DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency B->C failed: %v", err)
 	}
-	err = s.AddDependency(ctx, idC, idA)
+	err = s.AddDependency(ctx, idC, idA, DepTypeBlocks)
 	if err != ErrCycle {
 		t.Errorf("Transitive cycle C->A should return ErrCycle; got %v", err)
 	}
@@ -670,19 +620,19 @@ func testCycleDetection(t *testing.T, s Storage) {
 		t.Fatalf("RemoveDependency B->C failed: %v", err)
 	}
 
-	if err := s.SetParent(ctx, idB, idA); err != nil {
-		t.Fatalf("SetParent B->A failed: %v", err)
+	if err := s.AddDependency(ctx, idB, idA, DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency (parent-child) B->A failed: %v", err)
 	}
-	err = s.SetParent(ctx, idA, idB)
+	err = s.AddDependency(ctx, idA, idB, DepTypeParentChild)
 	if err != ErrCycle {
 		t.Errorf("Hierarchy cycle should return ErrCycle; got %v", err)
 	}
 
 	// Test deeper hierarchy cycle: A is ancestor of C via B, try to make C parent of A
-	if err := s.SetParent(ctx, idC, idB); err != nil {
-		t.Fatalf("SetParent C->B failed: %v", err)
+	if err := s.AddDependency(ctx, idC, idB, DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency (parent-child) C->B failed: %v", err)
 	}
-	err = s.SetParent(ctx, idA, idC)
+	err = s.AddDependency(ctx, idA, idC, DepTypeParentChild)
 	if err != ErrCycle {
 		t.Errorf("Deep hierarchy cycle should return ErrCycle; got %v", err)
 	}

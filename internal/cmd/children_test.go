@@ -47,10 +47,10 @@ func TestChildrenCommand(t *testing.T) {
 	}
 
 	// Set parent relationships
-	if err := store.SetParent(ctx, child1ID, parentID); err != nil {
+	if err := store.AddDependency(ctx, child1ID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 1: %v", err)
 	}
-	if err := store.SetParent(ctx, child2ID, parentID); err != nil {
+	if err := store.AddDependency(ctx, child2ID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 2: %v", err)
 	}
 
@@ -161,10 +161,10 @@ func TestChildrenTreeFlag(t *testing.T) {
 	}
 
 	// Set parent relationships
-	if err := store.SetParent(ctx, childID, parentID); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.SetParent(ctx, grandchildID, childID); err != nil {
+	if err := store.AddDependency(ctx, grandchildID, childID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
@@ -225,7 +225,7 @@ func TestChildrenJSON(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.SetParent(ctx, childID, parentID); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
@@ -291,10 +291,10 @@ func TestChildrenTreeJSON(t *testing.T) {
 		t.Fatalf("failed to create grandchild: %v", err)
 	}
 
-	if err := store.SetParent(ctx, childID, parentID); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.SetParent(ctx, grandchildID, childID); err != nil {
+	if err := store.AddDependency(ctx, grandchildID, childID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
@@ -358,7 +358,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.SetParent(ctx, childID, parentID); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 

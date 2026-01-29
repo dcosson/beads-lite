@@ -917,7 +917,7 @@ func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 	}
 
 	// Add dependency
-	if err := s.AddDependency(ctx, id1, id2); err != nil {
+	if err := s.AddDependency(ctx, id1, id2, storage.DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency failed: %v", err)
 	}
 

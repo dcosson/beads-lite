@@ -29,12 +29,15 @@ func TestBlockedCommand(t *testing.T) {
 
 	// Create a blocked issue (depends on open issue)
 	blockedID, err := store.Create(ctx, &storage.Issue{
-		Title:     "Blocked issue",
-		Priority:  storage.PriorityMedium,
-		DependsOn: []string{depID},
+		Title:    "Blocked issue",
+		Priority: storage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+	// Add dependency: blockedID depends on depID
+	if err := store.AddDependency(ctx, blockedID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create an unblocked issue
@@ -90,14 +93,17 @@ func TestBlockedByRelationship(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Create an issue that is blocked_by the blocker
+	// Create an issue that is blocked by the blocker
 	blockedID, err := store.Create(ctx, &storage.Issue{
-		Title:     "Blocked issue",
-		Priority:  storage.PriorityMedium,
-		BlockedBy: []string{blockerID},
+		Title:    "Blocked issue",
+		Priority: storage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+	// Add dependency: blockedID depends on blockerID (blockerID blocks blockedID)
+	if err := store.AddDependency(ctx, blockedID, blockerID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app for testing
@@ -192,12 +198,15 @@ func TestBlockedClosedDependency(t *testing.T) {
 
 	// Create an issue that depends on the closed issue
 	issueID, err := store.Create(ctx, &storage.Issue{
-		Title:     "Issue with closed dependency",
-		Priority:  storage.PriorityMedium,
-		DependsOn: []string{depID},
+		Title:    "Issue with closed dependency",
+		Priority: storage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+	// Add dependency: issueID depends on depID
+	if err := store.AddDependency(ctx, issueID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app for testing
@@ -240,12 +249,15 @@ func TestBlockedJSONOutput(t *testing.T) {
 
 	// Create a blocked issue
 	blockedID, err := store.Create(ctx, &storage.Issue{
-		Title:     "Blocked issue",
-		Priority:  storage.PriorityMedium,
-		DependsOn: []string{depID},
+		Title:    "Blocked issue",
+		Priority: storage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+	// Add dependency: blockedID depends on depID
+	if err := store.AddDependency(ctx, blockedID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app for testing with JSON output
@@ -290,9 +302,15 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 
 	// Create an issue blocked by both
 	blockedID, _ := store.Create(ctx, &storage.Issue{
-		Title:     "Multiply blocked",
-		DependsOn: []string{dep1ID, dep2ID},
+		Title: "Multiply blocked",
 	})
+	// Add dependencies: blockedID depends on both dep1ID and dep2ID
+	if err := store.AddDependency(ctx, blockedID, dep1ID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency on dep1: %v", err)
+	}
+	if err := store.AddDependency(ctx, blockedID, dep2ID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency on dep2: %v", err)
+	}
 
 	// Create app for testing
 	var out bytes.Buffer

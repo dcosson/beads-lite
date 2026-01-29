@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -37,7 +38,7 @@ Examples:
 			// Try exact match first
 			issue, err := app.Storage.Get(ctx, query)
 			if err == nil {
-				return outputIssue(app, issue)
+				return outputIssue(app, ctx, issue)
 			}
 			if err != storage.ErrNotFound {
 				return fmt.Errorf("getting issue %s: %w", query, err)
@@ -52,17 +53,52 @@ Examples:
 				return err
 			}
 
-			return outputIssue(app, issue)
+			return outputIssue(app, ctx, issue)
 		},
 	}
 
 	return cmd
 }
 
+// enrichedDep represents a dependency enriched with full issue details for JSON output.
+type enrichedDep struct {
+	ID             string                `json:"id"`
+	Title          string                `json:"title"`
+	Status         storage.Status        `json:"status"`
+	Priority       storage.Priority      `json:"priority"`
+	Type           storage.IssueType     `json:"type"`
+	DependencyType storage.DependencyType `json:"dependency_type"`
+}
+
+// enrichDeps fetches full issue details for each dependency entry.
+func enrichDeps(ctx context.Context, store storage.Storage, deps []storage.Dependency) []enrichedDep {
+	result := make([]enrichedDep, 0, len(deps))
+	for _, dep := range deps {
+		issue, err := store.Get(ctx, dep.ID)
+		if err != nil {
+			// Include even if we can't load the issue
+			result = append(result, enrichedDep{
+				ID:             dep.ID,
+				DependencyType: dep.Type,
+			})
+			continue
+		}
+		result = append(result, enrichedDep{
+			ID:             issue.ID,
+			Title:          issue.Title,
+			Status:         issue.Status,
+			Priority:       issue.Priority,
+			Type:           issue.Type,
+			DependencyType: dep.Type,
+		})
+	}
+	return result
+}
+
 // outputIssue formats and outputs the issue details.
-func outputIssue(app *App, issue *storage.Issue) error {
+func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	if app.JSON {
-		return json.NewEncoder(app.Out).Encode(issue)
+		return outputIssueJSON(app, ctx, issue)
 	}
 
 	// Header: ID and Title with status
@@ -93,38 +129,25 @@ func outputIssue(app *App, issue *storage.Issue) error {
 	if issue.Parent != "" {
 		fmt.Fprintf(app.Out, "\nParent:   %s\n", issue.Parent)
 	}
-	if len(issue.Children) > 0 {
+	children := issue.Children()
+	if len(children) > 0 {
 		fmt.Fprintf(app.Out, "\nChildren:\n")
-		for _, child := range issue.Children {
+		for _, child := range children {
 			fmt.Fprintf(app.Out, "  - %s\n", child)
 		}
 	}
 
 	// Dependencies
-	if len(issue.DependsOn) > 0 {
+	if len(issue.Dependencies) > 0 {
 		fmt.Fprintf(app.Out, "\nDepends On:\n")
-		for _, dep := range issue.DependsOn {
-			fmt.Fprintf(app.Out, "  - %s\n", dep)
+		for _, dep := range issue.Dependencies {
+			fmt.Fprintf(app.Out, "  - %s [%s]\n", dep.ID, dep.Type)
 		}
 	}
 	if len(issue.Dependents) > 0 {
 		fmt.Fprintf(app.Out, "\nDependents:\n")
 		for _, dep := range issue.Dependents {
-			fmt.Fprintf(app.Out, "  - %s\n", dep)
-		}
-	}
-
-	// Blocking
-	if len(issue.Blocks) > 0 {
-		fmt.Fprintf(app.Out, "\nBlocks:\n")
-		for _, b := range issue.Blocks {
-			fmt.Fprintf(app.Out, "  - %s\n", b)
-		}
-	}
-	if len(issue.BlockedBy) > 0 {
-		fmt.Fprintf(app.Out, "\nBlocked By:\n")
-		for _, b := range issue.BlockedBy {
-			fmt.Fprintf(app.Out, "  - %s\n", b)
+			fmt.Fprintf(app.Out, "  - %s [%s]\n", dep.ID, dep.Type)
 		}
 	}
 
@@ -147,4 +170,49 @@ func outputIssue(app *App, issue *storage.Issue) error {
 	}
 
 	return nil
+}
+
+// issueJSONOutput is the JSON output format for show command, with enriched deps.
+type issueJSONOutput struct {
+	ID          string              `json:"id"`
+	Title       string              `json:"title"`
+	Description string              `json:"description"`
+	Status      storage.Status      `json:"status"`
+	Priority    storage.Priority    `json:"priority"`
+	Type        storage.IssueType   `json:"type"`
+	Parent      string              `json:"parent,omitempty"`
+	Dependencies []enrichedDep      `json:"dependencies"`
+	Dependents   []enrichedDep      `json:"dependents"`
+	Labels      []string            `json:"labels,omitempty"`
+	Assignee    string              `json:"assignee,omitempty"`
+	Comments    []storage.Comment   `json:"comments,omitempty"`
+	CreatedAt   string              `json:"created_at"`
+	UpdatedAt   string              `json:"updated_at"`
+	ClosedAt    *string             `json:"closed_at,omitempty"`
+}
+
+// outputIssueJSON outputs the issue in JSON format with enriched dependencies.
+func outputIssueJSON(app *App, ctx context.Context, issue *storage.Issue) error {
+	out := issueJSONOutput{
+		ID:           issue.ID,
+		Title:        issue.Title,
+		Description:  issue.Description,
+		Status:       issue.Status,
+		Priority:     issue.Priority,
+		Type:         issue.Type,
+		Parent:       issue.Parent,
+		Dependencies: enrichDeps(ctx, app.Storage, issue.Dependencies),
+		Dependents:   enrichDeps(ctx, app.Storage, issue.Dependents),
+		Labels:       issue.Labels,
+		Assignee:     issue.Assignee,
+		Comments:     issue.Comments,
+		CreatedAt:    issue.CreatedAt.Format("2006-01-02T15:04:05.999999999-07:00"),
+		UpdatedAt:    issue.UpdatedAt.Format("2006-01-02T15:04:05.999999999-07:00"),
+	}
+	if issue.ClosedAt != nil {
+		closedStr := issue.ClosedAt.Format("2006-01-02T15:04:05.999999999-07:00")
+		out.ClosedAt = &closedStr
+	}
+
+	return json.NewEncoder(app.Out).Encode(out)
 }

@@ -549,7 +549,7 @@ func TestUpdateSetParent(t *testing.T) {
 	// Verify parent has child in children list
 	gotParent, _ := store.Get(context.Background(), parentID)
 	found := false
-	for _, c := range gotParent.Children {
+	for _, c := range gotParent.Children() {
 		if c == childID {
 			found = true
 			break
@@ -572,7 +572,7 @@ func TestUpdateReparent(t *testing.T) {
 	childID, _ := store.Create(context.Background(), child)
 
 	// Set initial parent
-	if err := store.SetParent(context.Background(), childID, parent1ID); err != nil {
+	if err := store.AddDependency(context.Background(), childID, parent1ID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set initial parent: %v", err)
 	}
 
@@ -590,7 +590,7 @@ func TestUpdateReparent(t *testing.T) {
 
 	// Old parent should not have child
 	gotOldParent, _ := store.Get(context.Background(), parent1ID)
-	for _, c := range gotOldParent.Children {
+	for _, c := range gotOldParent.Children() {
 		if c == childID {
 			t.Errorf("old parent should not have child in children list")
 		}
@@ -599,7 +599,7 @@ func TestUpdateReparent(t *testing.T) {
 	// New parent should have child
 	gotNewParent, _ := store.Get(context.Background(), parent2ID)
 	found := false
-	for _, c := range gotNewParent.Children {
+	for _, c := range gotNewParent.Children() {
 		if c == childID {
 			found = true
 			break
@@ -619,7 +619,7 @@ func TestUpdateRemoveParent(t *testing.T) {
 	parentID, _ := store.Create(context.Background(), parent)
 	childID, _ := store.Create(context.Background(), child)
 
-	if err := store.SetParent(context.Background(), childID, parentID); err != nil {
+	if err := store.AddDependency(context.Background(), childID, parentID, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
@@ -636,7 +636,7 @@ func TestUpdateRemoveParent(t *testing.T) {
 	}
 
 	gotParent, _ := store.Get(context.Background(), parentID)
-	for _, c := range gotParent.Children {
+	for _, c := range gotParent.Children() {
 		if c == childID {
 			t.Errorf("parent should not have child in children list after removal")
 		}
@@ -670,7 +670,7 @@ func TestUpdateParentCycle(t *testing.T) {
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Make A parent of B
-	if err := store.SetParent(context.Background(), idB, idA); err != nil {
+	if err := store.AddDependency(context.Background(), idB, idA, storage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set initial parent: %v", err)
 	}
 

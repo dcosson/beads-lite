@@ -226,7 +226,7 @@ func TestCreateWithParent(t *testing.T) {
 	// Verify parent has child in its children list
 	parent, _ := store.Get(context.Background(), parentID)
 	found := false
-	for _, c := range parent.Children {
+	for _, c := range parent.Children() {
 		if c == childID {
 			found = true
 			break
@@ -257,27 +257,13 @@ func TestCreateWithDependsOn(t *testing.T) {
 	dependentID := extractCreatedID(out.String())
 	dependent, _ := store.Get(context.Background(), dependentID)
 
-	found := false
-	for _, d := range dependent.DependsOn {
-		if d == depID {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("issue should have dependency in depends_on list")
+	if !dependent.HasDependency(depID) {
+		t.Errorf("issue should have dependency in dependencies list")
 	}
 
 	// Verify dependency has dependent in its dependents list
 	dep, _ := store.Get(context.Background(), depID)
-	found = false
-	for _, d := range dep.Dependents {
-		if d == dependentID {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !dep.HasDependent(dependentID) {
 		t.Errorf("dependency should have dependent in dependents list")
 	}
 }
@@ -299,8 +285,8 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 	dependentID := extractCreatedID(out.String())
 	dependent, _ := store.Get(context.Background(), dependentID)
 
-	if len(dependent.DependsOn) != 2 {
-		t.Errorf("expected 2 dependencies, got %d", len(dependent.DependsOn))
+	if len(dependent.Dependencies) != 2 {
+		t.Errorf("expected 2 dependencies, got %d", len(dependent.Dependencies))
 	}
 }
 
@@ -442,8 +428,9 @@ func TestCreateAllFlags(t *testing.T) {
 	if issue.Parent != parentID {
 		t.Errorf("parent mismatch: got %q", issue.Parent)
 	}
-	if len(issue.DependsOn) != 1 || issue.DependsOn[0] != depID {
-		t.Errorf("depends_on mismatch: got %v", issue.DependsOn)
+	// Should have 2 dependencies: parent-child (from --parent) and blocks (from --depends-on)
+	if len(issue.Dependencies) != 2 || !issue.HasDependency(depID) || !issue.HasDependency(parentID) {
+		t.Errorf("dependencies mismatch: got %v", issue.Dependencies)
 	}
 	if len(issue.Labels) != 2 {
 		t.Errorf("labels mismatch: got %v", issue.Labels)

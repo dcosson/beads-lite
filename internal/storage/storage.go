@@ -7,6 +7,42 @@ import (
 	"time"
 )
 
+// DependencyType represents the type of relationship between two issues.
+type DependencyType string
+
+const (
+	DepTypeBlocks        DependencyType = "blocks"
+	DepTypeTracks        DependencyType = "tracks"
+	DepTypeRelated       DependencyType = "related"
+	DepTypeParentChild   DependencyType = "parent-child"
+	DepTypeDiscoveredFrom DependencyType = "discovered-from"
+	DepTypeUntil         DependencyType = "until"
+	DepTypeCausedBy      DependencyType = "caused-by"
+	DepTypeValidates     DependencyType = "validates"
+	DepTypeRelatesTo     DependencyType = "relates-to"
+	DepTypeSupersedes    DependencyType = "supersedes"
+)
+
+// ValidDependencyTypes is the set of all valid dependency types.
+var ValidDependencyTypes = map[DependencyType]bool{
+	DepTypeBlocks:        true,
+	DepTypeTracks:        true,
+	DepTypeRelated:       true,
+	DepTypeParentChild:   true,
+	DepTypeDiscoveredFrom: true,
+	DepTypeUntil:         true,
+	DepTypeCausedBy:      true,
+	DepTypeValidates:     true,
+	DepTypeRelatesTo:     true,
+	DepTypeSupersedes:    true,
+}
+
+// Dependency represents a typed dependency between two issues.
+type Dependency struct {
+	ID   string         `json:"id"`
+	Type DependencyType `json:"type"`
+}
+
 // Issue represents a task/bug/feature in the system.
 type Issue struct {
 	ID          string    `json:"id"`
@@ -16,17 +52,12 @@ type Issue struct {
 	Priority    Priority  `json:"priority"`
 	Type        IssueType `json:"type"`
 
-	// Hierarchy (doubly-linked)
-	Parent   string   `json:"parent,omitempty"`
-	Children []string `json:"children,omitempty"`
+	// Hierarchy convenience field (set automatically with parent-child deps)
+	Parent string `json:"parent,omitempty"`
 
-	// Dependencies (doubly-linked)
-	DependsOn  []string `json:"depends_on,omitempty"`  // issues this one waits for
-	Dependents []string `json:"dependents,omitempty"` // issues waiting for this one
-
-	// Blocking (doubly-linked)
-	Blocks    []string `json:"blocks,omitempty"`     // issues this one blocks
-	BlockedBy []string `json:"blocked_by,omitempty"` // issues blocking this one
+	// Typed dependencies
+	Dependencies []Dependency `json:"dependencies,omitempty"` // issues this one depends on
+	Dependents   []Dependency `json:"dependents,omitempty"`   // issues that depend on this one
 
 	Labels    []string  `json:"labels,omitempty"`
 	Assignee  string    `json:"assignee,omitempty"`
@@ -34,6 +65,59 @@ type Issue struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 	ClosedAt  *time.Time `json:"closed_at,omitempty"`
+}
+
+// Children returns the IDs of child issues (dependents with type parent-child).
+func (issue *Issue) Children() []string {
+	var children []string
+	for _, dep := range issue.Dependents {
+		if dep.Type == DepTypeParentChild {
+			children = append(children, dep.ID)
+		}
+	}
+	return children
+}
+
+// HasDependency checks if the issue has a dependency on the given ID.
+func (issue *Issue) HasDependency(id string) bool {
+	for _, dep := range issue.Dependencies {
+		if dep.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// HasDependent checks if the issue has a dependent with the given ID.
+func (issue *Issue) HasDependent(id string) bool {
+	for _, dep := range issue.Dependents {
+		if dep.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// DependencyIDs returns the IDs from the Dependencies list, optionally filtered by type.
+func (issue *Issue) DependencyIDs(filterType *DependencyType) []string {
+	var ids []string
+	for _, dep := range issue.Dependencies {
+		if filterType == nil || dep.Type == *filterType {
+			ids = append(ids, dep.ID)
+		}
+	}
+	return ids
+}
+
+// DependentIDs returns the IDs from the Dependents list, optionally filtered by type.
+func (issue *Issue) DependentIDs(filterType *DependencyType) []string {
+	var ids []string
+	for _, dep := range issue.Dependents {
+		if filterType == nil || dep.Type == *filterType {
+			ids = append(ids, dep.ID)
+		}
+	}
+	return ids
 }
 
 // Comment represents a comment on an issue.
@@ -136,36 +220,18 @@ type Storage interface {
 	// Reopen moves a closed issue back to open status.
 	Reopen(ctx context.Context, id string) error
 
-	// AddDependency creates a dependency relationship (A depends on B).
+	// AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
 	// Locks both issues, then updates:
-	//   - A.depends_on += B
-	//   - B.dependents += A
-	AddDependency(ctx context.Context, dependentID, dependencyID string) error
+	//   - issueID.dependencies += {dependsOnID, depType}
+	//   - dependsOnID.dependents += {issueID, depType}
+	// When depType is parent-child, also sets issueID.Parent = dependsOnID
+	// and handles reparenting (removes old parent-child dep if child had a previous parent).
+	AddDependency(ctx context.Context, issueID, dependsOnID string, depType DependencyType) error
 
-	// RemoveDependency removes a dependency relationship.
-	// Locks both issues and updates both sides.
-	RemoveDependency(ctx context.Context, dependentID, dependencyID string) error
-
-	// AddBlock creates a blocking relationship (A blocks B).
-	// Locks both issues, then updates:
-	//   - A.blocks += B
-	//   - B.blocked_by += A
-	AddBlock(ctx context.Context, blockerID, blockedID string) error
-
-	// RemoveBlock removes a blocking relationship.
-	// Locks both issues and updates both sides.
-	RemoveBlock(ctx context.Context, blockerID, blockedID string) error
-
-	// SetParent sets the parent of an issue.
-	// Locks both issues, then updates:
-	//   - child.parent = parent
-	//   - parent.children += child
-	// If child had a previous parent, also locks and updates that issue.
-	SetParent(ctx context.Context, childID, parentID string) error
-
-	// RemoveParent removes the parent relationship.
-	// Locks both child and parent, updates both sides.
-	RemoveParent(ctx context.Context, childID string) error
+	// RemoveDependency removes a dependency relationship by ID.
+	// Locks both issues and removes the dep entry from both sides.
+	// If the removed dep was parent-child, also clears issueID.Parent.
+	RemoveDependency(ctx context.Context, issueID, dependsOnID string) error
 
 	// AddComment adds a comment to an issue.
 	AddComment(ctx context.Context, issueID string, comment *Comment) error

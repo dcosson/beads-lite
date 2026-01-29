@@ -36,19 +36,25 @@ Subcommands:
 
 // newDepAddCmd creates the "dep add" subcommand.
 func newDepAddCmd(provider *AppProvider) *cobra.Command {
+	var depType string
+
 	cmd := &cobra.Command{
 		Use:   "add <issue-id> <dependency-id>",
 		Short: "Add a dependency (issue depends on dependency)",
 		Long: `Create a dependency relationship where issue depends on dependency.
 
 This means the dependency must be completed before issue can start.
-Both issues are updated: issue.depends_on gets dependency added,
+Both issues are updated: issue.dependencies gets dependency added,
 and dependency.dependents gets issue added.
 
 Cycle detection prevents circular dependencies.
 
+Use --type to specify the dependency type (default: blocks).
+
 Examples:
-  bd dep add bd-a1b2 bd-c3d4   # bd-a1b2 depends on bd-c3d4`,
+  bd dep add bd-a1b2 bd-c3d4                  # bd-a1b2 depends on bd-c3d4 (type: blocks)
+  bd dep add bd-a1b2 bd-c3d4 --type tracks    # bd-a1b2 tracks bd-c3d4
+  bd dep add bd-a1b2 bd-c3d4 --type parent-child  # sets parent-child relationship`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -59,6 +65,12 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 			dependencyID := args[1]
+
+			// Validate dependency type
+			dt := storage.DependencyType(depType)
+			if !storage.ValidDependencyTypes[dt] {
+				return fmt.Errorf("invalid dependency type %q; valid types: blocks, tracks, related, parent-child, discovered-from, until, caused-by, validates, relates-to, supersedes", depType)
+			}
 
 			// Resolve IDs (support prefix matching)
 			issue, err := resolveIssue(app.Storage, ctx, issueID)
@@ -71,8 +83,8 @@ Examples:
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
-			// Add the dependency
-			if err := app.Storage.AddDependency(ctx, issue.ID, dependency.ID); err != nil {
+			// Add the typed dependency (parent-child is handled automatically by AddDependency)
+			if err := app.Storage.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
 				if err == storage.ErrCycle {
 					return fmt.Errorf("cannot add dependency: would create a cycle")
 				}
@@ -82,17 +94,20 @@ Examples:
 			// Output the result
 			if app.JSON {
 				result := map[string]string{
-					"issue":      issue.ID,
-					"dependency": dependency.ID,
-					"status":     "added",
+					"issue":           issue.ID,
+					"dependency":      dependency.ID,
+					"dependency_type": depType,
+					"status":          "added",
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Added dependency: %s depends on %s\n", issue.ID, dependency.ID)
+			fmt.Fprintf(app.Out, "Added dependency: %s depends on %s (type: %s)\n", issue.ID, dependency.ID, depType)
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&depType, "type", "t", "blocks", "Dependency type (blocks, tracks, related, parent-child, etc.)")
 
 	return cmd
 }
@@ -104,7 +119,7 @@ func newDepRemoveCmd(provider *AppProvider) *cobra.Command {
 		Short: "Remove a dependency",
 		Long: `Remove a dependency relationship between two issues.
 
-Both issues are updated: dependency is removed from issue.depends_on,
+Both issues are updated: dependency is removed from issue.dependencies,
 and issue is removed from dependency.dependents.
 
 Examples:
@@ -131,7 +146,7 @@ Examples:
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
-			// Remove the dependency
+			// RemoveDependency handles parent-child cleanup automatically
 			if err := app.Storage.RemoveDependency(ctx, issue.ID, dependency.ID); err != nil {
 				return fmt.Errorf("removing dependency: %w", err)
 			}
@@ -157,20 +172,28 @@ Examples:
 // newDepListCmd creates the "dep list" subcommand.
 func newDepListCmd(provider *AppProvider) *cobra.Command {
 	var tree bool
+	var direction string
+	var filterType string
 
 	cmd := &cobra.Command{
 		Use:   "list <issue-id>",
 		Short: "List dependencies for an issue",
 		Long: `Show all dependencies for an issue.
 
-By default, shows direct dependencies (what this issue depends on)
-and dependents (what depends on this issue).
+By default, shows both dependencies and dependents.
+Use --direction to control which to show:
+  down  Show what this issue depends on (dependencies)
+  up    Show what depends on this issue (dependents)
 
+Use --type to filter by dependency type.
 Use --tree to show a tree view of transitive dependencies.
 
 Examples:
-  bd dep list bd-a1b2          # Show direct dependencies
-  bd dep list bd-a1b2 --tree   # Show dependency tree`,
+  bd dep list bd-a1b2                       # Show all deps
+  bd dep list bd-a1b2 --direction down      # What this depends on
+  bd dep list bd-a1b2 --direction up        # What depends on this
+  bd dep list bd-a1b2 --type blocks         # Only blocking deps
+  bd dep list bd-a1b2 --tree                # Show dependency tree`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -181,6 +204,21 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
+			// Validate direction
+			if direction != "" && direction != "down" && direction != "up" {
+				return fmt.Errorf("invalid direction %q; must be 'down' or 'up'", direction)
+			}
+
+			// Validate type filter
+			var typeFilter *storage.DependencyType
+			if filterType != "" {
+				dt := storage.DependencyType(filterType)
+				if !storage.ValidDependencyTypes[dt] {
+					return fmt.Errorf("invalid dependency type %q", filterType)
+				}
+				typeFilter = &dt
+			}
+
 			// Resolve ID (support prefix matching)
 			issue, err := resolveIssue(app.Storage, ctx, issueID)
 			if err != nil {
@@ -188,29 +226,53 @@ Examples:
 			}
 
 			if app.JSON {
-				return outputDepListJSON(app, ctx, issue, tree)
+				return outputDepListJSON(app, ctx, issue, tree, direction, typeFilter)
 			}
 
-			return outputDepListText(app, ctx, issue, tree)
+			return outputDepListText(app, ctx, issue, tree, direction, typeFilter)
 		},
 	}
 
 	cmd.Flags().BoolVar(&tree, "tree", false, "Show dependency tree (transitive dependencies)")
+	cmd.Flags().StringVar(&direction, "direction", "", "Filter direction: 'down' (dependencies) or 'up' (dependents)")
+	cmd.Flags().StringVarP(&filterType, "type", "t", "", "Filter by dependency type")
 
 	return cmd
 }
 
+// filterDeps filters a dependency slice by type, if typeFilter is non-nil.
+func filterDeps(deps []storage.Dependency, typeFilter *storage.DependencyType) []storage.Dependency {
+	if typeFilter == nil {
+		return deps
+	}
+	var filtered []storage.Dependency
+	for _, d := range deps {
+		if d.Type == *typeFilter {
+			filtered = append(filtered, d)
+		}
+	}
+	return filtered
+}
+
 // outputDepListJSON outputs dependency list in JSON format.
-func outputDepListJSON(app *App, ctx context.Context, issue *storage.Issue, tree bool) error {
-	result := map[string]interface{}{
-		"id":         issue.ID,
-		"title":      issue.Title,
-		"depends_on": issue.DependsOn,
-		"dependents": issue.Dependents,
+func outputDepListJSON(app *App, ctx context.Context, issue *storage.Issue, tree bool, direction string, typeFilter *storage.DependencyType) error {
+	result := make(map[string]interface{})
+	result["id"] = issue.ID
+	result["title"] = issue.Title
+
+	showDown := direction == "" || direction == "down"
+	showUp := direction == "" || direction == "up"
+
+	if showDown {
+		deps := filterDeps(issue.Dependencies, typeFilter)
+		result["dependencies"] = deps
+	}
+	if showUp {
+		deps := filterDeps(issue.Dependents, typeFilter)
+		result["dependents"] = deps
 	}
 
 	if tree {
-		// Build tree structure
 		depTree := buildDepTree(app.Storage, ctx, issue, make(map[string]bool))
 		result["tree"] = depTree
 	}
@@ -241,24 +303,24 @@ func buildDepTree(store storage.Storage, ctx context.Context, issue *storage.Iss
 	visited[issue.ID] = true
 
 	// Recursively add dependencies
-	for _, depID := range issue.DependsOn {
-		dep, err := store.Get(ctx, depID)
+	for _, dep := range issue.Dependencies {
+		depIssue, err := store.Get(ctx, dep.ID)
 		if err != nil {
 			node.Children = append(node.Children, &depTreeNode{
-				ID:     depID,
+				ID:     dep.ID,
 				Title:  "(error loading)",
 				Status: "unknown",
 			})
 			continue
 		}
-		node.Children = append(node.Children, buildDepTree(store, ctx, dep, visited))
+		node.Children = append(node.Children, buildDepTree(store, ctx, depIssue, visited))
 	}
 
 	return node
 }
 
 // outputDepListText outputs dependency list in text format.
-func outputDepListText(app *App, ctx context.Context, issue *storage.Issue, tree bool) error {
+func outputDepListText(app *App, ctx context.Context, issue *storage.Issue, tree bool, direction string, typeFilter *storage.DependencyType) error {
 	fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
 	fmt.Fprintln(app.Out, strings.Repeat("-", len(issue.ID)+len(issue.Title)+2))
 
@@ -266,34 +328,43 @@ func outputDepListText(app *App, ctx context.Context, issue *storage.Issue, tree
 		return outputDepTree(app, ctx, issue, 0, make(map[string]bool))
 	}
 
+	showDown := direction == "" || direction == "down"
+	showUp := direction == "" || direction == "up"
+
 	// Direct dependencies
-	if len(issue.DependsOn) == 0 {
-		fmt.Fprintln(app.Out, "\nDepends On: (none)")
-	} else {
-		fmt.Fprintln(app.Out, "\nDepends On:")
-		for _, depID := range issue.DependsOn {
-			dep, err := app.Storage.Get(ctx, depID)
-			if err != nil {
-				fmt.Fprintf(app.Out, "  → %s (error: %v)\n", depID, err)
-			} else {
-				status := statusIndicator(dep.Status)
-				fmt.Fprintf(app.Out, "  → %s %s: %s\n", status, dep.ID, dep.Title)
+	if showDown {
+		deps := filterDeps(issue.Dependencies, typeFilter)
+		if len(deps) == 0 {
+			fmt.Fprintln(app.Out, "\nDependencies: (none)")
+		} else {
+			fmt.Fprintln(app.Out, "\nDependencies:")
+			for _, d := range deps {
+				dep, err := app.Storage.Get(ctx, d.ID)
+				if err != nil {
+					fmt.Fprintf(app.Out, "  → %s [%s] (error: %v)\n", d.ID, d.Type, err)
+				} else {
+					status := statusIndicator(dep.Status)
+					fmt.Fprintf(app.Out, "  → %s %s: %s [%s]\n", status, dep.ID, dep.Title, d.Type)
+				}
 			}
 		}
 	}
 
 	// Dependents (what depends on this)
-	if len(issue.Dependents) == 0 {
-		fmt.Fprintln(app.Out, "\nDependents: (none)")
-	} else {
-		fmt.Fprintln(app.Out, "\nDependents (blocked by this):")
-		for _, depID := range issue.Dependents {
-			dep, err := app.Storage.Get(ctx, depID)
-			if err != nil {
-				fmt.Fprintf(app.Out, "  ← %s (error: %v)\n", depID, err)
-			} else {
-				status := statusIndicator(dep.Status)
-				fmt.Fprintf(app.Out, "  ← %s %s: %s\n", status, dep.ID, dep.Title)
+	if showUp {
+		deps := filterDeps(issue.Dependents, typeFilter)
+		if len(deps) == 0 {
+			fmt.Fprintln(app.Out, "\nDependents: (none)")
+		} else {
+			fmt.Fprintln(app.Out, "\nDependents:")
+			for _, d := range deps {
+				dep, err := app.Storage.Get(ctx, d.ID)
+				if err != nil {
+					fmt.Fprintf(app.Out, "  ← %s [%s] (error: %v)\n", d.ID, d.Type, err)
+				} else {
+					status := statusIndicator(dep.Status)
+					fmt.Fprintf(app.Out, "  ← %s %s: %s [%s]\n", status, dep.ID, dep.Title, d.Type)
+				}
 			}
 		}
 	}
@@ -316,7 +387,7 @@ func outputDepTree(app *App, ctx context.Context, issue *storage.Issue, depth in
 
 	// Prevent cycles
 	if visited[issue.ID] {
-		if len(issue.DependsOn) > 0 {
+		if len(issue.Dependencies) > 0 {
 			fmt.Fprintf(app.Out, "%s  └─ (cycle detected)\n", indent)
 		}
 		return nil
@@ -324,13 +395,13 @@ func outputDepTree(app *App, ctx context.Context, issue *storage.Issue, depth in
 	visited[issue.ID] = true
 
 	// Recursively show dependencies
-	for _, depID := range issue.DependsOn {
-		dep, err := app.Storage.Get(ctx, depID)
+	for _, dep := range issue.Dependencies {
+		depIssue, err := app.Storage.Get(ctx, dep.ID)
 		if err != nil {
-			fmt.Fprintf(app.Out, "%s  └─ %s (error: %v)\n", indent, depID, err)
+			fmt.Fprintf(app.Out, "%s  └─ %s (error: %v)\n", indent, dep.ID, err)
 			continue
 		}
-		outputDepTree(app, ctx, dep, depth+1, visited)
+		outputDepTree(app, ctx, depIssue, depth+1, visited)
 	}
 
 	return nil

@@ -39,17 +39,16 @@ func TestReadyCommand(t *testing.T) {
 
 	// Issue 3: blocked (depends on issue 2)
 	id3, err := store.Create(ctx, &storage.Issue{
-		Title:     "Blocked issue",
-		Priority:  storage.PriorityLow,
-		DependsOn: []string{id2},
+		Title:    "Blocked issue",
+		Priority: storage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	// Also add the dependent relationship on id2
-	issue2, _ := store.Get(ctx, id2)
-	issue2.Dependents = append(issue2.Dependents, id3)
-	store.Update(ctx, issue2)
+	// Add dependency: id3 depends on id2 (id2 blocks id3)
+	if err := store.AddDependency(ctx, id3, id2, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
+	}
 
 	// Create app for testing
 	var out bytes.Buffer
@@ -113,12 +112,15 @@ func TestReadyWithClosedDependency(t *testing.T) {
 
 	// Create an issue that depends on it
 	mainID, err := store.Create(ctx, &storage.Issue{
-		Title:     "Main issue",
-		Priority:  storage.PriorityHigh,
-		DependsOn: []string{depID},
+		Title:    "Main issue",
+		Priority: storage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+	// Add dependency: mainID depends on depID (depID blocks mainID)
+	if err := store.AddDependency(ctx, mainID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app

@@ -225,12 +225,12 @@ func TestDoctorBrokenDependencyReference(t *testing.T) {
 
 	// Create an issue with a dependency on a non-existent issue
 	issue := storage.Issue{
-		ID:        "bd-test",
-		Title:     "Has Broken Dep",
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
-		DependsOn: []string{"bd-nonexistent"},
+		ID:           "bd-test",
+		Title:        "Has Broken Dep",
+		Status:       storage.StatusOpen,
+		Priority:     storage.PriorityMedium,
+		Type:         storage.TypeTask,
+		Dependencies: []storage.Dependency{{ID: "bd-nonexistent", Type: storage.DepTypeBlocks}},
 	}
 	data, _ := json.Marshal(issue)
 	issuePath := filepath.Join(dir, "open", "bd-test.json")
@@ -255,13 +255,13 @@ func TestDoctorBrokenDependencyReference(t *testing.T) {
 	// Fix should remove the broken reference
 	fs.Doctor(ctx, true)
 
-	// Verify: DependsOn should be empty
+	// Verify: Dependencies should be empty
 	got, err := fs.Get(ctx, "bd-test")
 	if err != nil {
 		t.Fatalf("Get after fix failed: %v", err)
 	}
-	if len(got.DependsOn) != 0 {
-		t.Errorf("Expected empty DependsOn after fix, got: %v", got.DependsOn)
+	if len(got.Dependencies) != 0 {
+		t.Errorf("Expected empty Dependencies after fix, got: %v", got.Dependencies)
 	}
 }
 
@@ -276,12 +276,12 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 
 	// Create two issues where A depends on B but B doesn't have A as dependent
 	issueA := storage.Issue{
-		ID:        "bd-aaaa",
-		Title:     "Issue A",
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
-		DependsOn: []string{"bd-bbbb"},
+		ID:           "bd-aaaa",
+		Title:        "Issue A",
+		Status:       storage.StatusOpen,
+		Priority:     storage.PriorityMedium,
+		Type:         storage.TypeTask,
+		Dependencies: []storage.Dependency{{ID: "bd-bbbb", Type: storage.DepTypeBlocks}},
 	}
 	issueB := storage.Issue{
 		ID:         "bd-bbbb",
@@ -289,7 +289,7 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 		Status:     storage.StatusOpen,
 		Priority:   storage.PriorityMedium,
 		Type:       storage.TypeTask,
-		Dependents: []string{}, // Missing A!
+		Dependents: []storage.Dependency{}, // Missing A!
 	}
 
 	dataA, _ := json.Marshal(issueA)
@@ -321,14 +321,7 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get B after fix failed: %v", err)
 	}
-	found = false
-	for _, dep := range gotB.Dependents {
-		if dep == "bd-aaaa" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !gotB.HasDependent("bd-aaaa") {
 		t.Errorf("Expected B.Dependents to contain A after fix, got: %v", gotB.Dependents)
 	}
 }
@@ -449,7 +442,7 @@ func TestDoctorCleanStorage(t *testing.T) {
 	idB, _ := fs.Create(ctx, issueB)
 
 	// Add a proper dependency
-	fs.AddDependency(ctx, idA, idB)
+	fs.AddDependency(ctx, idA, idB, storage.DepTypeBlocks)
 
 	// Close one issue properly
 	fs.Close(ctx, idB)
@@ -473,22 +466,22 @@ func TestDoctorAsymmetricBlocks(t *testing.T) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
-	// Create two issues where A blocks B but B doesn't have A in blocked_by
+	// Create two issues where A blocks B (A has B as dependent) but B doesn't have A in dependencies
 	issueA := storage.Issue{
-		ID:       "bd-aaaa",
-		Title:    "Blocker A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
-		Blocks:   []string{"bd-bbbb"},
+		ID:         "bd-aaaa",
+		Title:      "Blocker A",
+		Status:     storage.StatusOpen,
+		Priority:   storage.PriorityMedium,
+		Type:       storage.TypeTask,
+		Dependents: []storage.Dependency{{ID: "bd-bbbb", Type: storage.DepTypeBlocks}},
 	}
 	issueB := storage.Issue{
-		ID:        "bd-bbbb",
-		Title:     "Blocked B",
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
-		BlockedBy: []string{}, // Missing A!
+		ID:           "bd-bbbb",
+		Title:        "Blocked B",
+		Status:       storage.StatusOpen,
+		Priority:     storage.PriorityMedium,
+		Type:         storage.TypeTask,
+		Dependencies: []storage.Dependency{}, // Missing A!
 	}
 
 	dataA, _ := json.Marshal(issueA)
@@ -503,32 +496,25 @@ func TestDoctorAsymmetricBlocks(t *testing.T) {
 	}
 	found := false
 	for _, p := range problems {
-		if strings.Contains(p, "asymmetric blocks") {
+		if strings.Contains(p, "asymmetric dependency") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("Expected 'asymmetric blocks' problem, got: %v", problems)
+		t.Errorf("Expected 'asymmetric dependency' problem, got: %v", problems)
 	}
 
 	// Fix should restore the symmetric relationship
 	fs.Doctor(ctx, true)
 
-	// Verify: B should now have A in blocked_by
+	// Verify: B should now have A in dependencies (blocked by A)
 	gotB, err := fs.Get(ctx, "bd-bbbb")
 	if err != nil {
 		t.Fatalf("Get B after fix failed: %v", err)
 	}
-	found = false
-	for _, blocker := range gotB.BlockedBy {
-		if blocker == "bd-aaaa" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("Expected B.BlockedBy to contain A after fix, got: %v", gotB.BlockedBy)
+	if !gotB.HasDependency("bd-aaaa") {
+		t.Errorf("Expected B.Dependencies to contain A after fix, got: %v", gotB.Dependencies)
 	}
 }
 
@@ -543,12 +529,12 @@ func TestDoctorAsymmetricParentChild(t *testing.T) {
 
 	// Create two issues where child has parent but parent doesn't list child
 	parent := storage.Issue{
-		ID:       "bd-parent",
-		Title:    "Parent",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
-		Children: []string{}, // Missing child!
+		ID:         "bd-parent",
+		Title:      "Parent",
+		Status:     storage.StatusOpen,
+		Priority:   storage.PriorityMedium,
+		Type:       storage.TypeEpic,
+		Dependents: []storage.Dependency{}, // Missing child!
 	}
 	child := storage.Issue{
 		ID:       "bd-child",
@@ -583,19 +569,12 @@ func TestDoctorAsymmetricParentChild(t *testing.T) {
 	// Fix should restore the symmetric relationship
 	fs.Doctor(ctx, true)
 
-	// Verify: parent should now have child in Children
+	// Verify: parent should now have child in Dependents
 	gotParent, err := fs.Get(ctx, "bd-parent")
 	if err != nil {
 		t.Fatalf("Get parent after fix failed: %v", err)
 	}
-	found = false
-	for _, c := range gotParent.Children {
-		if c == "bd-child" {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("Expected Parent.Children to contain child after fix, got: %v", gotParent.Children)
+	if !gotParent.HasDependent("bd-child") {
+		t.Errorf("Expected Parent.Dependents to contain child after fix, got: %v", gotParent.Dependents)
 	}
 }

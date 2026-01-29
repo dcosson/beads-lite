@@ -64,7 +64,7 @@ func (g *IssueGenerator) generateTreeRecursive(ctx context.Context, parent strin
 		g.ids = append(g.ids, id)
 
 		if parent != "" {
-			if err := g.storage.SetParent(ctx, id, parent); err != nil {
+			if err := g.storage.AddDependency(ctx, id, parent, storage.DepTypeParentChild); err != nil {
 				return fmt.Errorf("set parent for %s: %w", id, err)
 			}
 		}
@@ -101,7 +101,7 @@ func (g *IssueGenerator) GenerateDependencyChain(ctx context.Context, length int
 
 		if i > 0 {
 			// Current issue depends on the previous one
-			if err := g.storage.AddDependency(ctx, id, ids[i-1]); err != nil {
+			if err := g.storage.AddDependency(ctx, id, ids[i-1], storage.DepTypeBlocks); err != nil {
 				return nil, fmt.Errorf("add dependency from %s to %s: %w", id, ids[i-1], err)
 			}
 		}
@@ -141,7 +141,7 @@ func (g *IssueGenerator) GenerateDependencyDAG(ctx context.Context, nodes, edges
 		b := rand.Intn(nodes)
 		if a != b && a < b {
 			// b depends on a (higher index depends on lower)
-			if err := g.storage.AddDependency(ctx, ids[b], ids[a]); err != nil {
+			if err := g.storage.AddDependency(ctx, ids[b], ids[a], storage.DepTypeBlocks); err != nil {
 				// Ignore duplicate edge errors, just continue
 				continue
 			}

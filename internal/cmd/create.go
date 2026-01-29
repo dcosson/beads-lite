@@ -114,16 +114,16 @@ Examples:
 
 			// Set parent relationship if specified
 			if parent != "" {
-				if err := app.Storage.SetParent(ctx, id, parent); err != nil {
+				if err := app.Storage.AddDependency(ctx, id, parent, storage.DepTypeParentChild); err != nil {
 					// Clean up the created issue on failure
 					app.Storage.Delete(context.Background(), id)
 					return fmt.Errorf("setting parent %s: %w", parent, err)
 				}
 			}
 
-			// Add dependencies if specified
+			// Add dependencies if specified (default type: blocks)
 			for _, depID := range dependsOn {
-				if err := app.Storage.AddDependency(ctx, id, depID); err != nil {
+				if err := app.Storage.AddDependency(ctx, id, depID, storage.DepTypeBlocks); err != nil {
 					// Clean up on failure
 					app.Storage.Delete(context.Background(), id)
 					return fmt.Errorf("adding dependency on %s: %w", depID, err)

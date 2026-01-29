@@ -262,7 +262,7 @@ func (s *ConcurrentTestSuite) TestConcurrentDependencyAddition(t *testing.T) {
 				return
 			}
 
-			err := store.AddDependency(ctx, from, to)
+			err := store.AddDependency(ctx, from, to, DepTypeBlocks)
 			if err != nil {
 				// ErrCycle is acceptable - some dependencies may create cycles
 				if err == ErrCycle {
@@ -329,22 +329,14 @@ func (s *ConcurrentTestSuite) TestConcurrentDependencyAddition(t *testing.T) {
 		}
 
 		// Check that for each dependency, the target has this issue in dependents
-		for _, depID := range issue.DependsOn {
+		for _, depID := range issue.DependencyIDs(nil) {
 			dep, err := store.Get(ctx, depID)
 			if err != nil {
 				t.Errorf("failed to retrieve dependency %s: %v", depID, err)
 				continue
 			}
 
-			found := false
-			for _, d := range dep.Dependents {
-				if d == id {
-					found = true
-					break
-				}
-			}
-
-			if !found {
+			if !dep.HasDependent(id) {
 				t.Errorf("asymmetric dependency: %s depends on %s, but %s doesn't list %s in dependents",
 					id, depID, depID, id)
 			}

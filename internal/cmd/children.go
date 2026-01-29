@@ -59,7 +59,7 @@ Examples:
 				return err
 			}
 
-			if len(issue.Children) == 0 {
+			if len(issue.Children()) == 0 {
 				if app.JSON {
 					return json.NewEncoder(app.Out).Encode([]ChildInfo{})
 				}
@@ -82,7 +82,7 @@ Examples:
 // outputChildrenList outputs direct children as a simple list.
 func outputChildrenList(ctx context.Context, app *App, issue *storage.Issue) error {
 	var children []*ChildInfo
-	for _, childID := range issue.Children {
+	for _, childID := range issue.Children() {
 		child, err := app.Storage.Get(ctx, childID)
 		if err != nil {
 			// Child might be deleted or inaccessible
@@ -130,7 +130,7 @@ func outputChildrenTree(ctx context.Context, app *App, issue *storage.Issue) err
 func buildTree(ctx context.Context, app *App, issue *storage.Issue) []*ChildInfo {
 	var children []*ChildInfo
 
-	for _, childID := range issue.Children {
+	for _, childID := range issue.Children() {
 		child, err := app.Storage.Get(ctx, childID)
 		if err != nil {
 			children = append(children, &ChildInfo{
@@ -148,7 +148,7 @@ func buildTree(ctx context.Context, app *App, issue *storage.Issue) []*ChildInfo
 		}
 
 		// Recursively build subtree
-		if len(child.Children) > 0 {
+		if len(child.Children()) > 0 {
 			info.Children = buildTree(ctx, app, child)
 		}
 

@@ -231,17 +231,17 @@ func TestShowJSON(t *testing.T) {
 		t.Fatalf("show command JSON failed: %v", err)
 	}
 
-	// Verify output is valid JSON
-	var result storage.Issue
+	// Verify output is valid JSON (show outputs issueJSONOutput, not storage.Issue)
+	var result map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	if result.ID != id {
-		t.Errorf("expected ID %s, got %s", id, result.ID)
+	if result["id"] != id {
+		t.Errorf("expected ID %s, got %v", id, result["id"])
 	}
-	if result.Title != "JSON Test Issue" {
-		t.Errorf("expected title 'JSON Test Issue', got %s", result.Title)
+	if result["title"] != "JSON Test Issue" {
+		t.Errorf("expected title 'JSON Test Issue', got %v", result["title"])
 	}
 }
 
@@ -318,7 +318,7 @@ func TestShowWithDependencies(t *testing.T) {
 	}
 
 	// Add dependency relationship
-	if err := store.AddDependency(ctx, mainID, depID); err != nil {
+	if err := store.AddDependency(ctx, mainID, depID, storage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 

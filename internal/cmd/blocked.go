@@ -93,24 +93,15 @@ An issue is blocked if:
 }
 
 // getWaitingOn returns a list of issue IDs that this issue is waiting on.
-// This includes both depends_on and blocked_by that are not closed.
+// Only "blocks" type dependencies prevent readiness.
 func getWaitingOn(issue *storage.Issue, closedSet map[string]bool) []string {
 	var waitingOn []string
 	seen := make(map[string]bool)
 
-	// Check depends_on
-	for _, dep := range issue.DependsOn {
-		if !closedSet[dep] && !seen[dep] {
-			waitingOn = append(waitingOn, dep)
-			seen[dep] = true
-		}
-	}
-
-	// Check blocked_by
-	for _, blocker := range issue.BlockedBy {
-		if !closedSet[blocker] && !seen[blocker] {
-			waitingOn = append(waitingOn, blocker)
-			seen[blocker] = true
+	for _, dep := range issue.Dependencies {
+		if dep.Type == storage.DepTypeBlocks && !closedSet[dep.ID] && !seen[dep.ID] {
+			waitingOn = append(waitingOn, dep.ID)
+			seen[dep.ID] = true
 		}
 	}
 

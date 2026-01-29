@@ -122,7 +122,7 @@ Examples:
 				if parent == "" {
 					// Remove parent
 					if issue.Parent != "" {
-						if err := app.Storage.RemoveParent(ctx, issueID); err != nil {
+						if err := app.Storage.RemoveDependency(ctx, issueID, issue.Parent); err != nil {
 							return fmt.Errorf("removing parent: %w", err)
 						}
 					}
@@ -134,14 +134,14 @@ Examples:
 						}
 						return fmt.Errorf("getting parent issue: %w", err)
 					}
-					if err := app.Storage.SetParent(ctx, issueID, parent); err != nil {
+					if err := app.Storage.AddDependency(ctx, issueID, parent, storage.DepTypeParentChild); err != nil {
 						if err == storage.ErrCycle {
 							return fmt.Errorf("cannot set parent: would create a cycle")
 						}
 						return fmt.Errorf("setting parent: %w", err)
 					}
 				}
-				// Re-fetch issue since SetParent/RemoveParent modify storage directly
+				// Re-fetch issue since AddDependency/RemoveDependency modify storage directly
 				issue, err = app.Storage.Get(ctx, issueID)
 				if err != nil {
 					return fmt.Errorf("re-fetching issue after parent update: %w", err)
