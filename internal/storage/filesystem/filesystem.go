@@ -967,6 +967,55 @@ func removeDep(deps []storage.Dependency, id string) []storage.Dependency {
 	return result
 }
 
+// childCountersPath returns the path to the child counters JSON file.
+func (fs *FilesystemStorage) childCountersPath() string {
+	return filepath.Join(fs.root, "child_counters.json")
+}
+
+// childCountersLockPath returns the path to the lock file for child counters.
+func (fs *FilesystemStorage) childCountersLockPath() string {
+	return filepath.Join(fs.root, "child_counters.lock")
+}
+
+// GetNextChildID atomically increments and returns the next child number
+// for the given parent ID. The first child of any parent returns 1.
+func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string) (int, error) {
+	lockPath := fs.childCountersLockPath()
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return 0, fmt.Errorf("opening child counters lock: %w", err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return 0, fmt.Errorf("acquiring child counters lock: %w", err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	// Read current counters
+	counters := make(map[string]int)
+	counterPath := fs.childCountersPath()
+	data, err := os.ReadFile(counterPath)
+	if err == nil {
+		if err := json.Unmarshal(data, &counters); err != nil {
+			return 0, fmt.Errorf("parsing child counters: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return 0, fmt.Errorf("reading child counters: %w", err)
+	}
+
+	// Increment
+	counters[parentID]++
+	next := counters[parentID]
+
+	// Write back atomically
+	if err := atomicWriteJSON(counterPath, counters); err != nil {
+		return 0, fmt.Errorf("writing child counters: %w", err)
+	}
+
+	return next, nil
+}
+
 // hasDependencyCycle checks if adding a dependency from issueID to dependsOnID would create a cycle.
 // It walks the dependency graph from 'dependsOnID' to see if 'issueID' is reachable.
 func (fs *FilesystemStorage) hasDependencyCycle(ctx context.Context, issueID, dependsOnID string) (bool, error) {

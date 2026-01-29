@@ -237,6 +237,10 @@ type Storage interface {
 	// AddComment adds a comment to an issue.
 	AddComment(ctx context.Context, issueID string, comment *Comment) error
 
+	// GetNextChildID atomically increments and returns the next child number
+	// for the given parent ID. The first child of any parent returns 1.
+	GetNextChildID(ctx context.Context, parentID string) (int, error)
+
 	// Init initializes the storage (creates directories, etc.).
 	Init(ctx context.Context) error
 

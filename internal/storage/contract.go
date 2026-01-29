@@ -20,6 +20,7 @@ func RunContractTests(t *testing.T, factory func() Storage) {
 	t.Run("Hierarchy", func(t *testing.T) { testHierarchy(t, factory()) })
 	t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
 	t.Run("Comments", func(t *testing.T) { testComments(t, factory()) })
+	t.Run("ChildCounters", func(t *testing.T) { testChildCounters(t, factory()) })
 }
 
 func testCreate(t *testing.T, s Storage) {
@@ -707,6 +708,49 @@ func testComments(t *testing.T, s Storage) {
 	err = s.AddComment(ctx, "nonexistent-id", comment1)
 	if err != ErrNotFound {
 		t.Errorf("AddComment on non-existent issue: got %v, want ErrNotFound", err)
+	}
+}
+
+func testChildCounters(t *testing.T, s Storage) {
+	ctx := context.Background()
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// First child of a new parent should be 1
+	n, err := s.GetNextChildID(ctx, "parent-a")
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("First child number: got %d, want 1", n)
+	}
+
+	// Second child should be 2
+	n, err = s.GetNextChildID(ctx, "parent-a")
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	if n != 2 {
+		t.Errorf("Second child number: got %d, want 2", n)
+	}
+
+	// Different parent should start at 1
+	n, err = s.GetNextChildID(ctx, "parent-b")
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	if n != 1 {
+		t.Errorf("First child of different parent: got %d, want 1", n)
+	}
+
+	// Original parent should continue from 2
+	n, err = s.GetNextChildID(ctx, "parent-a")
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	if n != 3 {
+		t.Errorf("Third child of parent-a: got %d, want 3", n)
 	}
 }
 
