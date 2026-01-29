@@ -61,7 +61,7 @@ Examples:
 
 			if len(issue.Children()) == 0 {
 				if app.JSON {
-					return json.NewEncoder(app.Out).Encode([]ChildInfo{})
+					return json.NewEncoder(app.Out).Encode([]IssueListJSON{})
 				}
 				fmt.Fprintf(app.Out, "No children for %s\n", issue.ID)
 				return nil
@@ -81,27 +81,22 @@ Examples:
 
 // outputChildrenList outputs direct children as a simple list.
 func outputChildrenList(ctx context.Context, app *App, issue *storage.Issue) error {
-	var children []*ChildInfo
+	var children []*storage.Issue
 	for _, childID := range issue.Children() {
 		child, err := app.Storage.Get(ctx, childID)
 		if err != nil {
-			// Child might be deleted or inaccessible
-			children = append(children, &ChildInfo{
-				ID:     childID,
-				Title:  "(not found)",
-				Status: "unknown",
-			})
-			continue
+			continue // Skip inaccessible children
 		}
-		children = append(children, &ChildInfo{
-			ID:     child.ID,
-			Title:  child.Title,
-			Status: string(child.Status),
-		})
+		children = append(children, child)
 	}
 
 	if app.JSON {
-		return json.NewEncoder(app.Out).Encode(children)
+		// Use IssueListJSON format to match original beads
+		result := make([]IssueListJSON, len(children))
+		for i, child := range children {
+			result[i] = ToIssueListJSON(child)
+		}
+		return json.NewEncoder(app.Out).Encode(result)
 	}
 
 	fmt.Fprintf(app.Out, "Children of %s (%d):\n\n", issue.ID, len(children))

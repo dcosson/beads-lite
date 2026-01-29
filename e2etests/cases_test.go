@@ -20,7 +20,7 @@ var testCases = []TestCase{
 	{"05_list", caseList},
 	{"06_close_reopen", caseCloseReopen},
 	{"07_delete", caseDelete},
-	{"08_dep_lifecycle", caseDepLifecycle},
+	{"08_deps", caseDeps},
 	{"09_parent_children", caseParentChildren},
 	{"10_comment", caseComment},
 	{"11_ready_blocked", caseReadyBlocked},
@@ -625,6 +625,13 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "show G after cascade (F removed)", n.NormalizeJSON([]byte(result.Stdout)))
 
+	// List all remaining issues after cascade
+	result, err = mustRun(r, sandbox, "list", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "list after cascade", n.NormalizeJSONSorted([]byte(result.Stdout)))
+
 	// Suppress unused variable warnings
 	_ = idC
 	_ = idD
@@ -633,7 +640,7 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 }
 
 // 08: Dependency lifecycle (add, list, remove, verify symmetry).
-func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) {
+func caseDeps(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
 	// Create two issues
@@ -657,7 +664,7 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 
-	// Add dep: A depends on B
+	// Add dep: A depends on B (A is blocked by B)
 	result, err = mustRun(r, sandbox, "dep", "add", idA, idB, "--json")
 	if err != nil {
 		return "", err
@@ -677,6 +684,13 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 	section(&out, "show B has dependents", n.NormalizeJSON([]byte(result.Stdout)))
+
+	// List all - verify dependencies array is populated
+	result, err = mustRun(r, sandbox, "list", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "list shows dependencies", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Dep list A
 	result, err = mustRun(r, sandbox, "dep", "list", idA, "--json")
@@ -698,6 +712,13 @@ func caseDepLifecycle(r *Runner, n *Normalizer, sandbox string) (string, error) 
 		return "", err
 	}
 	section(&out, "show A after dep removal", n.NormalizeJSON([]byte(result.Stdout)))
+
+	// List after removal - verify dependencies array is empty
+	result, err = mustRun(r, sandbox, "list", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "list after dep removal", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	return out.String(), nil
 }
@@ -741,6 +762,13 @@ func caseParentChildren(r *Runner, n *Normalizer, sandbox string) (string, error
 		return "", err
 	}
 	section(&out, "show child has parent", n.NormalizeJSON([]byte(result.Stdout)))
+
+	// List all - verify parent-child dependency in list output
+	result, err = mustRun(r, sandbox, "list", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "list shows parent-child deps", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List children of parent
 	result, err = mustRun(r, sandbox, "children", parentID, "--json")

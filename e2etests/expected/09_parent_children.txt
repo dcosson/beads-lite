@@ -69,6 +69,45 @@
   }
 ]
 
+=== list shows parent-child deps ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_1",
+        "issue_id": "ISSUE_2",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "id": "ISSUE_1",
+    "issue_type": "epic",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Parent issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
 === list children of parent ===
 [
   {

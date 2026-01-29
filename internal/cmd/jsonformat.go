@@ -56,19 +56,30 @@ type CommentJSON struct {
 	ID        string `json:"id"`
 }
 
-// IssueListJSON is the JSON output format for list command (with counts instead of full deps).
+// ListDepJSON is the dependency format used in list command output.
+// Different from EnrichedDepJSON - uses depends_on_id/issue_id instead of full issue data.
+type ListDepJSON struct {
+	CreatedAt   string `json:"created_at"`
+	CreatedBy   string `json:"created_by,omitempty"`
+	DependsOnID string `json:"depends_on_id"`
+	IssueID     string `json:"issue_id"`
+	Type        string `json:"type"`
+}
+
+// IssueListJSON is the JSON output format for list command.
 type IssueListJSON struct {
-	CreatedAt       string `json:"created_at"`
-	CreatedBy       string `json:"created_by,omitempty"`
-	DependencyCount int    `json:"dependency_count"`
-	DependentCount  int    `json:"dependent_count"`
-	ID              string `json:"id"`
-	IssueType       string `json:"issue_type"`
-	Owner           string `json:"owner,omitempty"`
-	Priority        int    `json:"priority"`
-	Status          string `json:"status"`
-	Title           string `json:"title"`
-	UpdatedAt       string `json:"updated_at"`
+	CreatedAt       string        `json:"created_at"`
+	CreatedBy       string        `json:"created_by,omitempty"`
+	Dependencies    []ListDepJSON `json:"dependencies,omitempty"`
+	DependencyCount int           `json:"dependency_count"`
+	DependentCount  int           `json:"dependent_count"`
+	ID              string        `json:"id"`
+	IssueType       string        `json:"issue_type"`
+	Owner           string        `json:"owner,omitempty"`
+	Priority        int           `json:"priority"`
+	Status          string        `json:"status"`
+	Title           string        `json:"title"`
+	UpdatedAt       string        `json:"updated_at"`
 }
 
 // IssueSimpleJSON is a simpler JSON output format for ready/blocked commands (no counts).
@@ -204,9 +215,25 @@ func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issu
 func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 	name, email := getGitUser()
 
+	// Convert dependencies to list format
+	var deps []ListDepJSON
+	if len(issue.Dependencies) > 0 {
+		deps = make([]ListDepJSON, len(issue.Dependencies))
+		for i, dep := range issue.Dependencies {
+			deps[i] = ListDepJSON{
+				CreatedAt:   formatTime(issue.CreatedAt), // Use issue's created_at as proxy
+				CreatedBy:   name,
+				DependsOnID: dep.ID,
+				IssueID:     issue.ID,
+				Type:        string(dep.Type),
+			}
+		}
+	}
+
 	return IssueListJSON{
 		CreatedAt:       formatTime(issue.CreatedAt),
 		CreatedBy:       name,
+		Dependencies:    deps,
 		DependencyCount: len(issue.Dependencies),
 		DependentCount:  len(issue.Dependents),
 		ID:              issue.ID,

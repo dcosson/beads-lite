@@ -90,6 +90,45 @@
   }
 ]
 
+=== list shows dependencies ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_1",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 1,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
 === dep list A ===
 [
   {
@@ -124,6 +163,36 @@
     "priority": 2,
     "status": "open",
     "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list after dep removal ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
     "updated_at": "TIMESTAMP"
   }
 ]

@@ -268,3 +268,90 @@ EXIT_CODE: 0
   }
 ]
 
+=== list after cascade ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_5",
+        "issue_id": "ISSUE_4",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_4",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 2,
+    "id": "ISSUE_5",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue C",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_5",
+        "issue_id": "ISSUE_6",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_6",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue D",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_9",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue G",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Keeper",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
