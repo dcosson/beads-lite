@@ -49,11 +49,15 @@ func TestDeleteWithJSONOutput(t *testing.T) {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
+	// Simple delete: deleted is a string
 	if result["deleted"] != issueID {
 		t.Errorf("expected deleted %q, got %v", issueID, result["deleted"])
 	}
 	if result["dependencies_removed"] != float64(0) {
 		t.Errorf("expected dependencies_removed 0, got %v", result["dependencies_removed"])
+	}
+	if result["references_updated"] != float64(0) {
+		t.Errorf("expected references_updated 0, got %v", result["references_updated"])
 	}
 }
 

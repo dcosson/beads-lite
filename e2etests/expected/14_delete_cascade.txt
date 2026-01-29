@@ -1,0 +1,386 @@
+=== create A ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_1",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue A",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create B ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_2",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue B",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create C ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_3",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue C",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create D ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_4",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue D",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create E ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_5",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue E",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create F ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_6",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue F",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create G ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_7",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Issue G",
+  "updated_at": "TIMESTAMP"
+}
+
+=== show A before delete ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_2",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue B",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_5",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue E",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue A",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show B before delete (A's dependency) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_3",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue C",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_1",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue A",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show E before delete (depends on A) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_1",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue A",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_6",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue F",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_5",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue E",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== delete A with cascade ===
+{
+  "deleted": [
+    "ISSUE_1"
+  ],
+  "deleted_count": 3,
+  "dependencies_removed": 4,
+  "events_removed": 7,
+  "labels_removed": 0,
+  "orphaned_issues": null,
+  "references_updated": 0
+}
+
+=== show A after delete ===
+
+
+=== show B after delete (A removed from dependents) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_3",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue C",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show E after delete (no longer depends on A) ===
+
+
+=== show C (unaffected, still has B and D as dependents) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_4",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue D",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_2",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue B",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue C",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show F (unaffected, still depends on E and G) ===
+
+
+=== list all after cascade delete ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_3",
+        "issue_id": "ISSUE_2",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 2,
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue C",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_3",
+        "issue_id": "ISSUE_4",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_4",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue D",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_7",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue G",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
