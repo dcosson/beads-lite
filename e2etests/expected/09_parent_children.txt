@@ -32,7 +32,6 @@
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
-    "parent": "ISSUE_1",
     "priority": 2,
     "status": "open",
     "title": "Child issue",
@@ -73,9 +72,26 @@
 === list children of parent ===
 [
   {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_1",
+        "issue_id": "ISSUE_2",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
     "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
     "status": "open",
-    "title": "Child issue"
+    "title": "Child issue",
+    "updated_at": "TIMESTAMP"
   }
 ]
 

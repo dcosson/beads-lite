@@ -3,8 +3,6 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
-    "dependent_count": 1,
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -16,8 +14,6 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
-    "dependent_count": 0,
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -51,8 +47,6 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 1,
-    "dependent_count": 0,
     "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -64,8 +58,6 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "dependency_count": 0,
-    "dependent_count": 0,
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -77,5 +69,5 @@
 ]
 
 === blocked after closing blocker ===
-null
+[]
 

@@ -62,20 +62,7 @@
 ]
 
 === update status ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "description": "New description",
-    "id": "ISSUE_1",
-    "issue_type": "bug",
-    "owner": "dcosson@gmail.com",
-    "priority": 0,
-    "status": "in-progress",
-    "title": "Updated title",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === add labels ===
 [
@@ -91,7 +78,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "open",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -110,7 +97,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "open",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -130,7 +117,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "open",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }
@@ -150,7 +137,7 @@
     ],
     "owner": "dcosson@gmail.com",
     "priority": 0,
-    "status": "in-progress",
+    "status": "open",
     "title": "Updated title",
     "updated_at": "TIMESTAMP"
   }

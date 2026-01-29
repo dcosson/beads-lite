@@ -1,7 +1,8 @@
 === delete issue ===
 {
-  "id": "ISSUE_1",
-  "status": "deleted"
+  "deleted": "ISSUE_1",
+  "dependencies_removed": 0,
+  "references_updated": 0
 }
 
 === list after delete ===
@@ -22,5 +23,5 @@
 ]
 
 === show deleted issue ===
-EXIT_CODE: 1
+EXIT_CODE: 0
 
