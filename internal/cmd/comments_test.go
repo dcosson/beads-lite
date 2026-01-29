@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"beads-lite/internal/storage"
 )
 
-func TestCommentAddBasic(t *testing.T) {
+func TestCommentsAddBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue to add a comment to
 	issue := &storage.Issue{
 		Title:    "Issue for comments",
 		Status:   storage.StatusOpen,
@@ -26,10 +27,10 @@ func TestCommentAddBasic(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id, "This is a test comment"})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment add failed: %v", err)
+		t.Fatalf("comments add failed: %v", err)
 	}
 
 	output := out.String()
@@ -37,7 +38,6 @@ func TestCommentAddBasic(t *testing.T) {
 		t.Errorf("expected output to contain 'Added comment to %s', got %q", id, output)
 	}
 
-	// Verify comment was added
 	got, err := store.Get(context.Background(), id)
 	if err != nil {
 		t.Fatalf("failed to get issue: %v", err)
@@ -50,10 +50,9 @@ func TestCommentAddBasic(t *testing.T) {
 	}
 }
 
-func TestCommentAddWithAuthor(t *testing.T) {
+func TestCommentsAddWithAuthor(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	// Create an issue
 	issue := &storage.Issue{
 		Title:    "Issue for author test",
 		Status:   storage.StatusOpen,
@@ -65,13 +64,12 @@ func TestCommentAddWithAuthor(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id, "Comment with author", "--author", "alice"})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment add failed: %v", err)
+		t.Fatalf("comments add failed: %v", err)
 	}
 
-	// Verify author was set
 	got, err := store.Get(context.Background(), id)
 	if err != nil {
 		t.Fatalf("failed to get issue: %v", err)
@@ -84,10 +82,49 @@ func TestCommentAddWithAuthor(t *testing.T) {
 	}
 }
 
-func TestCommentAddNonExistent(t *testing.T) {
+func TestCommentsAddFromFile(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issue := &storage.Issue{
+		Title:    "Issue for file test",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	// Write a temp file with comment content
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "comment.txt")
+	if err := os.WriteFile(tmpFile, []byte("Comment from file\n"), 0644); err != nil {
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+
+	cmd := newCommentsAddCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "-f", tmpFile})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("comments add failed: %v", err)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if len(got.Comments) != 1 {
+		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
+	}
+	if got.Comments[0].Body != "Comment from file" {
+		t.Errorf("expected comment body %q, got %q", "Comment from file", got.Comments[0].Body)
+	}
+}
+
+func TestCommentsAddNonExistent(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"bd-nonexistent", "Comment"})
 	err := cmd.Execute()
 	if err == nil {
@@ -98,10 +135,9 @@ func TestCommentAddNonExistent(t *testing.T) {
 	}
 }
 
-func TestCommentAddEmptyMessage(t *testing.T) {
+func TestCommentsAddEmptyMessage(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	// Create an issue
 	issue := &storage.Issue{
 		Title:    "Issue for empty message test",
 		Status:   storage.StatusOpen,
@@ -113,7 +149,7 @@ func TestCommentAddEmptyMessage(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id, ""})
 	err = cmd.Execute()
 	if err == nil {
@@ -124,12 +160,11 @@ func TestCommentAddEmptyMessage(t *testing.T) {
 	}
 }
 
-func TestCommentAddJSON(t *testing.T) {
+func TestCommentsAddJSON(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue
 	issue := &storage.Issue{
 		Title:    "Issue for JSON test",
 		Status:   storage.StatusOpen,
@@ -141,10 +176,10 @@ func TestCommentAddJSON(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id, "JSON comment", "--author", "bob"})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment add failed: %v", err)
+		t.Fatalf("comments add failed: %v", err)
 	}
 
 	var result map[string]interface{}
@@ -168,11 +203,10 @@ func TestCommentAddJSON(t *testing.T) {
 	}
 }
 
-func TestCommentListBasic(t *testing.T) {
+func TestCommentsListBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue with comments
 	issue := &storage.Issue{
 		Title:    "Issue with comments",
 		Status:   storage.StatusOpen,
@@ -184,7 +218,6 @@ func TestCommentListBasic(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Add some comments
 	comment1 := &storage.Comment{Author: "alice", Body: "First comment"}
 	comment2 := &storage.Comment{Author: "bob", Body: "Second comment"}
 	if err := store.AddComment(context.Background(), id, comment1); err != nil {
@@ -194,10 +227,10 @@ func TestCommentListBasic(t *testing.T) {
 		t.Fatalf("failed to add comment 2: %v", err)
 	}
 
-	cmd := newCommentListCmd(NewTestProvider(app))
+	cmd := newCommentsCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment list failed: %v", err)
+		t.Fatalf("comments list failed: %v", err)
 	}
 
 	output := out.String()
@@ -215,11 +248,10 @@ func TestCommentListBasic(t *testing.T) {
 	}
 }
 
-func TestCommentListEmpty(t *testing.T) {
+func TestCommentsListEmpty(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue without comments
 	issue := &storage.Issue{
 		Title:    "Issue without comments",
 		Status:   storage.StatusOpen,
@@ -231,10 +263,10 @@ func TestCommentListEmpty(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	cmd := newCommentListCmd(NewTestProvider(app))
+	cmd := newCommentsCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment list failed: %v", err)
+		t.Fatalf("comments list failed: %v", err)
 	}
 
 	output := out.String()
@@ -243,10 +275,10 @@ func TestCommentListEmpty(t *testing.T) {
 	}
 }
 
-func TestCommentListNonExistent(t *testing.T) {
+func TestCommentsListNonExistent(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := newCommentListCmd(NewTestProvider(app))
+	cmd := newCommentsCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"bd-nonexistent"})
 	err := cmd.Execute()
 	if err == nil {
@@ -257,12 +289,11 @@ func TestCommentListNonExistent(t *testing.T) {
 	}
 }
 
-func TestCommentListJSON(t *testing.T) {
+func TestCommentsListJSON(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue with comments
 	issue := &storage.Issue{
 		Title:    "Issue for JSON list",
 		Status:   storage.StatusOpen,
@@ -274,16 +305,15 @@ func TestCommentListJSON(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Add a comment
 	comment := &storage.Comment{Author: "alice", Body: "Test comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
 
-	cmd := newCommentListCmd(NewTestProvider(app))
+	cmd := newCommentsCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment list failed: %v", err)
+		t.Fatalf("comments list failed: %v", err)
 	}
 
 	var result []map[string]interface{}
@@ -302,11 +332,10 @@ func TestCommentListJSON(t *testing.T) {
 	}
 }
 
-func TestCommentListNoAuthor(t *testing.T) {
+func TestCommentsListNoAuthor(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	// Create an issue
 	issue := &storage.Issue{
 		Title:    "Issue for no-author test",
 		Status:   storage.StatusOpen,
@@ -318,43 +347,66 @@ func TestCommentListNoAuthor(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Add a comment without author
 	comment := &storage.Comment{Body: "Anonymous comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
 
-	cmd := newCommentListCmd(NewTestProvider(app))
+	cmd := newCommentsCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id})
 	if err := cmd.Execute(); err != nil {
-		t.Fatalf("comment list failed: %v", err)
+		t.Fatalf("comments list failed: %v", err)
 	}
 
 	output := out.String()
 	if !strings.Contains(output, "Anonymous comment") {
 		t.Errorf("expected output to contain 'Anonymous comment', got %q", output)
 	}
-	// Output should NOT have a colon with no author
-	// Format should be "[timestamp] body" not "[timestamp] : body"
 	if strings.Contains(output, ": Anonymous") {
 		t.Errorf("expected output without colon for anonymous comment, got %q", output)
 	}
 }
 
-func TestCommentNoArgs(t *testing.T) {
+func TestCommentsNoArgs(t *testing.T) {
 	app, _ := setupTestApp(t)
 
-	cmd := newCommentAddCmd(NewTestProvider(app))
+	cmd := newCommentsAddCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
 	if err == nil {
-		t.Error("expected error when no arguments provided")
+		t.Error("expected error when no arguments provided to add")
 	}
 
-	cmd = newCommentListCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{})
+	cmd2 := newCommentsCmd(NewTestProvider(app))
+	cmd2.SetArgs([]string{})
+	err = cmd2.Execute()
+	if err == nil {
+		t.Error("expected error when no arguments provided to comments")
+	}
+}
+
+func TestCommentsAddNoMessageArg(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issue := &storage.Issue{
+		Title:    "Issue for no-message test",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	// No message arg and no -f flag should error
+	cmd := newCommentsAddCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id})
 	err = cmd.Execute()
 	if err == nil {
-		t.Error("expected error when no arguments provided")
+		t.Error("expected error when no message provided")
+	}
+	if !strings.Contains(err.Error(), "comment message required") {
+		t.Errorf("expected error about message required, got %q", err.Error())
 	}
 }

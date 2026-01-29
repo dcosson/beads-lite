@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 10: Comment add and list.
+// 10: Comments add and list.
 func caseComment(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
@@ -17,21 +17,21 @@ func caseComment(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Add first comment
-	result, err = mustRun(r, sandbox, "comment", "add", id, "First comment", "--json")
+	result, err = mustRun(r, sandbox, "comments", "add", id, "First comment", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add first comment", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Add second comment
-	result, err = mustRun(r, sandbox, "comment", "add", id, "Second comment", "--json")
+	result, err = mustRun(r, sandbox, "comments", "add", id, "Second comment", "--json")
 	if err != nil {
 		return "", err
 	}
 	section(&out, "add second comment", n.NormalizeJSON([]byte(result.Stdout)))
 
-	// List comments
-	result, err = mustRun(r, sandbox, "comment", "list", id, "--json")
+	// List comments (default behavior: bd comments <id>)
+	result, err = mustRun(r, sandbox, "comments", id, "--json")
 	if err != nil {
 		return "", err
 	}
