@@ -26,8 +26,8 @@ func NewNormalizer() *Normalizer {
 }
 
 var (
-	// Match beads-lite IDs (bd-XXXX) or original beads IDs (e2etests-XXX)
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}|e2etests-[0-9a-z]{3})`)
+	// Match issue IDs: letters/numbers/dashes ending with a short alphanumeric hash
+	issueIDPattern   = regexp.MustCompile(`[a-zA-Z0-9][-a-zA-Z0-9]*-[0-9a-zA-Z]{3,8}`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
