@@ -160,6 +160,192 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	}
 }
 
+func TestReadyExcludesEphemeral(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir)
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create a normal issue (should appear)
+	normalID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Normal issue",
+		Priority: storage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	// Create an ephemeral issue (should NOT appear)
+	ephID, err := store.Create(ctx, &storage.Issue{
+		Title:     "Ephemeral issue",
+		Priority:  storage.PriorityHigh,
+		Ephemeral: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+	}
+
+	cmd := newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed: %v", err)
+	}
+
+	output := out.String()
+	if !bytes.Contains([]byte(output), []byte(normalID)) {
+		t.Errorf("expected output to contain normal issue %s, got: %s", normalID, output)
+	}
+	if bytes.Contains([]byte(output), []byte(ephID)) {
+		t.Errorf("expected output NOT to contain ephemeral issue %s, got: %s", ephID, output)
+	}
+}
+
+func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir)
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create a molecule root
+	molRootID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Molecule root",
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeEpic,
+	})
+	if err != nil {
+		t.Fatalf("failed to create mol root: %v", err)
+	}
+
+	// Create two molecule steps (children of root)
+	stepID1, err := store.Create(ctx, &storage.Issue{
+		Title:    "Step 1",
+		Priority: storage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create step 1: %v", err)
+	}
+	if err := store.AddDependency(ctx, stepID1, molRootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child dep: %v", err)
+	}
+
+	stepID2, err := store.Create(ctx, &storage.Issue{
+		Title:    "Step 2",
+		Priority: storage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create step 2: %v", err)
+	}
+	if err := store.AddDependency(ctx, stepID2, molRootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child dep: %v", err)
+	}
+
+	// Create a non-molecule issue
+	otherID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Other top-level issue",
+		Priority: storage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create other issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+	}
+
+	// With --mol: should show only molecule steps, not other issues
+	cmd := newReadyCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--mol", molRootID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready --mol failed: %v", err)
+	}
+
+	output := out.String()
+	if !bytes.Contains([]byte(output), []byte(stepID1)) {
+		t.Errorf("expected --mol output to contain step %s, got: %s", stepID1, output)
+	}
+	if !bytes.Contains([]byte(output), []byte(stepID2)) {
+		t.Errorf("expected --mol output to contain step %s, got: %s", stepID2, output)
+	}
+	if bytes.Contains([]byte(output), []byte(otherID)) {
+		t.Errorf("expected --mol output NOT to contain other issue %s, got: %s", otherID, output)
+	}
+	// Should show parallel info for multiple ready steps
+	if !bytes.Contains([]byte(output), []byte("parallel")) {
+		t.Errorf("expected --mol output to mention parallel steps, got: %s", output)
+	}
+}
+
+func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir)
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create a molecule root
+	molRootID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Molecule root",
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeEpic,
+	})
+	if err != nil {
+		t.Fatalf("failed to create mol root: %v", err)
+	}
+
+	// Create a molecule step (child of root)
+	stepID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Molecule step",
+		Priority: storage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create step: %v", err)
+	}
+	if err := store.AddDependency(ctx, stepID, molRootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child dep: %v", err)
+	}
+
+	// Create a top-level issue
+	topID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Top-level issue",
+		Priority: storage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create top-level issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+	}
+
+	// Without --mol: should show top-level issue, exclude molecule step
+	cmd := newReadyCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed: %v", err)
+	}
+
+	output := out.String()
+	if !bytes.Contains([]byte(output), []byte(topID)) {
+		t.Errorf("expected output to contain top-level issue %s, got: %s", topID, output)
+	}
+	if bytes.Contains([]byte(output), []byte(stepID)) {
+		t.Errorf("expected output NOT to contain molecule step %s, got: %s", stepID, output)
+	}
+}
+
 func TestReadyJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
