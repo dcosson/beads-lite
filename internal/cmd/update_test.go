@@ -690,3 +690,96 @@ func TestUpdateParentCycle(t *testing.T) {
 		t.Errorf("expected 'cycle' in error, got: %v", err)
 	}
 }
+
+func TestUpdateClaimUnassigned(t *testing.T) {
+	app, store := setupTestApp(t)
+	issue := &storage.Issue{
+		Title:  "Unassigned issue",
+		Type:   storage.TypeTask,
+		Status: storage.StatusOpen,
+	}
+	id, _ := store.Create(context.Background(), issue)
+
+	t.Setenv("BD_ACTOR", "test-actor")
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "--claim"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("claim failed: %v", err)
+	}
+
+	got, _ := store.Get(context.Background(), id)
+	if got.Assignee != "test-actor" {
+		t.Errorf("expected assignee %q, got %q", "test-actor", got.Assignee)
+	}
+	if got.Status != storage.StatusInProgress {
+		t.Errorf("expected status %q, got %q", storage.StatusInProgress, got.Status)
+	}
+}
+
+func TestUpdateClaimAlreadyAssigned(t *testing.T) {
+	app, store := setupTestApp(t)
+	issueID := createTestIssue(t, store) // has Assignee: "original-assignee"
+
+	t.Setenv("BD_ACTOR", "test-actor")
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{issueID, "--claim"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when claiming already-assigned issue")
+	}
+	if !strings.Contains(err.Error(), "already assigned") {
+		t.Errorf("expected 'already assigned' in error, got: %v", err)
+	}
+}
+
+func TestUpdateClaimResolvesFromBDActor(t *testing.T) {
+	app, store := setupTestApp(t)
+	issue := &storage.Issue{
+		Title:  "Unassigned",
+		Type:   storage.TypeTask,
+		Status: storage.StatusOpen,
+	}
+	id, _ := store.Create(context.Background(), issue)
+
+	t.Setenv("BD_ACTOR", "env-actor")
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "--claim"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("claim failed: %v", err)
+	}
+
+	got, _ := store.Get(context.Background(), id)
+	if got.Assignee != "env-actor" {
+		t.Errorf("expected assignee %q from BD_ACTOR, got %q", "env-actor", got.Assignee)
+	}
+}
+
+func TestUpdateClaimResolvesFromGitConfig(t *testing.T) {
+	app, store := setupTestApp(t)
+	issue := &storage.Issue{
+		Title:  "Unassigned",
+		Type:   storage.TypeTask,
+		Status: storage.StatusOpen,
+	}
+	id, _ := store.Create(context.Background(), issue)
+
+	// Clear BD_ACTOR so resolution falls through to git config user.name or $USER
+	t.Setenv("BD_ACTOR", "")
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "--claim"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("claim failed: %v", err)
+	}
+
+	got, _ := store.Get(context.Background(), id)
+	if got.Assignee == "" {
+		t.Error("expected non-empty assignee from git config or $USER fallback")
+	}
+	if got.Status != storage.StatusInProgress {
+		t.Errorf("expected status %q, got %q", storage.StatusInProgress, got.Status)
+	}
+}
