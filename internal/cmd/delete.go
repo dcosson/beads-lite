@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"beads-lite/internal/storage"
@@ -34,17 +35,25 @@ type deleteResultCascade struct {
 // newDeleteCmd creates the delete command.
 func newDeleteCmd(provider *AppProvider) *cobra.Command {
 	var (
-		force   bool
-		cascade bool
+		force    bool
+		cascade  bool
+		hard     bool
+		dryRun   bool
+		reason   string
+		fromFile string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "delete <issue-id>",
-		Short: "Permanently delete an issue",
-		Long: `Permanently delete an issue from the system.
+		Short: "Delete an issue (soft-delete by default)",
+		Long: `Delete an issue from the system.
 
-This action is irreversible. By default, a confirmation prompt is shown.
-Use --force to skip the confirmation.
+By default, issues are soft-deleted (tombstoned): the issue is moved to a
+deleted/ directory with status=tombstone and deletion metadata preserved.
+Tombstoned issues are excluded from normal queries but remain retrievable
+via 'bd show' and 'bd list --status tombstone'.
+
+Use --hard to permanently remove the issue file (irreversible).
 
 Supports prefix matching on IDs. If the provided ID is a unique prefix
 of an existing issue ID, that issue will be deleted.
@@ -53,10 +62,13 @@ With --cascade, all issues that depend on the deleted issue will also
 be deleted, recursively following the dependent chain.
 
 Examples:
-  bd delete bd-a1b2                  # Delete by full ID
-  bd delete bd-a1                    # Delete by prefix (if unique)
-  bd delete bd-a1b2 --force          # Delete without confirmation
-  bd delete bd-a1b2 --cascade --force # Delete and cascade to dependents`,
+  bd delete bd-a1b2                       # Soft-delete (tombstone)
+  bd delete bd-a1b2 --hard                # Permanently delete
+  bd delete bd-a1b2 --force               # Skip confirmation
+  bd delete bd-a1b2 --reason "duplicate"  # Record deletion reason
+  bd delete bd-a1b2 --cascade --force     # Cascade to dependents
+  bd delete bd-a1b2 --dry-run             # Preview without deleting
+  bd delete bd-a1b2 --from-file ids.txt   # Delete multiple from file`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -90,6 +102,24 @@ Examples:
 			toDelete := []string{issue.ID}
 			depsRemoved := 0
 
+			// Read additional IDs from file if specified
+			if fromFile != "" {
+				fileIDs, err := readIDsFromFile(fromFile)
+				if err != nil {
+					return fmt.Errorf("reading IDs from file: %w", err)
+				}
+				for _, fid := range fileIDs {
+					resolved, err := store.Get(ctx, fid)
+					if err == storage.ErrNotFound {
+						resolved, err = findByPrefix(store, ctx, fid)
+					}
+					if err != nil {
+						return fmt.Errorf("resolving ID %q from file: %w", fid, err)
+					}
+					toDelete = append(toDelete, resolved.ID)
+				}
+			}
+
 			if cascade {
 				// Collect all dependent issues recursively
 				visited := make(map[string]bool)
@@ -99,13 +129,40 @@ Examples:
 				}
 			}
 
+			// Build set of issues being deleted for cleanup
+			deleteSet := make(map[string]bool)
+			for _, id := range toDelete {
+				deleteSet[id] = true
+			}
+
+			// Dry run: preview and exit
+			if dryRun {
+				action := "Tombstone"
+				if hard {
+					action = "Permanently delete"
+				}
+				if len(toDelete) == 1 {
+					fmt.Fprintf(app.Out, "[dry-run] Would %s: %s\n", strings.ToLower(action), issue.ID)
+				} else {
+					fmt.Fprintf(app.Out, "[dry-run] Would %s %d issues:\n", strings.ToLower(action), len(toDelete))
+					for _, id := range toDelete {
+						fmt.Fprintf(app.Out, "  - %s\n", id)
+					}
+				}
+				return nil
+			}
+
 			// Confirmation prompt unless --force is used
 			if !force {
+				action := "Tombstone"
+				if hard {
+					action = "Permanently delete"
+				}
 				if len(toDelete) == 1 {
-					fmt.Fprintf(app.Out, "Delete issue %s: %s? [y/N] ", issue.ID, issue.Title)
+					fmt.Fprintf(app.Out, "%s issue %s: %s? [y/N] ", action, issue.ID, issue.Title)
 				} else {
-					fmt.Fprintf(app.Out, "Delete %d issues (%s and %d dependents)? [y/N] ",
-						len(toDelete), issue.ID, len(toDelete)-1)
+					fmt.Fprintf(app.Out, "%s %d issues (%s and %d dependents)? [y/N] ",
+						action, len(toDelete), issue.ID, len(toDelete)-1)
 				}
 
 				reader := bufio.NewReader(os.Stdin)
@@ -121,10 +178,12 @@ Examples:
 				}
 			}
 
-			// Build set of issues being deleted for cleanup
-			deleteSet := make(map[string]bool)
+			// Rewrite text references in surviving issues (must happen before
+			// dependency cleanup since it uses dependency links to find connected issues)
+			refsUpdated := 0
 			for _, id := range toDelete {
-				deleteSet[id] = true
+				n := rewriteTextReferences(ctx, store, id, deleteSet)
+				refsUpdated += n
 			}
 
 			// Count all dependencies involving deleted issues, and clean up external ones
@@ -140,17 +199,15 @@ Examples:
 				// Clean up dependencies to non-deleted issues
 				for _, dep := range issueToDelete.Dependencies {
 					if !deleteSet[dep.ID] {
-						// Remove this issue from the dependency target's Dependents list
 						if err := store.RemoveDependency(ctx, id, dep.ID); err != nil {
 							// Ignore errors - issue might already be cleaned up
 						}
 					}
 				}
 
-				// Clean up dependents from non-deleted issues (don't count - would double-count)
+				// Clean up dependents from non-deleted issues
 				for _, dep := range issueToDelete.Dependents {
 					if !deleteSet[dep.ID] {
-						// Remove dependency from the dependent issue
 						if err := store.RemoveDependency(ctx, dep.ID, id); err != nil {
 							// Ignore errors
 						}
@@ -158,41 +215,63 @@ Examples:
 				}
 			}
 
-			// Delete all collected issues
+			// Resolve actor for tombstone metadata
+			actor := ""
+			if !hard {
+				actor, _ = resolveActor(app)
+				if actor == "" {
+					actor = "unknown"
+				}
+			}
+
+			// Delete or tombstone all collected issues
 			for _, id := range toDelete {
-				if err := store.Delete(ctx, id); err != nil {
-					// Continue trying to delete others even if one fails
+				if hard {
+					if err := store.Delete(ctx, id); err != nil {
+						// Continue trying to delete others even if one fails
+					}
+				} else {
+					deleteReason := reason
+					if deleteReason == "" {
+						deleteReason = "deleted"
+					}
+					if err := store.CreateTombstone(ctx, id, actor, deleteReason); err != nil {
+						// Continue trying to process others even if one fails
+					}
 				}
 			}
 
 			// Output the result
 			if app.JSON {
 				if cascade {
-					// Cascade delete has a more detailed output format
 					result := deleteResultCascade{
-						Deleted:             []string{issue.ID}, // Only include the requested issue ID
+						Deleted:             []string{issue.ID},
 						DeletedCount:        len(toDelete),
 						DependenciesRemoved: depsRemoved,
-						EventsRemoved:       len(toDelete) + depsRemoved, // Simplified: 1 per issue + 1 per dep
+						EventsRemoved:       len(toDelete) + depsRemoved,
 						LabelsRemoved:       0,
-						OrphanedIssues:      nil, // null in JSON
-						ReferencesUpdated:   0,
+						OrphanedIssues:      nil,
+						ReferencesUpdated:   refsUpdated,
 					}
 					return json.NewEncoder(app.Out).Encode(result)
 				}
-				// Simple delete has a simpler output format
 				result := deleteResultSimple{
 					Deleted:             issue.ID,
 					DependenciesRemoved: depsRemoved,
-					ReferencesUpdated:   0,
+					ReferencesUpdated:   refsUpdated,
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
+			action := "Tombstoned"
+			if hard {
+				action = "Deleted"
+			}
+
 			if len(toDelete) == 1 {
-				fmt.Fprintf(app.Out, "Deleted %s\n", issue.ID)
+				fmt.Fprintf(app.Out, "%s %s\n", action, issue.ID)
 			} else {
-				fmt.Fprintf(app.Out, "Deleted %d issues (cascade from %s)\n", len(toDelete), issue.ID)
+				fmt.Fprintf(app.Out, "%s %d issues (cascade from %s)\n", action, len(toDelete), issue.ID)
 			}
 			return nil
 		},
@@ -200,6 +279,10 @@ Examples:
 
 	cmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompt")
 	cmd.Flags().BoolVar(&cascade, "cascade", false, "Recursively delete all dependent issues")
+	cmd.Flags().BoolVar(&hard, "hard", false, "Permanently delete instead of tombstoning")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Preview what would be deleted without doing it")
+	cmd.Flags().StringVar(&reason, "reason", "", "Reason for deletion (stored in tombstone)")
+	cmd.Flags().StringVar(&fromFile, "from-file", "", "Read additional issue IDs from file (one per line)")
 
 	return cmd
 }
@@ -233,8 +316,9 @@ func collectDependentsRecursive(ctx context.Context, store storage.Storage, issu
 
 // findByPrefix finds an issue by ID prefix.
 // Returns ErrNotFound if no match, or an error if multiple matches.
+// Tombstoned issues are excluded from prefix matching.
 func findByPrefix(store storage.Storage, ctx context.Context, prefix string) (*storage.Issue, error) {
-	// List all issues (both open and closed)
+	// List all issues (both open and closed, excluding tombstones)
 	openIssues, err := store.List(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -267,4 +351,72 @@ func findByPrefix(store storage.Storage, ctx context.Context, prefix string) (*s
 	}
 
 	return matches[0], nil
+}
+
+// readIDsFromFile reads issue IDs from a file, one per line.
+// Empty lines and lines starting with # are skipped.
+func readIDsFromFile(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		ids = append(ids, line)
+	}
+	return ids, nil
+}
+
+// rewriteTextReferences replaces references to deletedID in surviving issues'
+// descriptions with [deleted:ID] format. Returns the number of references updated.
+func rewriteTextReferences(ctx context.Context, store storage.Storage, deletedID string, deleteSet map[string]bool) int {
+	// Get the issue to find its connected issues
+	issue, err := store.Get(ctx, deletedID)
+	if err != nil {
+		return 0
+	}
+
+	// Collect all connected surviving issue IDs
+	connectedIDs := make(map[string]bool)
+	for _, dep := range issue.Dependencies {
+		if !deleteSet[dep.ID] {
+			connectedIDs[dep.ID] = true
+		}
+	}
+	for _, dep := range issue.Dependents {
+		if !deleteSet[dep.ID] {
+			connectedIDs[dep.ID] = true
+		}
+	}
+
+	// Build regex pattern for the deleted ID
+	pattern := regexp.MustCompile(`(^|[^A-Za-z0-9_-])` + regexp.QuoteMeta(deletedID) + `($|[^A-Za-z0-9_-])`)
+	replacement := "${1}[deleted:" + deletedID + "]${2}"
+
+	count := 0
+	for connID := range connectedIDs {
+		connIssue, err := store.Get(ctx, connID)
+		if err != nil {
+			continue
+		}
+
+		updated := false
+		newDesc := pattern.ReplaceAllString(connIssue.Description, replacement)
+		if newDesc != connIssue.Description {
+			connIssue.Description = newDesc
+			updated = true
+			count++
+		}
+
+		if updated {
+			store.Update(ctx, connIssue)
+		}
+	}
+
+	return count
 }

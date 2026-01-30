@@ -283,6 +283,8 @@ func parseStatus(s string) (storage.Status, error) {
 		return storage.StatusDeferred, nil
 	case "closed":
 		return storage.StatusClosed, nil
+	case "tombstone":
+		return "", fmt.Errorf("cannot set status to tombstone directly; use 'bd delete' instead")
 	default:
 		return "", fmt.Errorf("invalid status %q: must be one of open, in-progress, blocked, deferred, closed", s)
 	}
