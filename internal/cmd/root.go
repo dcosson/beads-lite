@@ -140,6 +140,27 @@ making them easy to review, diff, and track alongside your code.`,
 	// Global flags - these populate the provider config
 	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format (env: BD_JSON)")
 
+	// Compatibility flags — accepted for compatibility with the reference
+	// implementation but not used by beads-lite.
+	var (
+		noDaemon    bool
+		noAutoFlush bool
+		noAutoImport bool
+		noDB        bool
+		lockTimeout string
+		sandbox     bool
+		readOnly    bool
+		allowStale  bool
+	)
+	rootCmd.PersistentFlags().BoolVar(&noDaemon, "no-daemon", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&noAutoFlush, "no-auto-flush", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&noAutoImport, "no-auto-import", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&noDB, "no-db", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().StringVar(&lockTimeout, "lock-timeout", "", "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&sandbox, "sandbox", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&readOnly, "readonly", false, "Accepted for compatibility (no-op)")
+	rootCmd.PersistentFlags().BoolVar(&allowStale, "allow-stale", false, "Accepted for compatibility (no-op)")
+
 	// Register all commands
 	rootCmd.AddCommand(newInitCmd(provider))
 	rootCmd.AddCommand(newCreateCmd(provider))
@@ -162,6 +183,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newMolCmd(provider))
 	rootCmd.AddCommand(newCookCmd(provider))
 	rootCmd.AddCommand(newFormulaCmd(provider))
+	rootCmd.AddCommand(newSyncCmd(provider))
 
 	return rootCmd
 }

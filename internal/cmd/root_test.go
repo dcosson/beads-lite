@@ -172,6 +172,63 @@ func TestAppProvider_Get_BD_JSON(t *testing.T) {
 	}
 }
 
+func TestCompatibilityFlags_Accepted(t *testing.T) {
+	tmpDir := t.TempDir()
+	beadsDir := setupBeadsDir(t, tmpDir)
+	t.Setenv("BEADS_DIR", beadsDir)
+
+	flags := []string{
+		"--no-daemon",
+		"--no-auto-flush",
+		"--no-auto-import",
+		"--no-db",
+		"--lock-timeout=5s",
+		"--sandbox",
+		"--readonly",
+		"--allow-stale",
+	}
+
+	for _, flag := range flags {
+		t.Run(flag, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			provider := &AppProvider{
+				Out: &out,
+				Err: &errOut,
+			}
+
+			rootCmd := newRootCmd(provider)
+			rootCmd.SetArgs([]string{flag, "list"})
+			rootCmd.SetOut(&out)
+			rootCmd.SetErr(&errOut)
+
+			if err := rootCmd.Execute(); err != nil {
+				t.Errorf("command with %s should not error, got: %v", flag, err)
+			}
+		})
+	}
+}
+
+func TestCompatibilityFlags_Combined(t *testing.T) {
+	tmpDir := t.TempDir()
+	beadsDir := setupBeadsDir(t, tmpDir)
+	t.Setenv("BEADS_DIR", beadsDir)
+
+	var out, errOut bytes.Buffer
+	provider := &AppProvider{
+		Out: &out,
+		Err: &errOut,
+	}
+
+	rootCmd := newRootCmd(provider)
+	rootCmd.SetArgs([]string{"--no-daemon", "--sandbox", "--allow-stale", "list"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&errOut)
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Errorf("command with combined compat flags should not error, got: %v", err)
+	}
+}
+
 func TestAppProvider_Get_BD_JSON_FlagOverridesEnv(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := setupBeadsDir(t, tmpDir)
