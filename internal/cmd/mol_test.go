@@ -15,11 +15,11 @@ func TestMolPourText(t *testing.T) {
 	cmd.SetArgs([]string{"test-formula"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Pour, got nil")
+		t.Fatal("expected error (no formula file), got nil")
 	}
-	// The stub returns ErrNotImplemented, which gets wrapped by the command
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	// The real Pour tries to load a formula file that doesn't exist
+	if !strings.Contains(err.Error(), "pour test-formula") {
+		t.Errorf("expected 'pour test-formula' error, got %v", err)
 	}
 	_ = out // no output expected on error
 }
@@ -32,10 +32,10 @@ func TestMolPourJSON(t *testing.T) {
 	cmd.SetArgs([]string{"test-formula"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Pour, got nil")
+		t.Fatal("expected error (no formula file), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "pour test-formula") {
+		t.Errorf("expected 'pour test-formula' error, got %v", err)
 	}
 }
 
@@ -46,10 +46,10 @@ func TestMolPourWithVars(t *testing.T) {
 	cmd.SetArgs([]string{"test-formula", "--var", "component=auth", "--var", "severity=high"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Pour, got nil")
+		t.Fatal("expected error (no formula file), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "pour test-formula") {
+		t.Errorf("expected 'pour test-formula' error, got %v", err)
 	}
 }
 
@@ -71,10 +71,10 @@ func TestMolWispText(t *testing.T) {
 	cmd.SetArgs([]string{"scratch-pad"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Pour (ephemeral), got nil")
+		t.Fatal("expected error (no formula file), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "wisp scratch-pad") {
+		t.Errorf("expected 'wisp scratch-pad' error, got %v", err)
 	}
 }
 
@@ -86,10 +86,10 @@ func TestMolWispJSON(t *testing.T) {
 	cmd.SetArgs([]string{"scratch-pad"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Pour (ephemeral), got nil")
+		t.Fatal("expected error (no formula file), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "wisp scratch-pad") {
+		t.Errorf("expected 'wisp scratch-pad' error, got %v", err)
 	}
 }
 
@@ -234,10 +234,11 @@ func TestMolBurnText(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Burn, got nil")
+		t.Fatal("expected error (no such molecule), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	// Real Burn tries to load the molecule and fails with not found
+	if !strings.Contains(err.Error(), "burn") {
+		t.Errorf("expected 'burn' error, got %v", err)
 	}
 }
 
@@ -249,10 +250,10 @@ func TestMolBurnJSON(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Burn, got nil")
+		t.Fatal("expected error (no such molecule), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "burn") {
+		t.Errorf("expected 'burn' error, got %v", err)
 	}
 }
 
@@ -454,13 +455,11 @@ func TestMolJSONOutputStructure(t *testing.T) {
 
 	// PourResult
 	pr := struct {
-		RootID      string   `json:"root_id"`
-		ChildIDs    []string `json:"child_ids"`
-		StepSummary string   `json:"step_summary"`
+		RootID   string   `json:"root_id"`
+		ChildIDs []string `json:"child_ids"`
 	}{
-		RootID:      "bd-test",
-		ChildIDs:    []string{"bd-test.1", "bd-test.2"},
-		StepSummary: "2 steps",
+		RootID:   "bd-test",
+		ChildIDs: []string{"bd-test.1", "bd-test.2"},
 	}
 	data, err := json.Marshal(pr)
 	if err != nil {

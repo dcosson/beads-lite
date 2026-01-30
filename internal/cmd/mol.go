@@ -69,7 +69,7 @@ Examples:
 			opts := meow.PourOptions{
 				FormulaName: args[0],
 				Vars:        parseVarFlags(vars),
-				ConfigDir:   app.ConfigDir,
+				SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
 			}
 
 			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
@@ -82,7 +82,6 @@ Examples:
 			}
 
 			fmt.Fprintf(app.Out, "Poured molecule: %s\n", result.RootID)
-			fmt.Fprintf(app.Out, "  Steps: %s\n", result.StepSummary)
 			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
 			return nil
 		},
@@ -117,7 +116,7 @@ Examples:
 				FormulaName: args[0],
 				Vars:        parseVarFlags(vars),
 				Ephemeral:   true,
-				ConfigDir:   app.ConfigDir,
+				SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
 			}
 
 			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
@@ -130,7 +129,6 @@ Examples:
 			}
 
 			fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.RootID)
-			fmt.Fprintf(app.Out, "  Steps: %s\n", result.StepSummary)
 			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
 			return nil
 		},
@@ -315,16 +313,15 @@ Examples:
 				return err
 			}
 
-			result, err := meow.Burn(cmd.Context(), app.Storage, args[0])
-			if err != nil {
+			if err := meow.Burn(cmd.Context(), app.Storage, args[0]); err != nil {
 				return fmt.Errorf("burn: %w", err)
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(result)
+				return json.NewEncoder(app.Out).Encode(map[string]string{"status": "burned", "molecule_id": args[0]})
 			}
 
-			fmt.Fprintf(app.Out, "Burned molecule: %d issues deleted\n", result.Count)
+			fmt.Fprintf(app.Out, "Burned molecule: %s\n", args[0])
 			return nil
 		},
 	}

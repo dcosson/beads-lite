@@ -11,28 +11,6 @@ import (
 // ErrNotImplemented is returned by functions that require Phase 3/4 work.
 var ErrNotImplemented = errors.New("not implemented: requires molecule storage (Phase 3/4)")
 
-// PourOptions configures a Pour operation (formula instantiation).
-type PourOptions struct {
-	FormulaName string
-	Vars        map[string]string
-	Ephemeral   bool
-	ConfigDir   string // used to build formula search path
-}
-
-// PourResult describes the issues created by a Pour.
-type PourResult struct {
-	RootID      string   `json:"root_id"`
-	ChildIDs    []string `json:"child_ids"`
-	StepSummary string   `json:"step_summary"`
-}
-
-// Pour loads a formula by name, validates variables, and creates the
-// corresponding issue tree (molecule). Returns the root issue ID and
-// the IDs of all child steps.
-func Pour(_ context.Context, _ storage.Storage, _ PourOptions) (*PourResult, error) {
-	return nil, ErrNotImplemented
-}
-
 // StepInfo describes a single step's current state.
 type StepInfo struct {
 	ID       string `json:"id"`
@@ -86,17 +64,6 @@ type StaleStep struct {
 // FindStaleSteps returns steps that are blocking progress in a molecule
 // (e.g. open steps whose dependencies are all met but that haven't moved).
 func FindStaleSteps(_ context.Context, _ storage.Storage, _ string) ([]*StaleStep, error) {
-	return nil, ErrNotImplemented
-}
-
-// BurnResult describes the outcome of a Burn (cascade delete).
-type BurnResult struct {
-	DeletedIDs []string `json:"deleted_ids"`
-	Count      int      `json:"count"`
-}
-
-// Burn cascade-deletes a molecule and all its child steps.
-func Burn(_ context.Context, _ storage.Storage, _ string) (*BurnResult, error) {
 	return nil, ErrNotImplemented
 }
 
