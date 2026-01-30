@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
 	"beads-lite/internal/storage"
 	"beads-lite/internal/storage/filesystem"
@@ -20,6 +21,7 @@ type App struct {
 	Router      *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory
+	FormulaPath meow.FormulaSearchPath
 	Out         io.Writer
 	Err         io.Writer
 	JSON        bool // output in JSON format

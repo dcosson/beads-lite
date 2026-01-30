@@ -10,6 +10,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
 	"beads-lite/internal/storage/filesystem"
 
@@ -94,6 +95,7 @@ func (p *AppProvider) init() (*App, error) {
 		Router:      router,
 		ConfigStore: configStore,
 		ConfigDir:   paths.ConfigDir,
+		FormulaPath: meow.DefaultSearchPath(paths.ConfigDir),
 		Out:         out,
 		Err:         errOut,
 		JSON:        p.JSONOutput,
