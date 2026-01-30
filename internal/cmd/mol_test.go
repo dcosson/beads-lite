@@ -311,44 +311,48 @@ func TestMolSquashMissingArg(t *testing.T) {
 
 func TestMolGCText(t *testing.T) {
 	app, _ := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
 
 	cmd := newMolGCCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error from stub GC, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	// Real GC runs successfully with 0 deletions on empty store
+	if !strings.Contains(out.String(), "GC") {
+		t.Errorf("expected GC output, got %q", out.String())
 	}
 }
 
 func TestMolGCJSON(t *testing.T) {
 	app, _ := setupTestApp(t)
 	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
 
 	cmd := newMolGCCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error from stub GC, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if out.Len() == 0 {
+		t.Error("expected JSON output, got empty")
 	}
 }
 
 func TestMolGCWithOlderThan(t *testing.T) {
 	app, _ := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
 
 	cmd := newMolGCCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--older-than", "24h"})
 	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error from stub GC, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(out.String(), "GC") {
+		t.Errorf("expected GC output, got %q", out.String())
 	}
 }
 
