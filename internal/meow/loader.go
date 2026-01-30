@@ -21,8 +21,9 @@ type FormulaSearchPath []string
 func DefaultSearchPath(configDir string) FormulaSearchPath {
 	var path FormulaSearchPath
 
-	// Project-level (highest priority)
-	path = append(path, filepath.Join(configDir, ".beads", "formulas"))
+	// Project-level (highest priority).
+	// configDir is the .beads directory itself, so formulas/ is directly inside it.
+	path = append(path, filepath.Join(configDir, "formulas"))
 
 	// User-level
 	if home, err := os.UserHomeDir(); err == nil {

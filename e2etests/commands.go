@@ -34,6 +34,15 @@ var knownCommands = map[string]bool{
 	"config list":      true,
 	"config unset":     true,
 	"config validate":  true,
+	"mol pour":         true,
+	"mol wisp":         true,
+	"mol current":      true,
+	"mol progress":     true,
+	"mol stale":        true,
+	"mol burn":         true,
+	"mol squash":       true,
+	"mol gc":           true,
+	"cook":             true,
 }
 
 // nonParentCommands are commands that do NOT have subcommands.

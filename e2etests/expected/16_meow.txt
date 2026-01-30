@@ -1,0 +1,327 @@
+=== cook preview ===
+{
+  "root": {
+    "step_id": "_root",
+    "title": "Test workflow",
+    "type": "epic"
+  },
+  "steps": [
+    {
+      "step_id": "setup",
+      "title": "Setup demo",
+      "type": "task"
+    },
+    {
+      "depends_on": [
+        "setup"
+      ],
+      "step_id": "build",
+      "title": "Build",
+      "type": "task"
+    },
+    {
+      "depends_on": [
+        "build"
+      ],
+      "step_id": "test",
+      "title": "Test",
+      "type": "task"
+    }
+  ]
+}
+
+=== pour molecule ===
+{
+  "ChildIDs": [
+    "ISSUE_1.1",
+    "ISSUE_1.2",
+    "ISSUE_1.3"
+  ],
+  "Formula": {
+    "description": "Test workflow",
+    "formula": "test-workflow",
+    "steps": [
+      {
+        "id": "setup",
+        "title": "Setup demo",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "setup"
+        ],
+        "id": "build",
+        "title": "Build",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "build"
+        ],
+        "id": "test",
+        "title": "Test",
+        "type": "task"
+      }
+    ],
+    "type": "workflow",
+    "vars": {
+      "name": {
+        "default": "world"
+      }
+    },
+    "version": 1
+  },
+  "RootID": "ISSUE_1"
+}
+
+=== mol current ===
+{
+  "progress": {
+    "blocked": 2,
+    "completed": 0,
+    "in_progress": 0,
+    "pending": 0,
+    "percent": 0,
+    "ready": 1,
+    "total": 3
+  },
+  "root_id": "ISSUE_1",
+  "steps": [
+    {
+      "id": "ISSUE_1.1",
+      "status": "ready",
+      "title": "Setup demo"
+    },
+    {
+      "id": "ISSUE_1.2",
+      "status": "blocked",
+      "title": "Build"
+    },
+    {
+      "id": "ISSUE_1.3",
+      "status": "blocked",
+      "title": "Test"
+    }
+  ],
+  "title": "Test workflow"
+}
+
+=== claim root ===
+[
+  {
+    "assignee": "testuser",
+    "children": [
+      "ISSUE_1.1",
+      "ISSUE_1.2",
+      "ISSUE_1.3"
+    ],
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "epic",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "in_progress",
+    "title": "Test workflow",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== claim step 1 ===
+[
+  {
+    "assignee": "testuser",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1.1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "in_progress",
+    "title": "Setup demo",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== close step 1 continue ===
+{
+  "closed": [
+    "ISSUE_1.1"
+  ],
+  "next_step": {
+    "id": "ISSUE_1.2",
+    "status": "in_progress",
+    "title": "Build"
+  }
+}
+
+=== close step 2 continue ===
+{
+  "closed": [
+    "ISSUE_1.2"
+  ],
+  "next_step": {
+    "id": "ISSUE_1.3",
+    "status": "in_progress",
+    "title": "Test"
+  }
+}
+
+=== close step 3 ===
+{
+  "closed": [
+    "ISSUE_1.3"
+  ]
+}
+
+=== mol progress complete ===
+{
+  "blocked": 0,
+  "completed": 3,
+  "in_progress": 0,
+  "pending": 0,
+  "percent": 100,
+  "ready": 0,
+  "total": 3
+}
+
+=== pour for burn ===
+{
+  "ChildIDs": [
+    "ISSUE_2.1",
+    "ISSUE_2.2",
+    "ISSUE_2.3"
+  ],
+  "Formula": {
+    "description": "Test workflow",
+    "formula": "test-workflow",
+    "steps": [
+      {
+        "id": "setup",
+        "title": "Setup demo",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "setup"
+        ],
+        "id": "build",
+        "title": "Build",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "build"
+        ],
+        "id": "test",
+        "title": "Test",
+        "type": "task"
+      }
+    ],
+    "type": "workflow",
+    "vars": {
+      "name": {
+        "default": "world"
+      }
+    },
+    "version": 1
+  },
+  "RootID": "ISSUE_2"
+}
+
+=== burn molecule ===
+{
+  "molecule_id": "ISSUE_2",
+  "status": "burned"
+}
+
+=== wisp molecule ===
+{
+  "ChildIDs": [
+    "ISSUE_3.1",
+    "ISSUE_3.2",
+    "ISSUE_3.3"
+  ],
+  "Formula": {
+    "description": "Test workflow",
+    "formula": "test-workflow",
+    "steps": [
+      {
+        "id": "setup",
+        "title": "Setup ephemeral",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "setup"
+        ],
+        "id": "build",
+        "title": "Build",
+        "type": "task"
+      },
+      {
+        "depends_on": [
+          "build"
+        ],
+        "id": "test",
+        "title": "Test",
+        "type": "task"
+      }
+    ],
+    "type": "workflow",
+    "vars": {
+      "name": {
+        "default": "world"
+      }
+    },
+    "version": 1
+  },
+  "RootID": "ISSUE_3"
+}
+
+=== ready excludes wisp ===
+[]
+
+=== squash wisp ===
+{
+  "digest_id": "ISSUE_3.4",
+  "keep_children": false,
+  "squashed_ids": [
+    "ISSUE_3.1",
+    "ISSUE_3.2",
+    "ISSUE_3.3"
+  ]
+}
+
+=== show digest ===
+[
+  {
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_3",
+        "issue_type": "epic",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Test workflow",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "description": "Test summary",
+    "id": "ISSUE_3.4",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_3",
+    "priority": 2,
+    "status": "closed",
+    "title": "Digest: Test workflow",
+    "updated_at": "TIMESTAMP"
+  }
+]
+

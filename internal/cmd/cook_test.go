@@ -11,12 +11,13 @@ import (
 	"beads-lite/internal/meow"
 )
 
-// writeCookFormula writes a formula JSON file into the .beads/formulas dir
-// under a temp directory, matching DefaultSearchPath layout. Returns the config dir.
+// writeCookFormula writes a formula JSON file into the formulas dir
+// under a temp directory, matching DefaultSearchPath layout.
+// Returns the dir which acts as configDir (the .beads directory).
 func writeCookFormula(t *testing.T, name, content string) string {
 	t.Helper()
 	dir := t.TempDir()
-	formulaDir := filepath.Join(dir, ".beads", "formulas")
+	formulaDir := filepath.Join(dir, "formulas")
 	if err := os.MkdirAll(formulaDir, 0o755); err != nil {
 		t.Fatalf("mkdir formulas: %v", err)
 	}
