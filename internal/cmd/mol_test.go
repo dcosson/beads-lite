@@ -275,10 +275,11 @@ func TestMolSquashText(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2", "--summary", "Completed feature"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Squash, got nil")
+		t.Fatal("expected error (no such molecule), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	// Real Squash tries to load the molecule and fails with not found
+	if !strings.Contains(err.Error(), "squash") {
+		t.Errorf("expected 'squash' error, got %v", err)
 	}
 }
 
@@ -290,10 +291,10 @@ func TestMolSquashJSON(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2", "--summary", "Completed feature", "--keep-children"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Squash, got nil")
+		t.Fatal("expected error (no such molecule), got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "squash") {
+		t.Errorf("expected 'squash' error, got %v", err)
 	}
 }
 
