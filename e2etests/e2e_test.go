@@ -31,7 +31,8 @@ func verifyReferenceBeads(t *testing.T, runner *Runner) {
 func TestE2E(t *testing.T) {
 	bdCmd := os.Getenv("BD_CMD")
 	if bdCmd == "" {
-		t.Fatal("BD_CMD environment variable not set")
+		t.Skip("BD_CMD environment variable not set")
+    return
 	}
 
 	runner := &Runner{BdCmd: bdCmd}

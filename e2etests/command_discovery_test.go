@@ -11,7 +11,7 @@ import (
 func TestCommandDiscovery(t *testing.T) {
 	bdCmd := os.Getenv("BD_CMD")
 	if bdCmd == "" {
-		t.Fatal("BD_CMD environment variable not set")
+		t.Skip("BD_CMD environment variable not set")
 	}
 
 	runner := &Runner{BdCmd: bdCmd}
