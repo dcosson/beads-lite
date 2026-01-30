@@ -11,7 +11,12 @@ import (
 
 // newReadyCmd creates the ready command.
 func newReadyCmd(provider *AppProvider) *cobra.Command {
-	var priority string
+	var (
+		priority string
+		molID    string
+		assignee string
+		limit    int
+	)
 
 	cmd := &cobra.Command{
 		Use:   "ready",
@@ -20,7 +25,12 @@ func newReadyCmd(provider *AppProvider) *cobra.Command {
 
 An issue is "ready" if:
 - Status is "open" (not in-progress, blocked, deferred, or closed)
-- All issues in depends_on are closed`,
+- All issues in depends_on are closed
+- Ephemeral issues are always excluded
+
+Without --mol, molecule steps (issues with a parent) are excluded to
+avoid overwhelming output. With --mol, ONLY steps from that molecule
+are shown, along with parallel group info.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -39,6 +49,16 @@ An issue is "ready" if:
 			if priority != "" {
 				p := storage.Priority(priority)
 				filter.Priority = &p
+			}
+
+			// Apply assignee filter if specified
+			if assignee != "" {
+				filter.Assignee = &assignee
+			}
+
+			// When --mol is specified, scope to children of that molecule
+			if molID != "" {
+				filter.Parent = &molID
 			}
 
 			issues, err := app.Storage.List(ctx, filter)
@@ -60,12 +80,27 @@ An issue is "ready" if:
 				closedSet[issue.ID] = true
 			}
 
-			// Filter to only ready issues
+			// Filter to only ready issues, excluding ephemeral and
+			// (when not in --mol mode) molecule steps.
 			var ready []*storage.Issue
 			for _, issue := range issues {
+				// Ephemeral issues are never ready (hardcoded exclusion).
+				if issue.Ephemeral {
+					continue
+				}
+				// Without --mol, exclude molecule steps (issues with a parent)
+				// to keep the output focused on top-level work.
+				if molID == "" && issue.Parent != "" {
+					continue
+				}
 				if isReady(issue, closedSet) {
 					ready = append(ready, issue)
 				}
+			}
+
+			// Apply limit
+			if limit > 0 && len(ready) > limit {
+				ready = ready[:limit]
 			}
 
 			if app.JSON {
@@ -82,9 +117,20 @@ An issue is "ready" if:
 				return nil
 			}
 
-			fmt.Fprintf(app.Out, "Ready issues (%d):\n\n", len(ready))
-			for _, issue := range ready {
-				fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+			if molID != "" {
+				fmt.Fprintf(app.Out, "Ready steps in %s (%d):\n\n", molID, len(ready))
+				// Show parallel group info: all ready steps can run concurrently.
+				if len(ready) > 1 {
+					fmt.Fprintf(app.Out, "  ⚡ %d steps can run in parallel:\n", len(ready))
+				}
+				for _, issue := range ready {
+					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+				}
+			} else {
+				fmt.Fprintf(app.Out, "Ready issues (%d):\n\n", len(ready))
+				for _, issue := range ready {
+					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+				}
 			}
 
 			return nil
@@ -92,6 +138,9 @@ An issue is "ready" if:
 	}
 
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
+	cmd.Flags().StringVar(&molID, "mol", "", "Restrict to ready steps within a molecule")
+	cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee")
+	cmd.Flags().IntVar(&limit, "limit", 0, "Maximum number of issues to show")
 
 	return cmd
 }
