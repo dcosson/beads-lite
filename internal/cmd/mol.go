@@ -1,0 +1,449 @@
+package cmd
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"beads-lite/internal/meow"
+
+	"github.com/spf13/cobra"
+)
+
+// newMolCmd creates the mol command group with subcommands.
+func newMolCmd(provider *AppProvider) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mol",
+		Short: "Manage MEOW molecules (formula instances)",
+		Long: `Manage MEOW molecules — instances of formula templates.
+
+A molecule is a tree of issues created by pouring a formula.
+Use subcommands to create, inspect, and clean up molecules.
+
+Subcommands:
+  pour      Pour a formula to create a molecule
+  wisp      Pour an ephemeral (temporary) molecule
+  current   Show current steps for a molecule
+  progress  Show completion statistics
+  stale     Find blocking/stale steps
+  burn      Cascade-delete a molecule
+  squash    Create a digest from a molecule
+  gc        Clean up old ephemeral molecules`,
+	}
+
+	cmd.AddCommand(newMolPourCmd(provider))
+	cmd.AddCommand(newMolWispCmd(provider))
+	cmd.AddCommand(newMolCurrentCmd(provider))
+	cmd.AddCommand(newMolProgressCmd(provider))
+	cmd.AddCommand(newMolStaleCmd(provider))
+	cmd.AddCommand(newMolBurnCmd(provider))
+	cmd.AddCommand(newMolSquashCmd(provider))
+	cmd.AddCommand(newMolGCCmd(provider))
+
+	return cmd
+}
+
+// newMolPourCmd creates the "mol pour" subcommand.
+func newMolPourCmd(provider *AppProvider) *cobra.Command {
+	var vars []string
+
+	cmd := &cobra.Command{
+		Use:   "pour <formula-name>",
+		Short: "Pour a formula to create a molecule",
+		Long: `Instantiate a formula by name, creating a molecule (issue tree).
+
+Variables can be supplied with --var key=value (repeatable).
+Missing required variables cause an error.
+
+Examples:
+  bd mol pour feature-workflow
+  bd mol pour bug-triage --var component=auth --var severity=high`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			opts := meow.PourOptions{
+				FormulaName: args[0],
+				Vars:        parseVarFlags(vars),
+				ConfigDir:   app.ConfigDir,
+			}
+
+			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
+			if err != nil {
+				return fmt.Errorf("pour %s: %w", args[0], err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "Poured molecule: %s\n", result.RootID)
+			fmt.Fprintf(app.Out, "  Steps: %s\n", result.StepSummary)
+			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringArrayVar(&vars, "var", nil, "Variable assignment (key=value, repeatable)")
+
+	return cmd
+}
+
+// newMolWispCmd creates the "mol wisp" subcommand (ephemeral pour).
+func newMolWispCmd(provider *AppProvider) *cobra.Command {
+	var vars []string
+
+	cmd := &cobra.Command{
+		Use:   "wisp <formula-name>",
+		Short: "Pour an ephemeral molecule (auto-cleaned by gc)",
+		Long: `Like pour, but marks the molecule as ephemeral.
+Ephemeral molecules are automatically cleaned up by "bd mol gc".
+
+Examples:
+  bd mol wisp scratch-pad
+  bd mol wisp spike --var topic=caching`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			opts := meow.PourOptions{
+				FormulaName: args[0],
+				Vars:        parseVarFlags(vars),
+				Ephemeral:   true,
+				ConfigDir:   app.ConfigDir,
+			}
+
+			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
+			if err != nil {
+				return fmt.Errorf("wisp %s: %w", args[0], err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.RootID)
+			fmt.Fprintf(app.Out, "  Steps: %s\n", result.StepSummary)
+			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringArrayVar(&vars, "var", nil, "Variable assignment (key=value, repeatable)")
+
+	return cmd
+}
+
+// newMolCurrentCmd creates the "mol current" subcommand.
+func newMolCurrentCmd(provider *AppProvider) *cobra.Command {
+	var actor string
+	var limit int
+	var rangeFlag string
+
+	cmd := &cobra.Command{
+		Use:   "current [molecule-id]",
+		Short: "Show current steps for a molecule",
+		Long: `List the steps of a molecule, classified by status.
+
+Use --for to filter to steps assigned to a specific actor.
+Use --limit to cap the number of steps shown.
+Use --range to show a slice of step IDs (start-end).
+
+Examples:
+  bd mol current bd-a1b2
+  bd mol current bd-a1b2 --for alice --limit 10
+  bd mol current bd-a1b2 --range step1-step5`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			opts := meow.CurrentOptions{
+				MoleculeID: args[0],
+				Actor:      actor,
+				Limit:      limit,
+			}
+
+			if rangeFlag != "" {
+				parts := strings.SplitN(rangeFlag, "-", 2)
+				if len(parts) == 2 {
+					opts.RangeStart = parts[0]
+					opts.RangeEnd = parts[1]
+				}
+			}
+
+			result, err := meow.Current(cmd.Context(), app.Storage, opts)
+			if err != nil {
+				return fmt.Errorf("current: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			if len(result.Steps) == 0 {
+				fmt.Fprintln(app.Out, "No steps found.")
+				return nil
+			}
+
+			for _, s := range result.Steps {
+				assignee := ""
+				if s.Assignee != "" {
+					assignee = fmt.Sprintf(" (@%s)", s.Assignee)
+				}
+				fmt.Fprintf(app.Out, "  [%s] %s: %s%s\n", s.Status, s.ID, s.Title, assignee)
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&actor, "for", "", "Filter steps assigned to this actor")
+	cmd.Flags().IntVar(&limit, "limit", 0, "Maximum number of steps to show")
+	cmd.Flags().StringVar(&rangeFlag, "range", "", "Step ID range (start-end)")
+
+	return cmd
+}
+
+// newMolProgressCmd creates the "mol progress" subcommand.
+func newMolProgressCmd(provider *AppProvider) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "progress [molecule-id]",
+		Short: "Show completion statistics for a molecule",
+		Long: `Display completion progress for a molecule.
+
+Shows total steps, completed steps, percentage, rate, and ETA.
+
+Examples:
+  bd mol progress bd-a1b2`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			result, err := meow.Progress(cmd.Context(), app.Storage, args[0])
+			if err != nil {
+				return fmt.Errorf("progress: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "Progress: %d/%d (%.0f%%)\n", result.Complete, result.Total, result.Percent)
+			if result.Rate != "" {
+				fmt.Fprintf(app.Out, "  Rate: %s\n", result.Rate)
+			}
+			if result.ETA != "" {
+				fmt.Fprintf(app.Out, "  ETA:  %s\n", result.ETA)
+			}
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// newMolStaleCmd creates the "mol stale" subcommand.
+func newMolStaleCmd(provider *AppProvider) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "stale <molecule-id>",
+		Short: "Find stale/blocking steps in a molecule",
+		Long: `Identify steps that are blocking progress.
+
+A step is stale if its dependencies are met but it hasn't progressed.
+
+Examples:
+  bd mol stale bd-a1b2`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			steps, err := meow.FindStaleSteps(cmd.Context(), app.Storage, args[0])
+			if err != nil {
+				return fmt.Errorf("stale: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(steps)
+			}
+
+			if len(steps) == 0 {
+				fmt.Fprintln(app.Out, "No stale steps found.")
+				return nil
+			}
+
+			fmt.Fprintf(app.Out, "Stale steps (%d):\n", len(steps))
+			for _, s := range steps {
+				fmt.Fprintf(app.Out, "  %s: %s (%s)\n", s.ID, s.Title, s.Reason)
+			}
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// newMolBurnCmd creates the "mol burn" subcommand.
+func newMolBurnCmd(provider *AppProvider) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "burn <molecule-id>",
+		Short: "Cascade-delete a molecule and all its steps",
+		Long: `Delete a molecule root and all of its child step issues.
+
+This is irreversible. All issues in the molecule tree are removed.
+
+Examples:
+  bd mol burn bd-a1b2`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			result, err := meow.Burn(cmd.Context(), app.Storage, args[0])
+			if err != nil {
+				return fmt.Errorf("burn: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "Burned molecule: %d issues deleted\n", result.Count)
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// newMolSquashCmd creates the "mol squash" subcommand.
+func newMolSquashCmd(provider *AppProvider) *cobra.Command {
+	var summary string
+	var keepChildren bool
+
+	cmd := &cobra.Command{
+		Use:   "squash <molecule-id>",
+		Short: "Create a digest from a molecule",
+		Long: `Squash a molecule into a single digest issue.
+
+The digest summarises all steps. By default, child step issues are
+removed after squashing. Use --keep-children to preserve them.
+
+Examples:
+  bd mol squash bd-a1b2 --summary "Completed auth feature"
+  bd mol squash bd-a1b2 --keep-children`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			opts := meow.SquashOptions{
+				MoleculeID:   args[0],
+				Summary:      summary,
+				KeepChildren: keepChildren,
+			}
+
+			result, err := meow.Squash(cmd.Context(), app.Storage, opts)
+			if err != nil {
+				return fmt.Errorf("squash: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "Squashed molecule into digest: %s\n", result.DigestID)
+			fmt.Fprintf(app.Out, "  Squashed steps: %d\n", len(result.SquashedIDs))
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&summary, "summary", "", "Summary text for the digest issue")
+	cmd.Flags().BoolVar(&keepChildren, "keep-children", false, "Keep child step issues after squashing")
+
+	return cmd
+}
+
+// newMolGCCmd creates the "mol gc" subcommand.
+func newMolGCCmd(provider *AppProvider) *cobra.Command {
+	var olderThan string
+
+	cmd := &cobra.Command{
+		Use:   "gc",
+		Short: "Clean up old ephemeral molecules",
+		Long: `Remove ephemeral molecules older than the specified duration.
+
+Ephemeral molecules are created with "bd mol wisp" and are intended
+for temporary/scratch work.
+
+Examples:
+  bd mol gc                      # default: 7 days
+  bd mol gc --older-than 24h
+  bd mol gc --older-than 168h    # 1 week`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			dur := 7 * 24 * time.Hour // default: 7 days
+			if olderThan != "" {
+				parsed, parseErr := time.ParseDuration(olderThan)
+				if parseErr != nil {
+					return fmt.Errorf("invalid duration %q: %w", olderThan, parseErr)
+				}
+				dur = parsed
+			}
+
+			opts := meow.GCOptions{
+				OlderThan: dur,
+			}
+
+			result, err := meow.GC(cmd.Context(), app.Storage, opts)
+			if err != nil {
+				return fmt.Errorf("gc: %w", err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(result)
+			}
+
+			fmt.Fprintf(app.Out, "GC: removed %d ephemeral molecules\n", result.Count)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&olderThan, "older-than", "", "Remove molecules older than this duration (e.g. 24h, 168h)")
+
+	return cmd
+}
+
+// parseVarFlags converts ["key=value", ...] into a map.
+func parseVarFlags(vars []string) map[string]string {
+	m := make(map[string]string, len(vars))
+	for _, v := range vars {
+		parts := strings.SplitN(v, "=", 2)
+		if len(parts) == 2 {
+			m[parts[0]] = parts[1]
+		}
+	}
+	return m
+}
