@@ -97,6 +97,15 @@ Examples:
 				desc = strings.TrimSpace(string(data))
 			}
 
+			// Enforce required description if configured
+			if app.ConfigStore != nil {
+				if v, ok := app.ConfigStore.Get("create.require-description"); ok && v == "true" {
+					if strings.TrimSpace(desc) == "" {
+						return fmt.Errorf("description is required (create.require-description is enabled)")
+					}
+				}
+			}
+
 			// Create the issue
 			issue := &storage.Issue{
 				Title:       title,

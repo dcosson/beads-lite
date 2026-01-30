@@ -662,3 +662,67 @@ func TestCreateAllFlags(t *testing.T) {
 		t.Errorf("description mismatch: got %q", issue.Description)
 	}
 }
+
+func TestCreateRequireDescription_Enabled_NoDesc(t *testing.T) {
+	app, _ := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"create.require-description": "true",
+	}}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when description is required but not provided")
+	}
+	if !strings.Contains(err.Error(), "description is required") {
+		t.Errorf("expected error about required description, got: %v", err)
+	}
+}
+
+func TestCreateRequireDescription_Enabled_WithDesc(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"create.require-description": "true",
+	}}
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--description", "A valid description"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create should succeed with description: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if issue.Description != "A valid description" {
+		t.Errorf("expected description %q, got %q", "A valid description", issue.Description)
+	}
+}
+
+func TestCreateRequireDescription_Disabled(t *testing.T) {
+	app, _ := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"create.require-description": "false",
+	}}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create should succeed when require-description is false: %v", err)
+	}
+}
+
+func TestCreateRequireDescription_NotSet(t *testing.T) {
+	app, _ := setupTestApp(t)
+	// No ConfigStore set — default behavior, description not required
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create should succeed when config not set: %v", err)
+	}
+}

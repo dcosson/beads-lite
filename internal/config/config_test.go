@@ -8,13 +8,14 @@ func TestDefaultValues(t *testing.T) {
 	defaults := DefaultValues()
 
 	expected := map[string]string{
-		"defaults.priority":   "medium",
-		"defaults.type":       "task",
-		"id.prefix":           "bd-",
-		"id.length":           "4",
-		"actor":               "${USER}",
-		"project.name":        "issues",
-		"hierarchy.max_depth": "3",
+		"create.require-description": "false",
+		"defaults.priority":          "medium",
+		"defaults.type":              "task",
+		"id.prefix":                  "bd-",
+		"id.length":                  "4",
+		"actor":                      "${USER}",
+		"project.name":               "issues",
+		"hierarchy.max_depth":        "3",
 	}
 
 	if len(defaults) != len(expected) {
