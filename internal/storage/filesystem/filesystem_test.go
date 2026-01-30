@@ -1101,6 +1101,84 @@ func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
 	}
 }
 
+// TestDeleteDoesNotReuseChildNumbers verifies that deleting or closing a child
+// issue does not cause its child number to be reused. The child counter must
+// never be decremented; it persists at its last value regardless of deletions.
+func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create a parent issue
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Create child .1 via GetNextChildID
+	child1ID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
+	}
+	wantChild1 := storage.ChildID(parentID, 1)
+	if child1ID != wantChild1 {
+		t.Fatalf("First child: got %q, want %q", child1ID, wantChild1)
+	}
+	// Actually create the child issue so we can delete it
+	createIssueWithID(t, s, child1ID, "Child 1")
+
+	// Delete child .1 (permanent deletion)
+	if err := s.Delete(ctx, child1ID); err != nil {
+		t.Fatalf("Delete child 1 failed: %v", err)
+	}
+
+	// Create next child — must get .2, not .1
+	child2ID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID after delete failed: %v", err)
+	}
+	wantChild2 := storage.ChildID(parentID, 2)
+	if child2ID != wantChild2 {
+		t.Errorf("After deleting child .1: got %q, want %q", child2ID, wantChild2)
+	}
+}
+
+// TestCloseDoesNotReuseChildNumbers verifies that closing (soft-deleting) a
+// child issue does not cause its child number to be reused.
+func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create a parent issue
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Create child .1
+	child1ID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
+	}
+	createIssueWithID(t, s, child1ID, "Child 1")
+
+	// Close child .1 (soft delete)
+	if err := s.Close(ctx, child1ID); err != nil {
+		t.Fatalf("Close child 1 failed: %v", err)
+	}
+
+	// Create next child — must get .2, not .1
+	child2ID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID after close failed: %v", err)
+	}
+	wantChild2 := storage.ChildID(parentID, 2)
+	if child2ID != wantChild2 {
+		t.Errorf("After closing child .1: got %q, want %q", child2ID, wantChild2)
+	}
+}
+
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()
