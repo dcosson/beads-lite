@@ -6,16 +6,17 @@ import (
 	"beads-lite/internal/storage"
 )
 
-// DefaultValues returns the default config map for the 6 core keys.
+// DefaultValues returns the default config map for the core keys.
 func DefaultValues() map[string]string {
 	return map[string]string{
-		"defaults.priority":   "medium",
-		"defaults.type":       "task",
-		"id.prefix":           "bd-",
-		"id.length":           "4",
-		"actor":               "${USER}",
-		"project.name":        "issues",
-		"hierarchy.max_depth": strconv.Itoa(storage.DefaultMaxHierarchyDepth),
+		"create.require-description": "false",
+		"defaults.priority":          "medium",
+		"defaults.type":              "task",
+		"id.prefix":                  "bd-",
+		"id.length":                  "4",
+		"actor":                      "${USER}",
+		"project.name":               "issues",
+		"hierarchy.max_depth":        strconv.Itoa(storage.DefaultMaxHierarchyDepth),
 	}
 }
 

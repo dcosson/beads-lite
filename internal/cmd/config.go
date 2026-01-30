@@ -274,6 +274,12 @@ var validTypes = map[string]bool{
 // configValidators maps known keys to their validation functions.
 // Each validator returns an error message if the value is invalid, or "" if valid.
 var configValidators = map[string]func(string) string{
+	"create.require-description": func(v string) string {
+		if v != "true" && v != "false" {
+			return fmt.Sprintf("create.require-description: must be \"true\" or \"false\", got %q", v)
+		}
+		return ""
+	},
 	"defaults.priority": func(v string) string {
 		if !validPriorities[v] {
 			keys := sortedKeys(validPriorities)
