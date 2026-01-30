@@ -4,6 +4,7 @@ package cmd
 import (
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -63,7 +64,14 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, err
 	}
 
-	store := filesystem.New(paths.DataDir)
+	var fsOpts []filesystem.Option
+	if v, ok := configStore.Get("hierarchy.max_depth"); ok {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 {
+			fsOpts = append(fsOpts, filesystem.WithMaxHierarchyDepth(n))
+		}
+	}
+
+	store := filesystem.New(paths.DataDir, fsOpts...)
 	store.CleanupStaleLocks()
 
 	out := p.Out

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 
 	"beads-lite/internal/storage"
@@ -110,19 +109,6 @@ Examples:
 
 			// When --parent is specified, use dot-notation child ID
 			if parent != "" {
-				// Check hierarchy depth limit from config
-				maxDepth := storage.DefaultMaxHierarchyDepth
-				if app.ConfigStore != nil {
-					if v, ok := app.ConfigStore.Get("hierarchy.max_depth"); ok {
-						if n, err := strconv.Atoi(v); err == nil && n >= 1 {
-							maxDepth = n
-						}
-					}
-				}
-				if err := storage.CheckHierarchyDepth(parent, maxDepth); err != nil {
-					return fmt.Errorf("generating child ID for parent %s: %w", parent, err)
-				}
-
 				childID, err := app.Storage.GetNextChildID(ctx, parent)
 				if err != nil {
 					return fmt.Errorf("generating child ID for parent %s: %w", parent, err)

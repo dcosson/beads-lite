@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage/filesystem"
 	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 )
 
 func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
@@ -522,6 +523,82 @@ func TestCreateDependencyNotFound(t *testing.T) {
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for non-existent dependency")
+	}
+}
+
+// mapConfigStore is a minimal config.Store backed by a map, for tests.
+type mapConfigStore struct {
+	data map[string]string
+}
+
+func (m *mapConfigStore) Get(key string) (string, bool) {
+	v, ok := m.data[key]
+	return v, ok
+}
+
+func (m *mapConfigStore) Set(key, value string) error {
+	m.data[key] = value
+	return nil
+}
+
+func (m *mapConfigStore) Unset(key string) error {
+	delete(m.data, key)
+	return nil
+}
+
+func (m *mapConfigStore) All() map[string]string {
+	cp := make(map[string]string, len(m.data))
+	for k, v := range m.data {
+		cp[k] = v
+	}
+	return cp
+}
+
+func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
+	dir := t.TempDir()
+	// Set max depth to 1 via the option (simulating config propagation)
+	store := filesystem.New(dir, filesystem.WithMaxHierarchyDepth(1))
+	if err := store.Init(context.Background()); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	cfg := &mapConfigStore{data: map[string]string{"hierarchy.max_depth": "1"}}
+	app := &App{
+		Storage:     store,
+		ConfigStore: cfg,
+		Out:         &bytes.Buffer{},
+		Err:         &bytes.Buffer{},
+	}
+	out := app.Out.(*bytes.Buffer)
+
+	// Create a root issue
+	parentIssue := &storage.Issue{Title: "Parent"}
+	parentID, err := store.Create(context.Background(), parentIssue)
+	if err != nil {
+		t.Fatalf("failed to create parent: %v", err)
+	}
+
+	// Create child at depth 1 — should succeed
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Child", "--parent", parentID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create child at depth 1 failed: %v", err)
+	}
+	childID := extractCreatedID(out.String())
+	if childID != parentID+".1" {
+		t.Errorf("expected child ID %q, got %q", parentID+".1", childID)
+	}
+
+	// Create grandchild at depth 2 — should fail (max=1)
+	out.Reset()
+	cmd2 := newCreateCmd(NewTestProvider(app))
+	cmd2.SetArgs([]string{"Grandchild", "--parent", childID})
+	err = cmd2.Execute()
+	if err == nil {
+		t.Fatal("expected error creating grandchild with max_depth=1")
+	}
+	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+		t.Errorf("expected ErrMaxDepthExceeded, got: %v", err)
 	}
 }
 

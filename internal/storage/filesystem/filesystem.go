@@ -21,12 +21,30 @@ import (
 
 // FilesystemStorage implements storage.Storage using filesystem-based JSON files.
 type FilesystemStorage struct {
-	root string // path to .beads directory
+	root              string // path to .beads directory
+	maxHierarchyDepth int
+}
+
+// Option configures a FilesystemStorage instance.
+type Option func(*FilesystemStorage)
+
+// WithMaxHierarchyDepth sets the maximum hierarchy depth for child IDs.
+func WithMaxHierarchyDepth(n int) Option {
+	return func(fs *FilesystemStorage) {
+		fs.maxHierarchyDepth = n
+	}
 }
 
 // New creates a new FilesystemStorage rooted at the given directory.
-func New(root string) *FilesystemStorage {
-	return &FilesystemStorage{root: root}
+func New(root string, opts ...Option) *FilesystemStorage {
+	fs := &FilesystemStorage{
+		root:              root,
+		maxHierarchyDepth: storage.DefaultMaxHierarchyDepth,
+	}
+	for _, opt := range opts {
+		opt(fs)
+	}
+	return fs
 }
 
 // Init initializes the storage by creating the required directories.
@@ -198,7 +216,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 
 		// Enforce hierarchy depth limit for explicit hierarchical IDs.
 		if parentID, _, ok := storage.ParseHierarchicalID(issue.ID); ok {
-			if err := storage.CheckHierarchyDepth(parentID, storage.DefaultMaxHierarchyDepth); err != nil {
+			if err := storage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 				return "", err
 			}
 		}
@@ -1073,7 +1091,7 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 	}
 
 	// 2. Check hierarchy depth limit
-	if err := storage.CheckHierarchyDepth(parentID, storage.DefaultMaxHierarchyDepth); err != nil {
+	if err := storage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 		return "", err
 	}
 

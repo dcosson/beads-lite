@@ -1369,6 +1369,54 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 	}
 }
 
+// TestWithMaxHierarchyDepth verifies that WithMaxHierarchyDepth overrides the
+// default depth limit for both GetNextChildID and explicit-ID Create paths.
+func TestWithMaxHierarchyDepth(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir, WithMaxHierarchyDepth(2))
+	ctx := context.Background()
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create root
+	root := &storage.Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+
+	// Depth 1: rootID.1 — should succeed
+	child1ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 1 failed: %v", err)
+	}
+	createIssueWithID(t, s, child1ID, "Depth 1")
+
+	// Depth 2: rootID.1.1 — should succeed (max=2)
+	child2ID, err := s.GetNextChildID(ctx, child1ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 2 failed: %v", err)
+	}
+	createIssueWithID(t, s, child2ID, "Depth 2")
+
+	// Depth 3 via GetNextChildID — should fail (exceeds max=2)
+	_, err = s.GetNextChildID(ctx, child2ID)
+	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+		t.Errorf("GetNextChildID at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
+	}
+
+	// Depth 3 via explicit Create — should also fail
+	tooDeep := &storage.Issue{
+		ID:    child2ID + ".1",
+		Title: "Too deep explicit",
+	}
+	_, err = s.Create(ctx, tooDeep)
+	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+		t.Errorf("Create explicit at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
+	}
+}
+
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()
