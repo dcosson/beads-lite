@@ -35,8 +35,14 @@ Examples:
 			ctx := cmd.Context()
 			query := args[0]
 
+			// Route to correct storage
+			store, err := app.StorageFor(ctx, query)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", query, err)
+			}
+
 			// Try exact match first
-			issue, err := app.Storage.Get(ctx, query)
+			issue, err := store.Get(ctx, query)
 			if err == nil {
 				return outputIssue(app, ctx, issue)
 			}
@@ -45,7 +51,7 @@ Examples:
 			}
 
 			// Exact match failed, try prefix matching
-			issue, err = findByPrefix(app.Storage, ctx, query)
+			issue, err = findByPrefix(store, ctx, query)
 			if err != nil {
 				if err == storage.ErrNotFound {
 					// In JSON mode, return empty output with exit 0 (matches original beads behavior)

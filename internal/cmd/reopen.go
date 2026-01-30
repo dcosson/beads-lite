@@ -29,7 +29,12 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
-			if err := app.Storage.Reopen(ctx, issueID); err != nil {
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
+			if err := store.Reopen(ctx, issueID); err != nil {
 				return fmt.Errorf("reopening issue %s: %w", issueID, err)
 			}
 

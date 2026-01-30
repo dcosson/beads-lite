@@ -28,7 +28,7 @@ func ResolvePaths() (Paths, error) {
 		if err != nil {
 			return Paths{}, err
 		}
-		return resolveFromBase(normalized)
+		return ResolveFromBase(normalized)
 	}
 
 	// 2. Walk up from CWD, stopping at git root
@@ -70,9 +70,11 @@ func ResolvePaths() (Paths, error) {
 	return buildPaths(configDir, configFile)
 }
 
-func resolveFromBase(basePath string) (Paths, error) {
+// ResolveFromBase resolves Paths from a known .beads directory path.
+// Follows redirect files and reads project.name from config.yaml.
+func ResolveFromBase(basePath string) (Paths, error) {
 	// Check for redirect
-	redirected, err := readRedirect(basePath)
+	redirected, err := ReadRedirect(basePath)
 	if err != nil {
 		return Paths{}, err
 	}
@@ -164,7 +166,7 @@ func findConfigUpward(start string) (string, string, bool, error) {
 		configFile := filepath.Join(configDir, "config.yaml")
 		if info, err := os.Stat(configFile); err == nil && !info.IsDir() {
 			// Check for redirect
-			redirected, rErr := readRedirect(configDir)
+			redirected, rErr := ReadRedirect(configDir)
 			if rErr != nil {
 				return "", "", false, rErr
 			}
@@ -237,10 +239,10 @@ func findGitWorktreeRoot(startDir string) (string, error) {
 	return mainRepoRoot, nil
 }
 
-// readRedirect reads a redirect file from a .beads directory.
+// ReadRedirect reads a redirect file from a .beads directory.
 // The redirect file contains a single line with an absolute or relative path
 // to the actual .beads directory. Returns "" if no redirect file exists.
-func readRedirect(beadsDir string) (string, error) {
+func ReadRedirect(beadsDir string) (string, error) {
 	redirectPath := filepath.Join(beadsDir, "redirect")
 	f, err := os.Open(redirectPath)
 	if err != nil {

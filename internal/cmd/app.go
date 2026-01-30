@@ -2,11 +2,14 @@
 package cmd
 
 import (
+	"context"
 	"io"
 	"os"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/routing"
 	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 
 	"golang.org/x/term"
 )
@@ -14,11 +17,31 @@ import (
 // App holds application state shared across commands.
 type App struct {
 	Storage     storage.Storage
+	Router      *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory
 	Out         io.Writer
 	Err         io.Writer
 	JSON        bool // output in JSON format
+}
+
+// StorageFor returns the storage for the given issue ID, routing if needed.
+// If the ID belongs to a remote rig, opens a filesystem store at the
+// resolved remote path. Returns the local store if no routing is needed.
+func (a *App) StorageFor(ctx context.Context, id string) (storage.Storage, error) {
+	if a.Router == nil {
+		return a.Storage, nil
+	}
+
+	paths, isRemote, err := a.Router.Resolve(id)
+	if err != nil {
+		return nil, err
+	}
+	if !isRemote {
+		return a.Storage, nil
+	}
+
+	return filesystem.New(paths.DataDir), nil
 }
 
 // SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,

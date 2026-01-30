@@ -39,7 +39,12 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
-			issue, err := app.Storage.Get(ctx, issueID)
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
+			issue, err := store.Get(ctx, issueID)
 			if err != nil {
 				if err == storage.ErrNotFound {
 					return fmt.Errorf("issue %s not found", issueID)
@@ -134,7 +139,12 @@ Examples:
 				CreatedAt: time.Now(),
 			}
 
-			if err := app.Storage.AddComment(ctx, issueID, comment); err != nil {
+			commentStore, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
+			if err := commentStore.AddComment(ctx, issueID, comment); err != nil {
 				if err == storage.ErrNotFound {
 					return fmt.Errorf("issue %s not found", issueID)
 				}

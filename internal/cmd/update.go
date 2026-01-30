@@ -52,8 +52,14 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
+			// Route to correct storage
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
 			// Fetch the existing issue
-			issue, err := app.Storage.Get(ctx, issueID)
+			issue, err := store.Get(ctx, issueID)
 			if err != nil {
 				return fmt.Errorf("getting issue %s: %w", issueID, err)
 			}
@@ -122,19 +128,19 @@ Examples:
 				if parent == "" {
 					// Remove parent
 					if issue.Parent != "" {
-						if err := app.Storage.RemoveDependency(ctx, issueID, issue.Parent); err != nil {
+						if err := store.RemoveDependency(ctx, issueID, issue.Parent); err != nil {
 							return fmt.Errorf("removing parent: %w", err)
 						}
 					}
 				} else {
 					// Set parent - verify it exists
-					if _, err := app.Storage.Get(ctx, parent); err != nil {
+					if _, err := store.Get(ctx, parent); err != nil {
 						if err == storage.ErrNotFound {
 							return fmt.Errorf("parent issue not found: %s", parent)
 						}
 						return fmt.Errorf("getting parent issue: %w", err)
 					}
-					if err := app.Storage.AddDependency(ctx, issueID, parent, storage.DepTypeParentChild); err != nil {
+					if err := store.AddDependency(ctx, issueID, parent, storage.DepTypeParentChild); err != nil {
 						if err == storage.ErrCycle {
 							return fmt.Errorf("cannot set parent: would create a cycle")
 						}
@@ -142,7 +148,7 @@ Examples:
 					}
 				}
 				// Re-fetch issue since AddDependency/RemoveDependency modify storage directly
-				issue, err = app.Storage.Get(ctx, issueID)
+				issue, err = store.Get(ctx, issueID)
 				if err != nil {
 					return fmt.Errorf("re-fetching issue after parent update: %w", err)
 				}
@@ -178,18 +184,18 @@ Examples:
 			}
 
 			// Save the updated issue
-			if err := app.Storage.Update(ctx, issue); err != nil {
+			if err := store.Update(ctx, issue); err != nil {
 				return fmt.Errorf("updating issue: %w", err)
 			}
 
 			// Output the result
 			if app.JSON {
 				// Fetch the updated issue to return full details
-				updatedIssue, err := app.Storage.Get(ctx, issueID)
+				updatedIssue, err := store.Get(ctx, issueID)
 				if err != nil {
 					return fmt.Errorf("fetching updated issue: %w", err)
 				}
-				result := ToIssueJSON(ctx, app.Storage, updatedIssue, false, false)
+				result := ToIssueJSON(ctx, store, updatedIssue, false, false)
 				// Original beads doesn't include parent field in update output
 				result.Parent = ""
 				// Return as array to match original beads format
