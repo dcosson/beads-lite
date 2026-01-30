@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -100,6 +101,64 @@ func TestParseHierarchicalID(t *testing.T) {
 			}
 			if childNum != tt.wantChild {
 				t.Errorf("ParseHierarchicalID(%q) childNum = %d, want %d", tt.id, childNum, tt.wantChild)
+			}
+		})
+	}
+}
+
+func TestHierarchyDepth(t *testing.T) {
+	tests := []struct {
+		id   string
+		want int
+	}{
+		// Root IDs — depth 0
+		{"bd-a3f8", 0},
+		{"no-dots", 0},
+		{"", 0},
+
+		// Single level — depth 1
+		{"bd-a3f8.1", 1},
+		{"prefix.0", 1},
+
+		// Multi-level
+		{"bd-a3f8.1.2", 2},
+		{"bd-a3f8.1.2.3", 3},
+		{"a.b.c.d.e", 4},
+
+		// Non-numeric suffix still counted (dots are counted)
+		{"my.project-abc", 1},
+		{"some.thing.name", 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.id, func(t *testing.T) {
+			got := HierarchyDepth(tt.id)
+			if got != tt.want {
+				t.Errorf("HierarchyDepth(%q) = %d, want %d", tt.id, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestChildID(t *testing.T) {
+	tests := []struct {
+		parentID string
+		childNum int
+		want     string
+	}{
+		{"bd-a3f8", 1, "bd-a3f8.1"},
+		{"bd-a3f8", 12, "bd-a3f8.12"},
+		{"bd-a3f8.1", 2, "bd-a3f8.1.2"},
+		{"bd-a3f8.1.2", 3, "bd-a3f8.1.2.3"},
+		{"prefix", 0, "prefix.0"},
+	}
+
+	for _, tt := range tests {
+		name := tt.parentID + "." + fmt.Sprintf("%d", tt.childNum)
+		t.Run(name, func(t *testing.T) {
+			got := ChildID(tt.parentID, tt.childNum)
+			if got != tt.want {
+				t.Errorf("ChildID(%q, %d) = %q, want %q", tt.parentID, tt.childNum, got, tt.want)
 			}
 		})
 	}

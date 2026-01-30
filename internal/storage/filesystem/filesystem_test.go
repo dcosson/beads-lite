@@ -1219,6 +1219,156 @@ func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
 	}
 }
 
+// TestGetNextChildID_SubChildren verifies that sub-children (grandchildren) get
+// sequentially numbered IDs (e.g. parent.1.1, parent.1.2, parent.1.3).
+func TestGetNextChildID_SubChildren(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create a root parent
+	root := &storage.Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+
+	// Create first child (rootID.1)
+	child1ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
+	}
+	if child1ID != storage.ChildID(rootID, 1) {
+		t.Fatalf("First child: got %q, want %q", child1ID, storage.ChildID(rootID, 1))
+	}
+	createIssueWithID(t, s, child1ID, "Child 1")
+
+	// Create sub-children under child 1: rootID.1.1, rootID.1.2, rootID.1.3
+	for i := 1; i <= 3; i++ {
+		subChildID, err := s.GetNextChildID(ctx, child1ID)
+		if err != nil {
+			t.Fatalf("GetNextChildID for sub-child %d failed: %v", i, err)
+		}
+		want := fmt.Sprintf("%s.%d", child1ID, i)
+		if subChildID != want {
+			t.Errorf("Sub-child %d: got %q, want %q", i, subChildID, want)
+		}
+		createIssueWithID(t, s, subChildID, fmt.Sprintf("Sub-child %d", i))
+	}
+
+	// Create second child of root (rootID.2) — root's counter should be independent
+	child2ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID for child 2 failed: %v", err)
+	}
+	if child2ID != storage.ChildID(rootID, 2) {
+		t.Errorf("Second child of root: got %q, want %q", child2ID, storage.ChildID(rootID, 2))
+	}
+}
+
+// TestGetNextChildID_CounterIsolation verifies that counters for different
+// parents in the hierarchy are independent. Creating children under parent.1
+// should not affect the counter for parent.2 or the root parent.
+func TestGetNextChildID_CounterIsolation(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create root
+	root := &storage.Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+
+	// Create two children of root
+	child1ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID child1 failed: %v", err)
+	}
+	createIssueWithID(t, s, child1ID, "Child 1")
+
+	child2ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID child2 failed: %v", err)
+	}
+	createIssueWithID(t, s, child2ID, "Child 2")
+
+	// Create 3 sub-children under child 1
+	for i := 1; i <= 3; i++ {
+		subID, err := s.GetNextChildID(ctx, child1ID)
+		if err != nil {
+			t.Fatalf("GetNextChildID under child1 #%d failed: %v", i, err)
+		}
+		want := fmt.Sprintf("%s.%d", child1ID, i)
+		if subID != want {
+			t.Errorf("Child1 sub-child %d: got %q, want %q", i, subID, want)
+		}
+		createIssueWithID(t, s, subID, fmt.Sprintf("Child1 Sub %d", i))
+	}
+
+	// Create first sub-child under child 2 — counter should start at 1, not 4
+	sub2ID, err := s.GetNextChildID(ctx, child2ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID under child2 failed: %v", err)
+	}
+	want := fmt.Sprintf("%s.1", child2ID)
+	if sub2ID != want {
+		t.Errorf("Child2 first sub-child: got %q, want %q (counter leaked from child1)", sub2ID, want)
+	}
+
+	// Root's counter should continue from 3 (already created .1 and .2)
+	child3ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID child3 failed: %v", err)
+	}
+	wantChild3 := storage.ChildID(rootID, 3)
+	if child3ID != wantChild3 {
+		t.Errorf("Third child of root: got %q, want %q", child3ID, wantChild3)
+	}
+}
+
+// TestGetNextChildID_MultipleParentsInterleaved verifies correct behavior when
+// creating children under multiple parents in an interleaved fashion.
+func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create two roots
+	rootA := &storage.Issue{Title: "Root A"}
+	rootAID, err := s.Create(ctx, rootA)
+	if err != nil {
+		t.Fatalf("Create root A failed: %v", err)
+	}
+
+	rootB := &storage.Issue{Title: "Root B"}
+	rootBID, err := s.Create(ctx, rootB)
+	if err != nil {
+		t.Fatalf("Create root B failed: %v", err)
+	}
+
+	// Interleave child creation: A.1, B.1, A.2, B.2, A.3
+	expected := []struct {
+		parentID string
+		wantNum  int
+	}{
+		{rootAID, 1},
+		{rootBID, 1},
+		{rootAID, 2},
+		{rootBID, 2},
+		{rootAID, 3},
+	}
+
+	for i, exp := range expected {
+		childID, err := s.GetNextChildID(ctx, exp.parentID)
+		if err != nil {
+			t.Fatalf("GetNextChildID step %d failed: %v", i, err)
+		}
+		want := storage.ChildID(exp.parentID, exp.wantNum)
+		if childID != want {
+			t.Errorf("Step %d: got %q, want %q", i, childID, want)
+		}
+	}
+}
+
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()
