@@ -77,8 +77,3 @@ type GCResult struct {
 	RemovedIDs []string `json:"removed_ids"`
 	Count      int      `json:"count"`
 }
-
-// GC removes ephemeral molecules older than the specified duration.
-func GC(_ context.Context, _ storage.Storage, _ GCOptions) (*GCResult, error) {
-	return nil, ErrNotImplemented
-}
