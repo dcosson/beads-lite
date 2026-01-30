@@ -67,26 +67,6 @@ func FindStaleSteps(_ context.Context, _ storage.Storage, _ string) ([]*StaleSte
 	return nil, ErrNotImplemented
 }
 
-// SquashOptions configures a Squash operation (digest creation).
-type SquashOptions struct {
-	MoleculeID   string
-	Summary      string
-	KeepChildren bool
-}
-
-// SquashResult describes the outcome of a Squash.
-type SquashResult struct {
-	DigestID     string   `json:"digest_id"`
-	SquashedIDs  []string `json:"squashed_ids"`
-	KeepChildren bool     `json:"keep_children"`
-}
-
-// Squash creates a digest issue summarising a molecule and optionally
-// removes child steps.
-func Squash(_ context.Context, _ storage.Storage, _ SquashOptions) (*SquashResult, error) {
-	return nil, ErrNotImplemented
-}
-
 // GCOptions configures a GC (garbage collection) operation.
 type GCOptions struct {
 	OlderThan time.Duration
