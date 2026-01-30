@@ -276,3 +276,209 @@ func TestCloseAlreadyClosed(t *testing.T) {
 		t.Error("expected error when closing already-closed issue")
 	}
 }
+
+// setupMolecule creates a root epic with 3 child steps (A→B→C chain).
+// Each step is a child of root via parent-child, and B blocks-depends on A, C blocks-depends on B.
+// Returns root ID, step A ID, step B ID, step C ID.
+func setupMolecule(t *testing.T, store storage.Storage) (string, string, string, string) {
+	t.Helper()
+	ctx := context.Background()
+
+	root := &storage.Issue{
+		Title:    "Root Epic",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeEpic,
+	}
+	rootID, err := store.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("failed to create root: %v", err)
+	}
+
+	stepA := &storage.Issue{
+		Title:    "Step A",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	idA, err := store.Create(ctx, stepA)
+	if err != nil {
+		t.Fatalf("failed to create step A: %v", err)
+	}
+
+	stepB := &storage.Issue{
+		Title:    "Step B",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	idB, err := store.Create(ctx, stepB)
+	if err != nil {
+		t.Fatalf("failed to create step B: %v", err)
+	}
+
+	stepC := &storage.Issue{
+		Title:    "Step C",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	idC, err := store.Create(ctx, stepC)
+	if err != nil {
+		t.Fatalf("failed to create step C: %v", err)
+	}
+
+	// Set parent-child relationships
+	if err := store.AddDependency(ctx, idA, rootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child A->root: %v", err)
+	}
+	if err := store.AddDependency(ctx, idB, rootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child B->root: %v", err)
+	}
+	if err := store.AddDependency(ctx, idC, rootID, storage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child C->root: %v", err)
+	}
+
+	// Set blocks dependencies: B depends on A, C depends on B
+	if err := store.AddDependency(ctx, idB, idA, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add blocks B->A: %v", err)
+	}
+	if err := store.AddDependency(ctx, idC, idB, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add blocks C->B: %v", err)
+	}
+
+	return rootID, idA, idB, idC
+}
+
+func TestCloseContinueAdvancesNextStep(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	_, idA, idB, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Closed "+idA) {
+		t.Errorf("expected output to contain 'Closed %s', got %q", idA, output)
+	}
+	if !strings.Contains(output, "Advanced to "+idB) {
+		t.Errorf("expected output to contain 'Advanced to %s', got %q", idB, output)
+	}
+
+	// Verify step B is now in_progress
+	got, err := store.Get(context.Background(), idB)
+	if err != nil {
+		t.Fatalf("failed to get step B: %v", err)
+	}
+	if got.Status != storage.StatusInProgress {
+		t.Errorf("expected step B status %q, got %q", storage.StatusInProgress, got.Status)
+	}
+}
+
+func TestCloseContinueNoAuto(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	_, idA, idB, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", "--no-auto", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue --no-auto failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Next step: "+idB) {
+		t.Errorf("expected output to contain 'Next step: %s', got %q", idB, output)
+	}
+
+	// Verify step B is still open (not claimed)
+	got, err := store.Get(context.Background(), idB)
+	if err != nil {
+		t.Fatalf("failed to get step B: %v", err)
+	}
+	if got.Status != storage.StatusOpen {
+		t.Errorf("expected step B status %q, got %q", storage.StatusOpen, got.Status)
+	}
+}
+
+func TestCloseSuggestNext(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	_, idA, idB, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--suggest-next", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --suggest-next failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Unblocked: "+idB) {
+		t.Errorf("expected output to contain 'Unblocked: %s', got %q", idB, output)
+	}
+}
+
+func TestCloseContinueNonMolecule(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	// Create a standalone issue (no parent)
+	issue := &storage.Issue{
+		Title:    "Standalone issue",
+		Status:   storage.StatusOpen,
+		Priority: storage.PriorityMedium,
+		Type:     storage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue on standalone issue failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Closed "+id) {
+		t.Errorf("expected output to contain 'Closed %s', got %q", id, output)
+	}
+	// Should print "No more steps" since it's not part of a molecule
+	if !strings.Contains(output, "No more steps") {
+		t.Errorf("expected output to contain 'No more steps', got %q", output)
+	}
+}
+
+func TestCloseContinueEndOfMolecule(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	ctx := context.Background()
+	_, idA, idB, idC := setupMolecule(t, store)
+
+	// Close A and B first so C is the last step
+	if err := store.Close(ctx, idA); err != nil {
+		t.Fatalf("failed to close A: %v", err)
+	}
+	if err := store.Close(ctx, idB); err != nil {
+		t.Fatalf("failed to close B: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", idC})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue on last step failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Closed "+idC) {
+		t.Errorf("expected output to contain 'Closed %s', got %q", idC, output)
+	}
+	if !strings.Contains(output, "No more steps") {
+		t.Errorf("expected output to contain 'No more steps', got %q", output)
+	}
+}
