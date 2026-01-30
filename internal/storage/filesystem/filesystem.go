@@ -55,6 +55,9 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirClosed), 0755); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirDeleted), 0755); err != nil {
+		return err
+	}
 	// Clean up any stale lock files from previous crashed processes
 	fs.CleanupStaleLocks()
 	return nil
@@ -99,6 +102,10 @@ func (fs *FilesystemStorage) issuePath(id string, closed bool) string {
 	if closed {
 		dir = storage.DirClosed
 	}
+	return filepath.Join(fs.root, dir, id+".json")
+}
+
+func (fs *FilesystemStorage) issuePathInDir(id string, dir string) string {
 	return filepath.Join(fs.root, dir, id+".json")
 }
 
@@ -301,6 +308,11 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*storage.Issue
 		data, err = os.ReadFile(path)
 	}
 	if os.IsNotExist(err) {
+		// Check deleted (tombstones)
+		path = fs.issuePathInDir(id, storage.DirDeleted)
+		data, err = os.ReadFile(path)
+	}
+	if os.IsNotExist(err) {
 		return nil, storage.ErrNotFound
 	}
 	if err != nil {
@@ -323,12 +335,15 @@ func (fs *FilesystemStorage) Update(ctx context.Context, issue *storage.Issue) e
 	}
 	defer lock.release()
 
-	// Check if issue exists
+	// Check if issue exists (open -> closed -> deleted)
 	path := fs.issuePath(issue.ID, false)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		path = fs.issuePath(issue.ID, true)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return storage.ErrNotFound
+			path = fs.issuePathInDir(issue.ID, storage.DirDeleted)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return storage.ErrNotFound
+			}
 		}
 	}
 
@@ -351,6 +366,10 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 		err = os.Remove(path)
 	}
 	if os.IsNotExist(err) {
+		path = fs.issuePathInDir(id, storage.DirDeleted)
+		err = os.Remove(path)
+	}
+	if os.IsNotExist(err) {
 		return storage.ErrNotFound
 	}
 	if err == nil {
@@ -368,11 +387,16 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	// Determine which directories to scan
 	scanOpen := true
 	scanClosed := false
+	scanDeleted := false
 
 	if filter != nil && filter.Status != nil {
-		if *filter.Status == storage.StatusClosed {
+		switch *filter.Status {
+		case storage.StatusClosed:
 			scanOpen = false
 			scanClosed = true
+		case storage.StatusTombstone:
+			scanOpen = false
+			scanDeleted = true
 		}
 	}
 
@@ -390,6 +414,14 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 			return nil, err
 		}
 		issues = append(issues, closedIssues...)
+	}
+
+	if scanDeleted {
+		deletedIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirDeleted), filter)
+		if err != nil {
+			return nil, err
+		}
+		issues = append(issues, deletedIssues...)
 	}
 
 	// Sort by CreatedAt (oldest first)
@@ -510,6 +542,67 @@ func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
 	}
 
 	// Clean up the lock file (it's no longer needed for closed issues)
+	os.Remove(fs.lockPath(id))
+
+	return nil
+}
+
+// CreateTombstone converts an issue to a tombstone (soft-delete).
+func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, actor string, reason string) error {
+	lock, err := fs.acquireLock(id)
+	if err != nil {
+		return err
+	}
+	defer lock.release()
+
+	issue, err := fs.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if issue.Status == storage.StatusTombstone {
+		return storage.ErrAlreadyTombstoned
+	}
+
+	// Record original type before overwriting
+	issue.OriginalType = issue.Type
+
+	// Set tombstone metadata
+	issue.Status = storage.StatusTombstone
+	now := time.Now()
+	issue.DeletedAt = &now
+	issue.DeletedBy = actor
+	issue.DeleteReason = reason
+	issue.ClosedAt = nil
+	issue.UpdatedAt = now
+
+	// Write to deleted/ first
+	deletedPath := fs.issuePathInDir(id, storage.DirDeleted)
+	if err := atomicWriteJSON(deletedPath, issue); err != nil {
+		return err
+	}
+
+	// Remove from original location (try open/ then closed/)
+	openPath := fs.issuePath(id, false)
+	closedPath := fs.issuePath(id, true)
+	errOpen := os.Remove(openPath)
+	if os.IsNotExist(errOpen) {
+		errClosed := os.Remove(closedPath)
+		if os.IsNotExist(errClosed) {
+			// Issue wasn't in open/ or closed/ — might have been created directly
+			// in deleted/. The write above succeeded, so this is fine.
+		} else if errClosed != nil {
+			// Rollback: remove from deleted/
+			os.Remove(deletedPath)
+			return errClosed
+		}
+	} else if errOpen != nil {
+		// Rollback: remove from deleted/
+		os.Remove(deletedPath)
+		return errOpen
+	}
+
+	// Clean up lock file
 	os.Remove(fs.lockPath(id))
 
 	return nil

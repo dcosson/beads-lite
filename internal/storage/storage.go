@@ -86,6 +86,12 @@ type Issue struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 	ClosedAt    *time.Time `json:"closed_at,omitempty"`
 	CloseReason string     `json:"close_reason,omitempty"`
+
+	// Tombstone fields (set when issue is soft-deleted)
+	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+	DeletedBy    string     `json:"deleted_by,omitempty"`
+	DeleteReason string     `json:"delete_reason,omitempty"`
+	OriginalType IssueType  `json:"original_type,omitempty"`
 }
 
 // Children returns the IDs of child issues (dependents with type parent-child).
@@ -158,6 +164,7 @@ const (
 	StatusBlocked    Status = "blocked"
 	StatusDeferred   Status = "deferred"
 	StatusClosed     Status = "closed"
+	StatusTombstone  Status = "tombstone"
 )
 
 // Priority represents the urgency of an issue.
@@ -265,6 +272,14 @@ type Storage interface {
 	// Returns ErrNotFound if parent doesn't exist, ErrMaxDepthExceeded if
 	// the parent is already at the maximum hierarchy depth.
 	GetNextChildID(ctx context.Context, parentID string) (string, error)
+
+	// CreateTombstone converts an issue to a tombstone (soft-delete).
+	// Sets status to tombstone, records deletion metadata, and moves
+	// the issue to deleted storage. The issue remains retrievable via
+	// Get() but is excluded from List() by default.
+	// Returns ErrNotFound if the issue doesn't exist.
+	// Returns ErrAlreadyTombstoned if the issue is already a tombstone.
+	CreateTombstone(ctx context.Context, id string, actor string, reason string) error
 
 	// Init initializes the storage (creates directories, etc.).
 	Init(ctx context.Context) error

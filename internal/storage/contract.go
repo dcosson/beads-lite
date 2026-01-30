@@ -23,6 +23,7 @@ func RunContractTests(t *testing.T, factory func() Storage) {
 	t.Run("Comments", func(t *testing.T) { testComments(t, factory()) })
 	t.Run("ChildCounters", func(t *testing.T) { testChildCounters(t, factory()) })
 	t.Run("HierarchyDepthLimit", func(t *testing.T) { testHierarchyDepthLimit(t, factory()) })
+	t.Run("CreateTombstone", func(t *testing.T) { testCreateTombstone(t, factory()) })
 }
 
 func testCreate(t *testing.T, s Storage) {
@@ -815,6 +816,129 @@ func testHierarchyDepthLimit(t *testing.T, s Storage) {
 	_, err = s.GetNextChildID(ctx, depth3ID)
 	if !errors.Is(err, ErrMaxDepthExceeded) {
 		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
+	}
+}
+
+func testCreateTombstone(t *testing.T, s Storage) {
+	ctx := context.Background()
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create an issue to tombstone
+	issue := &Issue{
+		Title:    "To Tombstone",
+		Status:   StatusOpen,
+		Priority: PriorityMedium,
+		Type:     TypeTask,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Tombstone it
+	if err := s.CreateTombstone(ctx, id, "test-actor", "no longer needed"); err != nil {
+		t.Fatalf("CreateTombstone failed: %v", err)
+	}
+
+	// Get() should still return the issue
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get after tombstone failed: %v", err)
+	}
+
+	// Verify tombstone metadata
+	if got.Status != StatusTombstone {
+		t.Errorf("Status: got %q, want %q", got.Status, StatusTombstone)
+	}
+	if got.DeletedAt == nil {
+		t.Error("DeletedAt should be set")
+	}
+	if got.DeletedBy != "test-actor" {
+		t.Errorf("DeletedBy: got %q, want %q", got.DeletedBy, "test-actor")
+	}
+	if got.DeleteReason != "no longer needed" {
+		t.Errorf("DeleteReason: got %q, want %q", got.DeleteReason, "no longer needed")
+	}
+	if got.OriginalType != TypeTask {
+		t.Errorf("OriginalType: got %q, want %q", got.OriginalType, TypeTask)
+	}
+	if got.ClosedAt != nil {
+		t.Error("ClosedAt should be nil after tombstone")
+	}
+
+	// List(nil) should NOT include tombstoned issue
+	openIssues, err := s.List(ctx, nil)
+	if err != nil {
+		t.Fatalf("List open failed: %v", err)
+	}
+	for _, iss := range openIssues {
+		if iss.ID == id {
+			t.Error("Tombstoned issue should not appear in default list")
+		}
+	}
+
+	// List with StatusTombstone filter SHOULD include it
+	tombstoneStatus := StatusTombstone
+	tombstones, err := s.List(ctx, &ListFilter{Status: &tombstoneStatus})
+	if err != nil {
+		t.Fatalf("List tombstones failed: %v", err)
+	}
+	found := false
+	for _, iss := range tombstones {
+		if iss.ID == id {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("Tombstoned issue should appear when filtering by tombstone status")
+	}
+
+	// Tombstone a non-existent issue should return ErrNotFound
+	err = s.CreateTombstone(ctx, "nonexistent-id", "actor", "reason")
+	if err != ErrNotFound {
+		t.Errorf("CreateTombstone non-existent: got %v, want ErrNotFound", err)
+	}
+
+	// Tombstone an already-tombstoned issue should return ErrAlreadyTombstoned
+	err = s.CreateTombstone(ctx, id, "actor", "reason")
+	if !errors.Is(err, ErrAlreadyTombstoned) {
+		t.Errorf("Double tombstone: got %v, want ErrAlreadyTombstoned", err)
+	}
+
+	// Hard Delete() should still work on tombstoned issues
+	if err := s.Delete(ctx, id); err != nil {
+		t.Fatalf("Delete tombstoned issue failed: %v", err)
+	}
+	_, err = s.Get(ctx, id)
+	if err != ErrNotFound {
+		t.Errorf("Get after hard delete of tombstone: got %v, want ErrNotFound", err)
+	}
+
+	// Test tombstoning a closed issue
+	closedIssue := &Issue{
+		Title:    "Closed then tombstoned",
+		Status:   StatusOpen,
+		Priority: PriorityLow,
+		Type:     TypeBug,
+	}
+	closedID, err := s.Create(ctx, closedIssue)
+	if err != nil {
+		t.Fatalf("Create closed issue failed: %v", err)
+	}
+	if err := s.Close(ctx, closedID); err != nil {
+		t.Fatalf("Close issue failed: %v", err)
+	}
+	if err := s.CreateTombstone(ctx, closedID, "actor", "obsolete"); err != nil {
+		t.Fatalf("CreateTombstone on closed issue failed: %v", err)
+	}
+	gotClosed, err := s.Get(ctx, closedID)
+	if err != nil {
+		t.Fatalf("Get closed-then-tombstoned issue failed: %v", err)
+	}
+	if gotClosed.Status != StatusTombstone {
+		t.Errorf("Closed-then-tombstoned status: got %q, want %q", gotClosed.Status, StatusTombstone)
 	}
 }
 
