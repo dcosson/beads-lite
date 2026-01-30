@@ -194,7 +194,7 @@ func atomicWriteJSON(path string, data interface{}) error {
 // Otherwise, a random ID is generated.
 func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (string, error) {
 	if issue.ID != "" {
-		// Use the pre-set ID (e.g. from GetNextChildID)
+		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
 		path := fs.issuePath(issue.ID, false)
 
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
@@ -205,6 +205,15 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 			return "", err
 		}
 		f.Close()
+
+		// Update child counter when creating with an explicit hierarchical ID
+		// so future GetNextChildID calls won't generate colliding IDs.
+		if parentID, childNum, ok := storage.ParseHierarchicalID(issue.ID); ok {
+			if err := fs.ensureChildCounterUpdated(parentID, childNum); err != nil {
+				os.Remove(path)
+				return "", fmt.Errorf("updating child counter for %s: %w", parentID, err)
+			}
+		}
 
 		issue.CreatedAt = time.Now()
 		issue.UpdatedAt = issue.CreatedAt
@@ -1004,6 +1013,44 @@ func (fs *FilesystemStorage) childCountersPath() string {
 // childCountersLockPath returns the path to the lock file for child counters.
 func (fs *FilesystemStorage) childCountersLockPath() string {
 	return filepath.Join(fs.root, "child_counters.lock")
+}
+
+// ensureChildCounterUpdated sets the child counter for parentID to at least
+// childNum, using max(current_counter, childNum). This prevents
+// GetNextChildID from generating IDs that collide with explicitly-created
+// hierarchical child IDs.
+func (fs *FilesystemStorage) ensureChildCounterUpdated(parentID string, childNum int) error {
+	lockPath := fs.childCountersLockPath()
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("opening child counters lock: %w", err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("acquiring child counters lock: %w", err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	counters := make(map[string]int)
+	counterPath := fs.childCountersPath()
+	data, err := os.ReadFile(counterPath)
+	if err == nil {
+		if err := json.Unmarshal(data, &counters); err != nil {
+			return fmt.Errorf("parsing child counters: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("reading child counters: %w", err)
+	}
+
+	if counters[parentID] < childNum {
+		counters[parentID] = childNum
+		if err := atomicWriteJSON(counterPath, counters); err != nil {
+			return fmt.Errorf("writing child counters: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // GetNextChildID validates the parent exists, checks hierarchy depth limits,

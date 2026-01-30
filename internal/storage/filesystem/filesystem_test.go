@@ -972,6 +972,135 @@ func TestGetNextChildID_MaxDepth(t *testing.T) {
 	}
 }
 
+// TestCreateExplicitHierarchicalID_UpdatesCounter verifies that creating an
+// issue with an explicit hierarchical ID updates the child counter so future
+// GetNextChildID calls don't collide.
+func TestCreateExplicitHierarchicalID_UpdatesCounter(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create parent issue
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Directly create a child with explicit ID (e.g., parentID.3)
+	explicitChild := &storage.Issue{
+		ID:    storage.ChildID(parentID, 3),
+		Title: "Explicit child 3",
+	}
+	childID, err := s.Create(ctx, explicitChild)
+	if err != nil {
+		t.Fatalf("Create explicit child failed: %v", err)
+	}
+	if childID != storage.ChildID(parentID, 3) {
+		t.Fatalf("got %q, want %q", childID, storage.ChildID(parentID, 3))
+	}
+
+	// Now GetNextChildID should return parentID.4, not parentID.1
+	nextID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	want := storage.ChildID(parentID, 4)
+	if nextID != want {
+		t.Errorf("GetNextChildID after explicit .3: got %q, want %q", nextID, want)
+	}
+}
+
+// TestCreateExplicitHierarchicalID_DoesNotLowerCounter verifies that creating
+// an issue with a lower child number doesn't lower the counter.
+func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Generate children 1 and 2 via GetNextChildID
+	for i := 0; i < 2; i++ {
+		childID, err := s.GetNextChildID(ctx, parentID)
+		if err != nil {
+			t.Fatalf("GetNextChildID failed: %v", err)
+		}
+		createIssueWithID(t, s, childID, fmt.Sprintf("Child %d", i+1))
+	}
+
+	// Use a separate parent to cleanly test that a lower explicit child
+	// number doesn't lower an already-higher counter.
+	parent2 := &storage.Issue{Title: "Parent 2"}
+	parent2ID, err := s.Create(ctx, parent2)
+	if err != nil {
+		t.Fatalf("Create parent2 failed: %v", err)
+	}
+
+	// Explicitly create child .5
+	child5 := &storage.Issue{
+		ID:    storage.ChildID(parent2ID, 5),
+		Title: "Explicit child 5",
+	}
+	if _, err := s.Create(ctx, child5); err != nil {
+		t.Fatalf("Create child 5 failed: %v", err)
+	}
+
+	// Explicitly create child .2 (lower than 5)
+	child2 := &storage.Issue{
+		ID:    storage.ChildID(parent2ID, 2),
+		Title: "Explicit child 2",
+	}
+	if _, err := s.Create(ctx, child2); err != nil {
+		t.Fatalf("Create child 2 failed: %v", err)
+	}
+
+	// Counter should still be at 5, so next should be .6
+	nextID, err := s.GetNextChildID(ctx, parent2ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	want := storage.ChildID(parent2ID, 6)
+	if nextID != want {
+		t.Errorf("GetNextChildID after .5 then .2: got %q, want %q", nextID, want)
+	}
+}
+
+// TestCreateNonHierarchicalID_NoCounterSideEffect verifies that creating an
+// issue with a plain (non-hierarchical) ID doesn't touch child counters.
+func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create a parent
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Create an issue with a non-hierarchical explicit ID
+	plain := &storage.Issue{
+		ID:    "my-custom-id",
+		Title: "Plain issue",
+	}
+	if _, err := s.Create(ctx, plain); err != nil {
+		t.Fatalf("Create plain issue failed: %v", err)
+	}
+
+	// Counter for parent should still be at 0, so next child is .1
+	nextID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	want := storage.ChildID(parentID, 1)
+	if nextID != want {
+		t.Errorf("got %q, want %q", nextID, want)
+	}
+}
+
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()

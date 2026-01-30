@@ -5,6 +5,7 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -287,6 +288,19 @@ func HierarchyDepth(id string) int {
 // ChildID returns the composite child ID given a parent ID and child number.
 func ChildID(parentID string, childNum int) string {
 	return fmt.Sprintf("%s.%d", parentID, childNum)
+}
+
+// ParseHierarchicalID splits a hierarchical ID into its immediate parent and
+// child number. For example, "bd-a3f8.2" returns ("bd-a3f8", 2, true).
+// Returns ("", 0, false) if the ID is not hierarchical.
+func ParseHierarchicalID(id string) (parentID string, childNum int, ok bool) {
+	if !IsHierarchicalID(id) {
+		return "", 0, false
+	}
+	dot := strings.LastIndex(id, ".")
+	parentID = id[:dot]
+	childNum, _ = strconv.Atoi(id[dot+1:])
+	return parentID, childNum, true
 }
 
 // RootParentID returns the root parent portion of a (possibly hierarchical) ID.
