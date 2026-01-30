@@ -142,6 +142,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newDepCmd(provider))
 	rootCmd.AddCommand(newCompactCmd(provider))
 	rootCmd.AddCommand(newConfigCmd(provider))
+	rootCmd.AddCommand(newMolCmd(provider))
 
 	return rootCmd
 }
