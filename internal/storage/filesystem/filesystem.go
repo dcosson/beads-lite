@@ -977,43 +977,56 @@ func (fs *FilesystemStorage) childCountersLockPath() string {
 	return filepath.Join(fs.root, "child_counters.lock")
 }
 
-// GetNextChildID atomically increments and returns the next child number
-// for the given parent ID. The first child of any parent returns 1.
-func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string) (int, error) {
+// GetNextChildID validates the parent exists, checks hierarchy depth limits,
+// atomically increments the child counter, and returns the full child ID.
+func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string) (string, error) {
+	// 1. Validate the parent exists
+	if _, err := fs.Get(ctx, parentID); err != nil {
+		if err == storage.ErrNotFound {
+			return "", fmt.Errorf("parent %s: %w", parentID, storage.ErrNotFound)
+		}
+		return "", fmt.Errorf("checking parent %s: %w", parentID, err)
+	}
+
+	// 2. Check hierarchy depth limit
+	if storage.HierarchyDepth(parentID) >= storage.DefaultMaxHierarchyDepth {
+		return "", fmt.Errorf("parent %s at depth %d: %w",
+			parentID, storage.HierarchyDepth(parentID), storage.ErrMaxDepthExceeded)
+	}
+
+	// 3. Atomically increment the child counter
 	lockPath := fs.childCountersLockPath()
 	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		return 0, fmt.Errorf("opening child counters lock: %w", err)
+		return "", fmt.Errorf("opening child counters lock: %w", err)
 	}
 	defer f.Close()
 
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return 0, fmt.Errorf("acquiring child counters lock: %w", err)
+		return "", fmt.Errorf("acquiring child counters lock: %w", err)
 	}
 	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 
-	// Read current counters
 	counters := make(map[string]int)
 	counterPath := fs.childCountersPath()
 	data, err := os.ReadFile(counterPath)
 	if err == nil {
 		if err := json.Unmarshal(data, &counters); err != nil {
-			return 0, fmt.Errorf("parsing child counters: %w", err)
+			return "", fmt.Errorf("parsing child counters: %w", err)
 		}
 	} else if !os.IsNotExist(err) {
-		return 0, fmt.Errorf("reading child counters: %w", err)
+		return "", fmt.Errorf("reading child counters: %w", err)
 	}
 
-	// Increment
 	counters[parentID]++
 	next := counters[parentID]
 
-	// Write back atomically
 	if err := atomicWriteJSON(counterPath, counters); err != nil {
-		return 0, fmt.Errorf("writing child counters: %w", err)
+		return "", fmt.Errorf("writing child counters: %w", err)
 	}
 
-	return next, nil
+	// 4. Return the full child ID
+	return storage.ChildID(parentID, next), nil
 }
 
 // hasDependencyCycle checks if adding a dependency from issueID to dependsOnID would create a cycle.

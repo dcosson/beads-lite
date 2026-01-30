@@ -2,6 +2,8 @@ package filesystem
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -788,13 +790,21 @@ func TestGetNextChildID_Sequential(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
+	// Create a parent issue
+	parent := &storage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
 	for i := 1; i <= 5; i++ {
-		n, err := s.GetNextChildID(ctx, "parent-1")
+		childID, err := s.GetNextChildID(ctx, parentID)
 		if err != nil {
 			t.Fatalf("GetNextChildID call %d failed: %v", i, err)
 		}
-		if n != i {
-			t.Errorf("Call %d: got %d, want %d", i, n, i)
+		want := fmt.Sprintf("%s.%d", parentID, i)
+		if childID != want {
+			t.Errorf("Call %d: got %q, want %q", i, childID, want)
 		}
 	}
 }
@@ -804,11 +814,18 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
+	// Create a parent issue
+	parent := &storage.Issue{Title: "Concurrent Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
 	const numWorkers = 10
 	const callsPerWorker = 10
 	total := numWorkers * callsPerWorker
 
-	results := make(chan int, total)
+	results := make(chan string, total)
 	errs := make(chan error, total)
 
 	var wg sync.WaitGroup
@@ -817,12 +834,12 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < callsPerWorker; i++ {
-				n, err := s.GetNextChildID(ctx, "concurrent-parent")
+				childID, err := s.GetNextChildID(ctx, parentID)
 				if err != nil {
 					errs <- err
 					return
 				}
-				results <- n
+				results <- childID
 			}
 		}()
 	}
@@ -834,20 +851,17 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 		t.Fatalf("Concurrent GetNextChildID error: %v", err)
 	}
 
-	// All returned values should be unique and in range [1, total]
-	seen := make(map[int]bool)
-	for n := range results {
-		if n < 1 || n > total {
-			t.Errorf("Counter value %d out of expected range [1, %d]", n, total)
+	// All returned IDs should be unique
+	seen := make(map[string]bool)
+	for childID := range results {
+		if seen[childID] {
+			t.Errorf("Duplicate child ID: %s", childID)
 		}
-		if seen[n] {
-			t.Errorf("Duplicate counter value: %d", n)
-		}
-		seen[n] = true
+		seen[childID] = true
 	}
 
 	if len(seen) != total {
-		t.Errorf("Expected %d unique values, got %d", total, len(seen))
+		t.Errorf("Expected %d unique IDs, got %d", total, len(seen))
 	}
 }
 
@@ -856,13 +870,20 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 	dir := t.TempDir()
 	ctx := context.Background()
 
-	// Create storage and increment counter
+	// Create storage and a parent issue
 	s1 := New(dir)
 	if err := s1.Init(ctx); err != nil {
 		t.Fatalf("Init 1 failed: %v", err)
 	}
+	parent := &storage.Issue{Title: "Persist Parent"}
+	parentID, err := s1.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Increment counter 3 times
 	for i := 0; i < 3; i++ {
-		if _, err := s1.GetNextChildID(ctx, "persist-parent"); err != nil {
+		if _, err := s1.GetNextChildID(ctx, parentID); err != nil {
 			t.Fatalf("GetNextChildID failed: %v", err)
 		}
 	}
@@ -873,12 +894,81 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 		t.Fatalf("Init 2 failed: %v", err)
 	}
 
-	n, err := s2.GetNextChildID(ctx, "persist-parent")
+	childID, err := s2.GetNextChildID(ctx, parentID)
 	if err != nil {
 		t.Fatalf("GetNextChildID after reinit failed: %v", err)
 	}
-	if n != 4 {
-		t.Errorf("Counter after reinit: got %d, want 4", n)
+	want := fmt.Sprintf("%s.%d", parentID, 4)
+	if childID != want {
+		t.Errorf("Counter after reinit: got %q, want %q", childID, want)
+	}
+}
+
+// TestGetNextChildID_ParentNotFound verifies error when parent doesn't exist.
+func TestGetNextChildID_ParentNotFound(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	_, err := s.GetNextChildID(ctx, "nonexistent-parent")
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Errorf("GetNextChildID on non-existent parent: got %v, want ErrNotFound", err)
+	}
+}
+
+// createIssueWithID is a test helper that creates an issue file with a specific ID.
+func createIssueWithID(t *testing.T, s *FilesystemStorage, id, title string) {
+	t.Helper()
+	issue := &storage.Issue{
+		ID:        id,
+		Title:     title,
+		Status:    storage.StatusOpen,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	path := s.issuePath(id, false)
+	if err := atomicWriteJSON(path, issue); err != nil {
+		t.Fatalf("createIssueWithID(%s) failed: %v", id, err)
+	}
+}
+
+// TestGetNextChildID_MaxDepth verifies hierarchy depth limit enforcement.
+func TestGetNextChildID_MaxDepth(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create root issue
+	root := &storage.Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+
+	// Create child at depth 1 (rootID.1)
+	child1ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 1 failed: %v", err)
+	}
+	// Store the child issue so we can create grandchildren
+	createIssueWithID(t, s, child1ID, "Child 1")
+
+	// Create grandchild at depth 2 (rootID.1.1)
+	child2ID, err := s.GetNextChildID(ctx, child1ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 2 failed: %v", err)
+	}
+	createIssueWithID(t, s, child2ID, "Child 2")
+
+	// Create great-grandchild at depth 3 (rootID.1.1.1) - should succeed (max depth = 3)
+	child3ID, err := s.GetNextChildID(ctx, child2ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 3 failed: %v", err)
+	}
+	createIssueWithID(t, s, child3ID, "Child 3")
+
+	// Depth 4 should fail (rootID.1.1.1.1 exceeds max depth of 3)
+	_, err = s.GetNextChildID(ctx, child3ID)
+	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
 

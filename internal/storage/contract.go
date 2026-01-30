@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -717,40 +718,63 @@ func testChildCounters(t *testing.T, s Storage) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
-	// First child of a new parent should be 1
-	n, err := s.GetNextChildID(ctx, "parent-a")
+	// Create parent issues so GetNextChildID can validate them
+	parentA := &Issue{Title: "Parent A"}
+	idA, err := s.Create(ctx, parentA)
 	if err != nil {
-		t.Fatalf("GetNextChildID failed: %v", err)
-	}
-	if n != 1 {
-		t.Errorf("First child number: got %d, want 1", n)
+		t.Fatalf("Create parent A failed: %v", err)
 	}
 
-	// Second child should be 2
-	n, err = s.GetNextChildID(ctx, "parent-a")
+	parentB := &Issue{Title: "Parent B"}
+	idB, err := s.Create(ctx, parentB)
 	if err != nil {
-		t.Fatalf("GetNextChildID failed: %v", err)
-	}
-	if n != 2 {
-		t.Errorf("Second child number: got %d, want 2", n)
+		t.Fatalf("Create parent B failed: %v", err)
 	}
 
-	// Different parent should start at 1
-	n, err = s.GetNextChildID(ctx, "parent-b")
+	// First child should return parentID.1
+	childID, err := s.GetNextChildID(ctx, idA)
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	if n != 1 {
-		t.Errorf("First child of different parent: got %d, want 1", n)
+	wantFirst := idA + ".1"
+	if childID != wantFirst {
+		t.Errorf("First child ID: got %q, want %q", childID, wantFirst)
 	}
 
-	// Original parent should continue from 2
-	n, err = s.GetNextChildID(ctx, "parent-a")
+	// Second child should return parentID.2
+	childID, err = s.GetNextChildID(ctx, idA)
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	if n != 3 {
-		t.Errorf("Third child of parent-a: got %d, want 3", n)
+	wantSecond := idA + ".2"
+	if childID != wantSecond {
+		t.Errorf("Second child ID: got %q, want %q", childID, wantSecond)
+	}
+
+	// Different parent should start at .1
+	childID, err = s.GetNextChildID(ctx, idB)
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	wantB := idB + ".1"
+	if childID != wantB {
+		t.Errorf("First child of different parent: got %q, want %q", childID, wantB)
+	}
+
+	// Original parent should continue from .3
+	childID, err = s.GetNextChildID(ctx, idA)
+	if err != nil {
+		t.Fatalf("GetNextChildID failed: %v", err)
+	}
+	wantThird := idA + ".3"
+	if childID != wantThird {
+		t.Errorf("Third child of parent A: got %q, want %q", childID, wantThird)
+	}
+
+	// Non-existent parent should return ErrNotFound
+	_, err = s.GetNextChildID(ctx, "nonexistent-id")
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("GetNextChildID on non-existent parent: got %v, want ErrNotFound", err)
 	}
 }
 

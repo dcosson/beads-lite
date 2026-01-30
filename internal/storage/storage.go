@@ -4,10 +4,15 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 	"unicode"
 )
+
+// DefaultMaxHierarchyDepth is the maximum number of dot-notation levels
+// allowed in hierarchical child IDs (e.g., bd-a3f8.1.2.3 = depth 3).
+const DefaultMaxHierarchyDepth = 3
 
 // DependencyType represents the type of relationship between two issues.
 type DependencyType string
@@ -239,9 +244,12 @@ type Storage interface {
 	// AddComment adds a comment to an issue.
 	AddComment(ctx context.Context, issueID string, comment *Comment) error
 
-	// GetNextChildID atomically increments and returns the next child number
-	// for the given parent ID. The first child of any parent returns 1.
-	GetNextChildID(ctx context.Context, parentID string) (int, error)
+	// GetNextChildID validates the parent exists, checks hierarchy depth limits,
+	// atomically increments the child counter, and returns the full child ID
+	// (e.g., "bd-a3f8" → "bd-a3f8.1", "bd-a3f8.1" → "bd-a3f8.1.1").
+	// Returns ErrNotFound if parent doesn't exist, ErrMaxDepthExceeded if
+	// the parent is already at the maximum hierarchy depth.
+	GetNextChildID(ctx context.Context, parentID string) (string, error)
 
 	// Init initializes the storage (creates directories, etc.).
 	Init(ctx context.Context) error
@@ -266,6 +274,17 @@ func IsHierarchicalID(id string) bool {
 		}
 	}
 	return true
+}
+
+// HierarchyDepth returns the nesting depth of an ID by counting dots.
+// A root ID like "bd-a3f8" has depth 0; "bd-a3f8.1" has depth 1, etc.
+func HierarchyDepth(id string) int {
+	return strings.Count(id, ".")
+}
+
+// ChildID returns the composite child ID given a parent ID and child number.
+func ChildID(parentID string, childNum int) string {
+	return fmt.Sprintf("%s.%d", parentID, childNum)
 }
 
 // RootParentID returns the root parent portion of a (possibly hierarchical) ID.
