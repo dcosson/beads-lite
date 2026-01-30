@@ -100,10 +100,10 @@ func TestMolCurrentText(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Current, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "current") {
+		t.Errorf("expected 'current' error, got %v", err)
 	}
 }
 
@@ -115,10 +115,10 @@ func TestMolCurrentJSON(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Current, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "current") {
+		t.Errorf("expected 'current' error, got %v", err)
 	}
 }
 
@@ -129,10 +129,10 @@ func TestMolCurrentWithFlags(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2", "--for", "alice", "--limit", "5", "--range", "s1-s5"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Current, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "current") {
+		t.Errorf("expected 'current' error, got %v", err)
 	}
 }
 
@@ -154,10 +154,10 @@ func TestMolProgressText(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Progress, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "progress") {
+		t.Errorf("expected 'progress' error, got %v", err)
 	}
 }
 
@@ -169,10 +169,10 @@ func TestMolProgressJSON(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub Progress, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "progress") {
+		t.Errorf("expected 'progress' error, got %v", err)
 	}
 }
 
@@ -194,10 +194,10 @@ func TestMolStaleText(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub FindStaleSteps, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "stale") {
+		t.Errorf("expected 'stale' error, got %v", err)
 	}
 }
 
@@ -209,10 +209,10 @@ func TestMolStaleJSON(t *testing.T) {
 	cmd.SetArgs([]string{"bd-a1b2"})
 	err := cmd.Execute()
 	if err == nil {
-		t.Fatal("expected error from stub FindStaleSteps, got nil")
+		t.Fatal("expected error for non-existent molecule, got nil")
 	}
-	if !strings.Contains(err.Error(), "not implemented") {
-		t.Errorf("expected 'not implemented' error, got %v", err)
+	if !strings.Contains(err.Error(), "stale") {
+		t.Errorf("expected 'stale' error, got %v", err)
 	}
 }
 
