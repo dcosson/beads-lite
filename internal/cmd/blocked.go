@@ -70,6 +70,10 @@ An issue is blocked if:
 			blocked := []BlockedIssueJSON{} // Initialize as empty slice (marshals to [] not null)
 			name, _ := getGitUser()
 			for _, issue := range issues {
+				// Ephemeral issues are never shown in blocked output (hardcoded exclusion).
+				if issue.Ephemeral {
+					continue
+				}
 				waitingOn := getWaitingOn(issue, closedSet)
 				if len(waitingOn) > 0 {
 					blocked = append(blocked, BlockedIssueJSON{

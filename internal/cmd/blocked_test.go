@@ -335,6 +335,119 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 	}
 }
 
+func TestBlockedExcludesEphemeralIssues(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir)
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create an open dependency issue
+	depID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Open dependency",
+		Priority: storage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create dep issue: %v", err)
+	}
+
+	// Create an ephemeral blocked issue — should be excluded
+	ephID, err := store.Create(ctx, &storage.Issue{
+		Title:     "Ephemeral blocked issue",
+		Priority:  storage.PriorityMedium,
+		Ephemeral: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to create ephemeral issue: %v", err)
+	}
+	if err := store.AddDependency(ctx, ephID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
+	}
+
+	// Create a persistent blocked issue — should be included
+	persistID, err := store.Create(ctx, &storage.Issue{
+		Title:    "Persistent blocked issue",
+		Priority: storage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create persistent issue: %v", err)
+	}
+	if err := store.AddDependency(ctx, persistID, depID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	cmd := newBlockedCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("blocked command failed: %v", err)
+	}
+
+	output := out.String()
+	if containsString(output, ephID) {
+		t.Errorf("expected ephemeral issue %s to be excluded from blocked output, got: %s", ephID, output)
+	}
+	if !containsString(output, persistID) {
+		t.Errorf("expected persistent issue %s to be included in blocked output, got: %s", persistID, output)
+	}
+}
+
+func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir)
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create two open dependency issues
+	dep1ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep A", Priority: storage.PriorityHigh})
+	dep2ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep B", Priority: storage.PriorityHigh})
+
+	// Create two persistent blocked issues
+	blocked1ID, _ := store.Create(ctx, &storage.Issue{
+		Title:    "Persistent blocked 1",
+		Priority: storage.PriorityMedium,
+	})
+	if err := store.AddDependency(ctx, blocked1ID, dep1ID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
+	}
+
+	blocked2ID, _ := store.Create(ctx, &storage.Issue{
+		Title:    "Persistent blocked 2",
+		Priority: storage.PriorityLow,
+	})
+	if err := store.AddDependency(ctx, blocked2ID, dep2ID, storage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add dependency: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	cmd := newBlockedCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("blocked command failed: %v", err)
+	}
+
+	output := out.String()
+	if !containsString(output, blocked1ID) {
+		t.Errorf("expected persistent blocked issue %s in output, got: %s", blocked1ID, output)
+	}
+	if !containsString(output, blocked2ID) {
+		t.Errorf("expected persistent blocked issue %s in output, got: %s", blocked2ID, output)
+	}
+}
+
 func containsString(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
 		(len(s) > 0 && len(substr) > 0 && findSubstring(s, substr)))
