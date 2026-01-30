@@ -189,8 +189,37 @@ func atomicWriteJSON(path string, data interface{}) error {
 	return nil
 }
 
-// Create creates a new issue and returns its generated ID.
+// Create creates a new issue and returns its ID.
+// If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
+// Otherwise, a random ID is generated.
 func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (string, error) {
+	if issue.ID != "" {
+		// Use the pre-set ID (e.g. from GetNextChildID)
+		path := fs.issuePath(issue.ID, false)
+
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if os.IsExist(err) {
+			return "", fmt.Errorf("issue %s already exists", issue.ID)
+		}
+		if err != nil {
+			return "", err
+		}
+		f.Close()
+
+		issue.CreatedAt = time.Now()
+		issue.UpdatedAt = issue.CreatedAt
+		if issue.Status == "" {
+			issue.Status = storage.StatusOpen
+		}
+
+		if err := atomicWriteJSON(path, issue); err != nil {
+			os.Remove(path)
+			return "", err
+		}
+
+		return issue.ID, nil
+	}
+
 	for attempts := 0; attempts < 3; attempts++ {
 		id, err := generateID()
 		if err != nil {

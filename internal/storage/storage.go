@@ -201,7 +201,9 @@ type ListFilter struct {
 // Storage defines the interface for issue persistence.
 // All storage engines must implement this interface.
 type Storage interface {
-	// Create creates a new issue and returns its generated ID.
+	// Create creates a new issue and returns its ID.
+	// If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
+	// Otherwise, a random ID is generated.
 	Create(ctx context.Context, issue *Issue) (string, error)
 
 	// Get retrieves an issue by ID.

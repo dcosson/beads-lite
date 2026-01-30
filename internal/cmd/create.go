@@ -107,6 +107,15 @@ Examples:
 				Assignee:    assignee,
 			}
 
+			// When --parent is specified, use dot-notation child ID
+			if parent != "" {
+				childID, err := app.Storage.GetNextChildID(ctx, parent)
+				if err != nil {
+					return fmt.Errorf("generating child ID for parent %s: %w", parent, err)
+				}
+				issue.ID = childID
+			}
+
 			id, err := app.Storage.Create(ctx, issue)
 			if err != nil {
 				return fmt.Errorf("creating issue: %w", err)

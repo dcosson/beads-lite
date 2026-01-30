@@ -218,6 +218,13 @@ func TestCreateWithParent(t *testing.T) {
 	}
 
 	childID := extractCreatedID(out.String())
+
+	// Child should have dot-notation ID: parentID.1
+	expectedChildID := parentID + ".1"
+	if childID != expectedChildID {
+		t.Errorf("expected child ID %q, got %q", expectedChildID, childID)
+	}
+
 	child, _ := store.Get(context.Background(), childID)
 	if child.Parent != parentID {
 		t.Errorf("expected parent %q, got %q", parentID, child.Parent)
@@ -234,6 +241,20 @@ func TestCreateWithParent(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("parent should have child in children list")
+	}
+
+	// Create a second child - should get .2
+	out.Reset()
+	cmd2 := newCreateCmd(NewTestProvider(app))
+	cmd2.SetArgs([]string{"Second child", "--parent", parentID})
+	if err := cmd2.Execute(); err != nil {
+		t.Fatalf("create second child failed: %v", err)
+	}
+
+	secondChildID := extractCreatedID(out.String())
+	expectedSecondID := parentID + ".2"
+	if secondChildID != expectedSecondID {
+		t.Errorf("expected second child ID %q, got %q", expectedSecondID, secondChildID)
 	}
 }
 
@@ -414,6 +435,13 @@ func TestCreateAllFlags(t *testing.T) {
 	}
 
 	id := extractCreatedID(out.String())
+
+	// With --parent, child ID should be dot-notation
+	expectedID := parentID + ".1"
+	if id != expectedID {
+		t.Errorf("expected dot-notation ID %q, got %q", expectedID, id)
+	}
+
 	issue, _ := store.Get(context.Background(), id)
 
 	if issue.Title != "Full featured issue" {
