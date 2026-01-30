@@ -25,6 +25,7 @@ func newUpdateCmd(provider *AppProvider) *cobra.Command {
 		parent       string
 		addLabels    []string
 		removeLabels []string
+		claim        bool
 	)
 
 	cmd := &cobra.Command{
@@ -41,7 +42,8 @@ Examples:
   bd update bd-a1b2 --assignee ""     # unassign
   bd update bd-a1b2 --parent bd-c3d4 # set parent
   bd update bd-a1b2 --parent ""      # remove parent
-  bd update bd-a1b2 --description -  # read from stdin`,
+  bd update bd-a1b2 --description -  # read from stdin
+  bd update bd-a1b2 --claim          # assign to self + set in-progress`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -60,6 +62,20 @@ Examples:
 
 			// Track if any changes were made
 			changed := false
+
+			// Handle --claim flag (check original state before other modifications)
+			if cmd.Flags().Changed("claim") && claim {
+				actor, err := resolveActor(app)
+				if err != nil {
+					return fmt.Errorf("claiming issue: %w", err)
+				}
+				if issue.Assignee != "" {
+					return fmt.Errorf("cannot claim %s: already assigned to %q", issueID, issue.Assignee)
+				}
+				issue.Assignee = actor
+				issue.Status = storage.StatusInProgress
+				changed = true
+			}
 
 			// Update title if specified
 			if cmd.Flags().Changed("title") {
@@ -210,6 +226,7 @@ Examples:
 	cmd.Flags().StringVar(&parent, "parent", "", "Set parent issue (empty string to remove parent)")
 	cmd.Flags().StringSliceVar(&addLabels, "add-label", nil, "Add label (can repeat)")
 	cmd.Flags().StringSliceVar(&removeLabels, "remove-label", nil, "Remove label (can repeat)")
+	cmd.Flags().BoolVar(&claim, "claim", false, "Claim issue: assign to current actor and set status to in-progress")
 
 	return cmd
 }
@@ -282,4 +299,27 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// resolveActor determines the current actor identity using a priority chain:
+//  1. BD_ACTOR env var (via config store, set by ApplyEnvOverrides)
+//  2. git config user.name
+//  3. $USER env var (OS username fallback)
+func resolveActor(app *App) (string, error) {
+	if app.ConfigStore != nil {
+		if actor, ok := app.ConfigStore.Get("actor"); ok && actor != "" && actor != "${USER}" {
+			return actor, nil
+		}
+	}
+
+	name, _ := getGitUser()
+	if name != "" {
+		return name, nil
+	}
+
+	if user := os.Getenv("USER"); user != "" {
+		return user, nil
+	}
+
+	return "", fmt.Errorf("cannot determine actor: set BD_ACTOR env var, git config user.name, or $USER")
 }
