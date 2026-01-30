@@ -78,6 +78,11 @@ func runInit(force bool, projectName string) error {
 		return fmt.Errorf("creating .beads directory: %w", err)
 	}
 
+	formulasPath := filepath.Join(beadsPath, "formulas")
+	if err := os.MkdirAll(formulasPath, 0755); err != nil {
+		return fmt.Errorf("creating formulas directory: %w", err)
+	}
+
 	configPath := filepath.Join(beadsPath, "config.yaml")
 	store, err := yamlstore.New(configPath)
 	if err != nil {

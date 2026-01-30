@@ -49,6 +49,12 @@ func TestInit(t *testing.T) {
 		if _, err := os.Stat(closedPath); os.IsNotExist(err) {
 			t.Error(".beads/issues/closed directory was not created")
 		}
+
+		// Check formulas/ directory exists
+		formulasPath := filepath.Join(beadsPath, "formulas")
+		if _, err := os.Stat(formulasPath); os.IsNotExist(err) {
+			t.Error(".beads/formulas directory was not created")
+		}
 	})
 
 	t.Run("fails if beads already exists", func(t *testing.T) {
