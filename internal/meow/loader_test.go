@@ -205,3 +205,147 @@ func searchString(s, substr string) bool {
 	}
 	return false
 }
+
+func TestListFormulas(t *testing.T) {
+	dir := t.TempDir()
+
+	jsonContent := `{"formula": "deploy", "description": "Deploy pipeline", "version": 1, "type": "workflow", "phase": "liquid"}`
+	if err := os.WriteFile(filepath.Join(dir, "deploy.formula.json"), []byte(jsonContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tomlContent := "formula = \"triage\"\ndescription = \"Bug triage\"\nversion = 1\ntype = \"expansion\"\n"
+	if err := os.WriteFile(filepath.Join(dir, "triage.formula.toml"), []byte(tomlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := ListFormulas(FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("ListFormulas() error = %v", err)
+	}
+	if len(entries) != 2 {
+		t.Fatalf("len(entries) = %d, want 2", len(entries))
+	}
+
+	// Find deploy entry.
+	var deploy *FormulaEntry
+	for i := range entries {
+		if entries[i].Name == "deploy" {
+			deploy = &entries[i]
+			break
+		}
+	}
+	if deploy == nil {
+		t.Fatal("expected 'deploy' entry, not found")
+	}
+	if deploy.Type != FormulaTypeWorkflow {
+		t.Errorf("deploy.Type = %q, want %q", deploy.Type, FormulaTypeWorkflow)
+	}
+	if deploy.Phase != "liquid" {
+		t.Errorf("deploy.Phase = %q, want %q", deploy.Phase, "liquid")
+	}
+	if deploy.Format != "json" {
+		t.Errorf("deploy.Format = %q, want %q", deploy.Format, "json")
+	}
+	if deploy.Description != "Deploy pipeline" {
+		t.Errorf("deploy.Description = %q, want %q", deploy.Description, "Deploy pipeline")
+	}
+}
+
+func TestListFormulasPriority(t *testing.T) {
+	projectDir := t.TempDir()
+	userDir := t.TempDir()
+
+	projectContent := `{"formula": "shared", "description": "project-level", "version": 1, "type": "workflow"}`
+	if err := os.WriteFile(filepath.Join(projectDir, "shared.formula.json"), []byte(projectContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	userContent := `{"formula": "shared", "description": "user-level", "version": 2, "type": "workflow"}`
+	if err := os.WriteFile(filepath.Join(userDir, "shared.formula.json"), []byte(userContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := ListFormulas(FormulaSearchPath{projectDir, userDir})
+	if err != nil {
+		t.Fatalf("ListFormulas() error = %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("len(entries) = %d, want 1 (project should shadow user)", len(entries))
+	}
+	if entries[0].Description != "project-level" {
+		t.Errorf("Description = %q, want %q", entries[0].Description, "project-level")
+	}
+}
+
+func TestListFormulasEmpty(t *testing.T) {
+	dir := t.TempDir()
+
+	entries, err := ListFormulas(FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("ListFormulas() error = %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("len(entries) = %d, want 0", len(entries))
+	}
+}
+
+func TestListFormulasNonexistentDir(t *testing.T) {
+	entries, err := ListFormulas(FormulaSearchPath{"/nonexistent/path"})
+	if err != nil {
+		t.Fatalf("ListFormulas() should skip missing dirs, got error: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("len(entries) = %d, want 0", len(entries))
+	}
+}
+
+func TestFindFormulaFile(t *testing.T) {
+	dir := t.TempDir()
+
+	content := `{"formula": "deploy", "version": 1, "type": "workflow"}`
+	expectedPath := filepath.Join(dir, "deploy.formula.json")
+	if err := os.WriteFile(expectedPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	filePath, format, err := FindFormulaFile("deploy", FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("FindFormulaFile() error = %v", err)
+	}
+	if filePath != expectedPath {
+		t.Errorf("filePath = %q, want %q", filePath, expectedPath)
+	}
+	if format != "json" {
+		t.Errorf("format = %q, want %q", format, "json")
+	}
+}
+
+func TestFindFormulaFileTOML(t *testing.T) {
+	dir := t.TempDir()
+
+	content := "formula = \"triage\"\nversion = 1\ntype = \"expansion\"\n"
+	expectedPath := filepath.Join(dir, "triage.formula.toml")
+	if err := os.WriteFile(expectedPath, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	filePath, format, err := FindFormulaFile("triage", FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("FindFormulaFile() error = %v", err)
+	}
+	if filePath != expectedPath {
+		t.Errorf("filePath = %q, want %q", filePath, expectedPath)
+	}
+	if format != "toml" {
+		t.Errorf("format = %q, want %q", format, "toml")
+	}
+}
+
+func TestFindFormulaFileMissing(t *testing.T) {
+	dir := t.TempDir()
+
+	_, _, err := FindFormulaFile("nonexistent", FormulaSearchPath{dir})
+	if err == nil {
+		t.Fatal("expected error for missing formula, got nil")
+	}
+}

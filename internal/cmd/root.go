@@ -161,6 +161,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newConfigCmd(provider))
 	rootCmd.AddCommand(newMolCmd(provider))
 	rootCmd.AddCommand(newCookCmd(provider))
+	rootCmd.AddCommand(newFormulaCmd(provider))
 
 	return rootCmd
 }
