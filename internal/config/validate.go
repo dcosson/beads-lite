@@ -9,12 +9,13 @@ import (
 // validValues maps known keys to their allowed values.
 // An empty slice means any non-empty string is accepted.
 var validValues = map[string][]string{
-	"defaults.priority": {"critical", "high", "medium", "low", "backlog"},
-	"defaults.type":     {"task", "bug", "feature", "epic", "chore"},
-	"id.prefix":         {},
-	"id.length":         {},
-	"actor":             {},
-	"project.name":      {},
+	"defaults.priority":   {"critical", "high", "medium", "low", "backlog"},
+	"defaults.type":       {"task", "bug", "feature", "epic", "chore"},
+	"id.prefix":           {},
+	"id.length":           {},
+	"actor":               {},
+	"project.name":        {},
+	"hierarchy.max_depth": {},
 }
 
 // Validate checks all values in s for known keys. It returns an error
@@ -41,6 +42,12 @@ func Validate(s Store) error {
 		// Keys with no enumerated values have type-specific checks.
 		switch key {
 		case "id.length":
+			n, err := strconv.Atoi(val)
+			if err != nil || n < 1 {
+				errs = append(errs, fmt.Sprintf(
+					"%s: must be a positive integer, got %q", key, val))
+			}
+		case "hierarchy.max_depth":
 			n, err := strconv.Atoi(val)
 			if err != nil || n < 1 {
 				errs = append(errs, fmt.Sprintf(

@@ -195,6 +195,14 @@ func atomicWriteJSON(path string, data interface{}) error {
 func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (string, error) {
 	if issue.ID != "" {
 		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
+
+		// Enforce hierarchy depth limit for explicit hierarchical IDs.
+		if parentID, _, ok := storage.ParseHierarchicalID(issue.ID); ok {
+			if err := storage.CheckHierarchyDepth(parentID, storage.DefaultMaxHierarchyDepth); err != nil {
+				return "", err
+			}
+		}
+
 		path := fs.issuePath(issue.ID, false)
 
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
@@ -1065,9 +1073,8 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 	}
 
 	// 2. Check hierarchy depth limit
-	if storage.HierarchyDepth(parentID) >= storage.DefaultMaxHierarchyDepth {
-		return "", fmt.Errorf("parent %s at depth %d: %w",
-			parentID, storage.HierarchyDepth(parentID), storage.ErrMaxDepthExceeded)
+	if err := storage.CheckHierarchyDepth(parentID, storage.DefaultMaxHierarchyDepth); err != nil {
+		return "", err
 	}
 
 	// 3. Atomically increment the child counter

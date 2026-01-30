@@ -285,6 +285,20 @@ func HierarchyDepth(id string) int {
 	return strings.Count(id, ".")
 }
 
+// CheckHierarchyDepth verifies that parentID is not already at the maximum
+// hierarchy depth. If adding a child to parentID would exceed maxDepth,
+// it returns ErrMaxDepthExceeded with a descriptive message.
+// For example, with maxDepth=3, a parent "bd-x.1.2.3" (depth 3) is rejected
+// because a child would be at depth 4.
+func CheckHierarchyDepth(parentID string, maxDepth int) error {
+	depth := HierarchyDepth(parentID)
+	if depth >= maxDepth {
+		return fmt.Errorf("cannot add child to %s (depth %d): maximum hierarchy depth is %d: %w",
+			parentID, depth, maxDepth, ErrMaxDepthExceeded)
+	}
+	return nil
+}
+
 // ChildID returns the composite child ID given a parent ID and child number.
 func ChildID(parentID string, childNum int) string {
 	return fmt.Sprintf("%s.%d", parentID, childNum)

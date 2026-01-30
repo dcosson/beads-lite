@@ -22,6 +22,7 @@ func RunContractTests(t *testing.T, factory func() Storage) {
 	t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
 	t.Run("Comments", func(t *testing.T) { testComments(t, factory()) })
 	t.Run("ChildCounters", func(t *testing.T) { testChildCounters(t, factory()) })
+	t.Run("HierarchyDepthLimit", func(t *testing.T) { testHierarchyDepthLimit(t, factory()) })
 }
 
 func testCreate(t *testing.T, s Storage) {
@@ -775,6 +776,45 @@ func testChildCounters(t *testing.T, s Storage) {
 	_, err = s.GetNextChildID(ctx, "nonexistent-id")
 	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("GetNextChildID on non-existent parent: got %v, want ErrNotFound", err)
+	}
+}
+
+func testHierarchyDepthLimit(t *testing.T, s Storage) {
+	ctx := context.Background()
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	// Create a root issue
+	root := &Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+
+	// Build chain: root -> depth 1 -> depth 2 -> depth 3
+	depth1ID, err := s.GetNextChildID(ctx, rootID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 1 failed: %v", err)
+	}
+	s.Create(ctx, &Issue{ID: depth1ID, Title: "Depth 1"})
+
+	depth2ID, err := s.GetNextChildID(ctx, depth1ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 2 failed: %v", err)
+	}
+	s.Create(ctx, &Issue{ID: depth2ID, Title: "Depth 2"})
+
+	depth3ID, err := s.GetNextChildID(ctx, depth2ID)
+	if err != nil {
+		t.Fatalf("GetNextChildID depth 3 failed: %v", err)
+	}
+	s.Create(ctx, &Issue{ID: depth3ID, Title: "Depth 3"})
+
+	// Depth 4 should be rejected
+	_, err = s.GetNextChildID(ctx, depth3ID)
+	if !errors.Is(err, ErrMaxDepthExceeded) {
+		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
 

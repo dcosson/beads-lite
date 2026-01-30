@@ -1,6 +1,9 @@
 package storage
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestIsHierarchicalID(t *testing.T) {
 	tests := []struct {
@@ -97,6 +100,49 @@ func TestParseHierarchicalID(t *testing.T) {
 			}
 			if childNum != tt.wantChild {
 				t.Errorf("ParseHierarchicalID(%q) childNum = %d, want %d", tt.id, childNum, tt.wantChild)
+			}
+		})
+	}
+}
+
+func TestCheckHierarchyDepth(t *testing.T) {
+	tests := []struct {
+		name     string
+		parentID string
+		maxDepth int
+		wantErr  bool
+	}{
+		// Root parent (depth 0) — always allowed
+		{"root_depth0_max3", "bd-a3f8", 3, false},
+		// Depth 1 parent — allowed at max 3
+		{"depth1_max3", "bd-a3f8.1", 3, false},
+		// Depth 2 parent — allowed at max 3
+		{"depth2_max3", "bd-a3f8.1.2", 3, false},
+		// Depth 3 parent — rejected at max 3 (child would be depth 4)
+		{"depth3_max3_rejected", "bd-a3f8.1.2.3", 3, true},
+		// Depth 4 parent — rejected at max 3
+		{"depth4_max3_rejected", "bd-a3f8.1.2.3.4", 3, true},
+		// Custom max depth of 1
+		{"depth0_max1", "bd-a3f8", 1, false},
+		{"depth1_max1_rejected", "bd-a3f8.1", 1, true},
+		// Custom max depth of 5
+		{"depth4_max5", "bd-a3f8.1.2.3.4", 5, false},
+		{"depth5_max5_rejected", "bd-a3f8.1.2.3.4.5", 5, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := CheckHierarchyDepth(tt.parentID, tt.maxDepth)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("CheckHierarchyDepth(%q, %d) = nil, want error", tt.parentID, tt.maxDepth)
+				} else if !errors.Is(err, ErrMaxDepthExceeded) {
+					t.Errorf("CheckHierarchyDepth(%q, %d) = %v, want ErrMaxDepthExceeded", tt.parentID, tt.maxDepth, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("CheckHierarchyDepth(%q, %d) = %v, want nil", tt.parentID, tt.maxDepth, err)
+				}
 			}
 		})
 	}

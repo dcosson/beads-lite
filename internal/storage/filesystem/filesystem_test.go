@@ -1101,6 +1101,46 @@ func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
 	}
 }
 
+// TestCreateExplicitHierarchicalID_MaxDepth verifies that creating an issue
+// with an explicit hierarchical ID that exceeds max depth is rejected.
+func TestCreateExplicitHierarchicalID_MaxDepth(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create root and build a chain to depth 3
+	root := &storage.Issue{Title: "Root"}
+	rootID, err := s.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("Create root failed: %v", err)
+	}
+	createIssueWithID(t, s, rootID+".1", "Depth 1")
+	createIssueWithID(t, s, rootID+".1.1", "Depth 2")
+	createIssueWithID(t, s, rootID+".1.1.1", "Depth 3")
+
+	// Trying to create at depth 4 via explicit ID should fail
+	tooDeep := &storage.Issue{
+		ID:    rootID + ".1.1.1.1",
+		Title: "Too deep",
+	}
+	_, err = s.Create(ctx, tooDeep)
+	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+		t.Errorf("Create at depth 4 with explicit ID: got %v, want ErrMaxDepthExceeded", err)
+	}
+
+	// Creating at depth 3 via explicit ID should succeed
+	okDepth := &storage.Issue{
+		ID:    rootID + ".1.1.2",
+		Title: "OK depth 3",
+	}
+	id, err := s.Create(ctx, okDepth)
+	if err != nil {
+		t.Fatalf("Create at depth 3 with explicit ID failed: %v", err)
+	}
+	if id != rootID+".1.1.2" {
+		t.Errorf("got %q, want %q", id, rootID+".1.1.2")
+	}
+}
+
 // TestDeleteDoesNotReuseChildNumbers verifies that deleting or closing a child
 // issue does not cause its child number to be reused. The child counter must
 // never be decremented; it persists at its last value regardless of deletions.
