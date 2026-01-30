@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -255,6 +256,120 @@ func TestCreateWithParent(t *testing.T) {
 	expectedSecondID := parentID + ".2"
 	if secondChildID != expectedSecondID {
 		t.Errorf("expected second child ID %q, got %q", expectedSecondID, secondChildID)
+	}
+}
+
+func TestCreateWithParentSubChildren(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	// Create parent
+	parentIssue := &storage.Issue{Title: "Parent epic"}
+	parentID, err := store.Create(context.Background(), parentIssue)
+	if err != nil {
+		t.Fatalf("failed to create parent: %v", err)
+	}
+
+	// Create first child via --parent
+	out := app.Out.(*bytes.Buffer)
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Child task", "--parent", parentID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create child failed: %v", err)
+	}
+
+	childID := extractCreatedID(out.String())
+	expectedChildID := parentID + ".1"
+	if childID != expectedChildID {
+		t.Errorf("expected child ID %q, got %q", expectedChildID, childID)
+	}
+
+	// Create grandchild via --parent (child as parent)
+	out.Reset()
+	cmd2 := newCreateCmd(NewTestProvider(app))
+	cmd2.SetArgs([]string{"Grandchild task", "--parent", childID})
+	if err := cmd2.Execute(); err != nil {
+		t.Fatalf("create grandchild failed: %v", err)
+	}
+
+	grandchildID := extractCreatedID(out.String())
+	expectedGrandchildID := childID + ".1"
+	if grandchildID != expectedGrandchildID {
+		t.Errorf("expected grandchild ID %q, got %q", expectedGrandchildID, grandchildID)
+	}
+
+	// Verify the grandchild's parent is the child
+	grandchild, _ := store.Get(context.Background(), grandchildID)
+	if grandchild.Parent != childID {
+		t.Errorf("grandchild parent: expected %q, got %q", childID, grandchild.Parent)
+	}
+
+	// Create second grandchild — should get .2
+	out.Reset()
+	cmd3 := newCreateCmd(NewTestProvider(app))
+	cmd3.SetArgs([]string{"Second grandchild", "--parent", childID})
+	if err := cmd3.Execute(); err != nil {
+		t.Fatalf("create second grandchild failed: %v", err)
+	}
+
+	grandchild2ID := extractCreatedID(out.String())
+	expectedGrandchild2ID := childID + ".2"
+	if grandchild2ID != expectedGrandchild2ID {
+		t.Errorf("expected second grandchild ID %q, got %q", expectedGrandchild2ID, grandchild2ID)
+	}
+
+	// Verify parent's children list has child
+	parent, _ := store.Get(context.Background(), parentID)
+	children := parent.Children()
+	found := false
+	for _, c := range children {
+		if c == childID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("parent should have child %s in children list, got %v", childID, children)
+	}
+
+	// Verify child's children list has both grandchildren
+	child, _ := store.Get(context.Background(), childID)
+	grandchildren := child.Children()
+	if len(grandchildren) != 2 {
+		t.Errorf("expected child to have 2 grandchildren, got %d: %v", len(grandchildren), grandchildren)
+	}
+}
+
+func TestCreateWithParentDepthLimit(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	// Create root
+	rootIssue := &storage.Issue{Title: "Root"}
+	rootID, err := store.Create(context.Background(), rootIssue)
+	if err != nil {
+		t.Fatalf("failed to create root: %v", err)
+	}
+
+	// Build chain to depth 3: root -> .1 -> .1.1 -> .1.1.1
+	currentParent := rootID
+	for depth := 1; depth <= 3; depth++ {
+		out := app.Out.(*bytes.Buffer)
+		out.Reset()
+		cmd := newCreateCmd(NewTestProvider(app))
+		cmd.SetArgs([]string{fmt.Sprintf("Depth %d", depth), "--parent", currentParent})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("create at depth %d failed: %v", depth, err)
+		}
+		currentParent = extractCreatedID(out.String())
+	}
+
+	// Depth 4 should fail
+	out := app.Out.(*bytes.Buffer)
+	out.Reset()
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Too deep", "--parent", currentParent})
+	err = cmd.Execute()
+	if err == nil {
+		t.Error("expected error creating child at depth 4, got nil")
 	}
 }
 
