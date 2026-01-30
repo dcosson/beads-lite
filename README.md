@@ -29,6 +29,109 @@ bd update bd-a1b2 --status in-progress
 bd close bd-a1b2                     # close an issue
 ```
 
+## Feature Parity with Beads
+
+Beads Lite aims to be a drop-in replacement for the core `bd` command interface.
+This table tracks implementation status across major feature areas.
+
+### Config & Setup
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| `bd init` | ✅ | ✅ | |
+| `BEADS_DIR` env var | ✅ | ✅ | |
+| Config path resolution (walk up CWD, git root) | ✅ | ✅ | |
+| `.beads/redirect` files | ✅ | ✅ | |
+| `bd config set/get/list/unset` | ✅ | ✅ | |
+| `bd config validate` | ✅ | ✅ | |
+| Custom status states (`status.custom`) | ✅ | ✅ | |
+| Custom types/priorities | ✅ | ⬜ | |
+
+### Issue Tracking
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| Create / show / update / delete | ✅ | ✅ | |
+| List with filters (status, priority, type, label, assignee) | ✅ | ✅ | |
+| Issue types (task, bug, feature, epic, chore) | ✅ | ✅ | |
+| Priorities (P0-P4) | ✅ | ✅ | |
+| Statuses (open, in_progress, blocked, deferred, closed) | ✅ | ✅ | |
+| Close / reopen | ✅ | ✅ | |
+| Assignees | ✅ | ✅ | |
+| Labels | ✅ | ✅ | |
+| Comments (`bd comments`) | ✅ | ✅ | |
+| Dependencies (10 typed dep kinds) | ✅ | ✅ | |
+| Parent-child hierarchy (dot notation IDs) | ✅ | ✅ | |
+| Search | ✅ | ✅ | |
+| Doctor (consistency checks) | ✅ | ✅ | |
+| Stats | ✅ | ✅ | |
+| Compact (prune old closed issues) | ✅ | ✅ | |
+| Ready / blocked views | ✅ | ✅ | |
+| Batch close with `--continue`/`--suggest-next` | ✅ | ✅ | |
+| `bd edit` (open in `$EDITOR`) | ✅ | ⬜ | |
+| `bd label` management | ✅ | 🟡 | Labels set via `bd update --label` |
+| `bd rename` (rename issue ID) | ✅ | ⬜ | |
+| `bd move` / `bd refile` (move between rigs) | ✅ | ⬜ | |
+| `bd duplicate` / `bd duplicates` | ✅ | ⬜ | |
+| `bd stale` (not updated recently) | ✅ | ⬜ | |
+| `bd lint` (check template sections) | ✅ | ⬜ | |
+| `bd graph` (dependency graph) | ✅ | 🟡 | `internal/graph` pkg exists, no CLI command |
+| Export / import (JSONL) | ✅ | ⬜ | |
+
+> 🟡 **label**: Labels can be set via `bd update --label`, but there's no dedicated `bd label` management command.
+> 🟡 **graph**: The `internal/graph` package implements the dependency graph logic, but no `bd graph` CLI command exposes it yet.
+
+### Molecular Expression of Work (MEOW)
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| Formulas (template definitions) | ✅ | ✅ | `internal/meow/` |
+| `bd formula list` | ✅ | ⬜ | |
+| `bd mol pour` (instantiate formula) | ✅ | ✅ | |
+| `bd mol wisp` (ephemeral instance) | ✅ | ✅ | |
+| `bd mol burn` (cascade delete) | ✅ | ✅ | |
+| `bd mol squash` (compress to digest) | ✅ | ✅ | |
+| `bd mol current` / `progress` / `stale` | ✅ | ✅ | |
+| `bd mol gc` (clean old wisps) | ✅ | ✅ | |
+| `bd mol bond` (combine protos/mols) | ✅ | ⬜ | |
+| `bd mol distill` (extract formula from epic) | ✅ | ⬜ | |
+| `bd cook` (compile formula to proto) | ✅ | ⬜ | Registered in upstream, not in beads-lite CLI |
+
+### Gas Town (Multi-Agent Coordination)
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| `bd agent` (state, heartbeat) | ✅ | ⬜ | |
+| `bd slot` (set, clear, list) | ✅ | ⬜ | Needs KV storage (bl-r2nl) |
+| `bd gate` (async coordination) | ✅ | ⬜ | |
+| `bd swarm` (structured epics) | ✅ | ⬜ | |
+| Seed patrol (formula seeding) | ✅ | ⬜ | |
+| `bd merge-slot` (serialized conflict resolution) | ✅ | ⬜ | |
+| `bd audit` (append-only activity log) | ✅ | ⬜ | |
+| `bd set-state` / `bd state` | ✅ | ⬜ | |
+| `bd mail` | ✅ | ⬜ | Delegates to `gt mail` |
+
+### Routing
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| Issue prefix routing (`routes.json`) | ✅ | ⬜ | Planned (see ROUTING.md) |
+| Town root discovery | ✅ | ⬜ | |
+| Contributor routing (maintainer/contributor workflows) | ✅ | ⬜ | |
+
+### Sync & Integrations
+
+| Feature | beads | beads-lite | Notes |
+|---------|:-----:|:----------:|-------|
+| JSONL sync (`bd sync`) | ✅ | ⬜ | |
+| Daemon (background sync) | ✅ | ⬜ | Not needed (no DB) |
+| Dolt backend (branching, history, diff) | ✅ | ⬜ | Out of scope |
+| Jira / Linear / GitHub integrations | ✅ | ⬜ | |
+| Federation (peer-to-peer sync) | ✅ | ⬜ | |
+| Git merge driver | ✅ | ⬜ | |
+
+**Legend:** ✅ implemented | 🟡 partial | ⬜ not yet
+
 ## Testing
 
 ```bash

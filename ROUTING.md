@@ -20,23 +20,32 @@ The prefix is everything up to and including the first hyphen:
 
 ### Routes File
 
-`routes.jsonl` lives in the town root's `.beads/` directory. One JSON object
-per line mapping prefix to rig path:
+> **Deviation from upstream beads:** Upstream uses `routes.json` (one JSON
+> object per line with `prefix` and `path` fields). Beads-lite uses
+> `routes.json` — a single JSON object with prefix keys grouped under
+> `prefix_routes`. This is easier to read, edit, and validate.
 
-```jsonl
-{"prefix": "hq-", "path": "."}
-{"prefix": "bl-", "path": "crew/misc"}
-{"prefix": "gt-", "path": "crew/max"}
+`routes.json` lives in the town root's `.beads/` directory:
+
+```json
+{
+  "prefix_routes": {
+    "hq-": {"path": "."},
+    "bl-": {"path": "crew/misc"},
+    "gt-": {"path": "crew/max"}
+  }
+}
 ```
 
-- `prefix`: Issue ID prefix including trailing hyphen.
+- Each key under `prefix_routes` is an issue ID prefix (including trailing
+  hyphen).
 - `path`: Relative path from town root to the rig directory (the parent of
   that rig's `.beads/`). `"."` means the town root itself.
 
 ### Town Root
 
 The top-level directory containing all rigs. For beads-lite, discover it by
-walking up from the current `.beads` directory looking for a `.beads/routes.jsonl`
+walking up from the current `.beads` directory looking for a `.beads/routes.json`
 file. If none found, routing is unavailable (not an error — just no routing).
 
 ### Redirect Support
@@ -57,7 +66,7 @@ logic in `config/provider.go`.
 
 ```
 1. Extract prefix from issue ID
-2. Look up prefix in routes.jsonl
+2. Look up prefix in routes.json
    - No routes file or no match → use local store
    - Match resolves to current .beads dir → use local store
 3. Resolve route path to .beads directory:
@@ -105,19 +114,23 @@ returns resolved paths or opened stores.
 ```go
 // Route maps a prefix to a rig path relative to town root.
 type Route struct {
-    Prefix string `json:"prefix"`
-    Path   string `json:"path"`
+    Path string `json:"path"`
+}
+
+// RoutesFile is the on-disk format of .beads/routes.json.
+type RoutesFile struct {
+    PrefixRoutes map[string]Route `json:"prefix_routes"`
 }
 
 // Router resolves issue IDs to the correct storage location.
 type Router struct {
     townRoot    string            // absolute path to town root
     localBeads  string            // absolute path to local .beads dir
-    routes      map[string]Route  // prefix → route
+    routes      map[string]Route  // prefix → route (parsed from prefix_routes)
 }
 
-// New creates a Router by loading routes.jsonl from the given .beads dir.
-// Returns nil Router (not an error) if no routes.jsonl exists.
+// New creates a Router by loading routes.json from the given .beads dir.
+// Returns nil Router (not an error) if no routes.json exists.
 func New(beadsDir string) (*Router, error)
 
 // Resolve returns the Paths for the rig that owns the given issue ID.
@@ -128,8 +141,8 @@ func (r *Router) Resolve(issueID string) (config.Paths, bool, error)
 ```
 
 Key behaviors:
-- `New()` reads `routes.jsonl` from the provided `.beads` dir. Walks up
-  parent directories to find it (the `.beads` that contains `routes.jsonl`
+- `New()` reads `routes.json` from the provided `.beads` dir. Walks up
+  parent directories to find it (the `.beads` that contains `routes.json`
   is the town root's `.beads`). If not found, returns `nil` — caller
   checks for nil and skips routing.
 - `Resolve()` extracts prefix, looks up route, constructs
@@ -137,11 +150,11 @@ Key behaviors:
   follow redirects and get the data dir. Returns whether the result points
   to a remote store.
 
-#### `routes.go` — JSONL parser
+#### `routes.go` — JSON parser
 
 ```go
-// LoadRoutes reads routes.jsonl and returns the route table.
-func LoadRoutes(path string) ([]Route, error)
+// LoadRoutes reads routes.json and returns the prefix→route map.
+func LoadRoutes(path string) (map[string]Route, error)
 
 // ExtractPrefix returns the prefix portion of an issue ID (up to and
 // including the first hyphen). Returns "" if no hyphen found.
@@ -150,14 +163,15 @@ func ExtractPrefix(id string) string
 
 #### `routing_test.go` — Tests
 
-- Parse valid routes.jsonl
+- Parse valid routes.json with prefix_routes
 - Parse empty / missing file
 - ExtractPrefix for various ID formats
 - Resolve local prefix → returns local paths, isRemote=false
 - Resolve remote prefix → returns remote paths, isRemote=true
 - Resolve unknown prefix → returns local paths, isRemote=false
 - Redirect followed on remote target
-- No routes.jsonl → nil Router
+- No routes.json → nil Router
+- Missing `prefix_routes` key → nil Router (not an error)
 
 ### Changes to `internal/config/provider.go`
 
@@ -190,7 +204,7 @@ Add to `App`:
 ```go
 type App struct {
     Storage     storage.Storage
-    Router      *routing.Router  // nil if no routes.jsonl
+    Router      *routing.Router  // nil if no routes.json
     ConfigStore config.Store
     ConfigDir   string
     // ...
@@ -222,15 +236,15 @@ Pass `router` into `App`.
 
 ### Town Root Discovery
 
-The `routing.New(beadsDir)` function needs to find `routes.jsonl`. Strategy:
+The `routing.New(beadsDir)` function needs to find `routes.json`. Strategy:
 
-1. Check `beadsDir/routes.jsonl` — if found, town root = parent of beadsDir
-2. Walk up parent directories looking for `.beads/routes.jsonl`
+1. Check `beadsDir/routes.json` — if found, town root = parent of beadsDir
+2. Walk up parent directories looking for `.beads/routes.json`
 3. Stop at filesystem root
 4. If not found, return nil Router
 
 This works because the town root's `.beads/` is the one that contains
-`routes.jsonl`. A rig's `.beads/` may be nested deeper (e.g.,
+`routes.json`. A rig's `.beads/` may be nested deeper (e.g.,
 `/repo/crew/misc/.beads/`), but the town root's is at `/repo/.beads/`.
 
 ### File Summary
