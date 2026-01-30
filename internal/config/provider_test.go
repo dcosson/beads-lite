@@ -400,7 +400,7 @@ func TestFindGitRoot_NotGitRepo(t *testing.T) {
 
 func TestReadRedirect_NoFile(t *testing.T) {
 	tmpDir := t.TempDir()
-	result, err := readRedirect(tmpDir)
+	result, err := ReadRedirect(tmpDir)
 	if err != nil {
 		t.Fatalf("readRedirect error: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestReadRedirect_EmptyFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmpDir, "redirect"), []byte(""), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := readRedirect(tmpDir)
+	result, err := ReadRedirect(tmpDir)
 	if err != nil {
 		t.Fatalf("readRedirect error: %v", err)
 	}
@@ -429,7 +429,7 @@ func TestReadRedirect_AbsolutePath(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "redirect"), []byte(targetDir+"\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := readRedirect(srcDir)
+	result, err := ReadRedirect(srcDir)
 	if err != nil {
 		t.Fatalf("readRedirect error: %v", err)
 	}
@@ -453,7 +453,7 @@ func TestReadRedirect_RelativePath(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "redirect"), []byte("../target\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := readRedirect(srcDir)
+	result, err := ReadRedirect(srcDir)
 	if err != nil {
 		t.Fatalf("readRedirect error: %v", err)
 	}
@@ -469,7 +469,7 @@ func TestReadRedirect_NonexistentTarget(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "redirect"), []byte("/nonexistent/path\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	_, err := readRedirect(srcDir)
+	_, err := ReadRedirect(srcDir)
 	if err == nil {
 		t.Fatal("readRedirect should error for nonexistent target")
 	}

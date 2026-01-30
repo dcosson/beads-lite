@@ -10,6 +10,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/routing"
 	"beads-lite/internal/storage/filesystem"
 
 	"github.com/spf13/cobra"
@@ -74,6 +75,11 @@ func (p *AppProvider) init() (*App, error) {
 	store := filesystem.New(paths.DataDir, fsOpts...)
 	store.CleanupStaleLocks()
 
+	router, err := routing.New(paths.ConfigDir)
+	if err != nil {
+		return nil, err
+	}
+
 	out := p.Out
 	if out == nil {
 		out = os.Stdout
@@ -85,6 +91,7 @@ func (p *AppProvider) init() (*App, error) {
 
 	return &App{
 		Storage:     store,
+		Router:      router,
 		ConfigStore: configStore,
 		ConfigDir:   paths.ConfigDir,
 		Out:         out,

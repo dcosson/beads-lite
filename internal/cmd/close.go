@@ -37,17 +37,24 @@ Examples:
 			}
 
 			ctx := cmd.Context()
-			store := app.Storage
 			var closed []string
 			var errors []error
 
 			for _, issueID := range args {
+				store, err := app.StorageFor(ctx, issueID)
+				if err != nil {
+					errors = append(errors, fmt.Errorf("routing %s: %w", issueID, err))
+					continue
+				}
 				if err := store.Close(ctx, issueID); err != nil {
 					errors = append(errors, fmt.Errorf("closing %s: %w", issueID, err))
 				} else {
 					closed = append(closed, issueID)
 				}
 			}
+
+			// Use local storage for molecule/dependent lookups
+			store := app.Storage
 
 			// JSON output
 			if app.JSON {

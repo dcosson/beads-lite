@@ -67,11 +67,17 @@ Examples:
 			ctx := cmd.Context()
 			idPrefix := args[0]
 
+			// Route to correct storage
+			store, err := app.StorageFor(ctx, idPrefix)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", idPrefix, err)
+			}
+
 			// Try exact match first
-			issue, err := app.Storage.Get(ctx, idPrefix)
+			issue, err := store.Get(ctx, idPrefix)
 			if err == storage.ErrNotFound {
 				// Try prefix matching
-				issue, err = findByPrefix(app.Storage, ctx, idPrefix)
+				issue, err = findByPrefix(store, ctx, idPrefix)
 			}
 			if err != nil {
 				if err == storage.ErrNotFound {
@@ -87,7 +93,7 @@ Examples:
 			if cascade {
 				// Collect all dependent issues recursively
 				visited := make(map[string]bool)
-				toDelete, err = collectDependentsRecursive(ctx, app.Storage, issue.ID, visited)
+				toDelete, err = collectDependentsRecursive(ctx, store, issue.ID, visited)
 				if err != nil {
 					return fmt.Errorf("collecting dependents: %w", err)
 				}
@@ -123,7 +129,7 @@ Examples:
 
 			// Count all dependencies involving deleted issues, and clean up external ones
 			for _, id := range toDelete {
-				issueToDelete, err := app.Storage.Get(ctx, id)
+				issueToDelete, err := store.Get(ctx, id)
 				if err != nil {
 					continue // Issue might already be processed
 				}
@@ -135,7 +141,7 @@ Examples:
 				for _, dep := range issueToDelete.Dependencies {
 					if !deleteSet[dep.ID] {
 						// Remove this issue from the dependency target's Dependents list
-						if err := app.Storage.RemoveDependency(ctx, id, dep.ID); err != nil {
+						if err := store.RemoveDependency(ctx, id, dep.ID); err != nil {
 							// Ignore errors - issue might already be cleaned up
 						}
 					}
@@ -145,7 +151,7 @@ Examples:
 				for _, dep := range issueToDelete.Dependents {
 					if !deleteSet[dep.ID] {
 						// Remove dependency from the dependent issue
-						if err := app.Storage.RemoveDependency(ctx, dep.ID, id); err != nil {
+						if err := store.RemoveDependency(ctx, dep.ID, id); err != nil {
 							// Ignore errors
 						}
 					}
@@ -154,7 +160,7 @@ Examples:
 
 			// Delete all collected issues
 			for _, id := range toDelete {
-				if err := app.Storage.Delete(ctx, id); err != nil {
+				if err := store.Delete(ctx, id); err != nil {
 					// Continue trying to delete others even if one fails
 				}
 			}

@@ -72,19 +72,25 @@ Examples:
 				return fmt.Errorf("invalid dependency type %q; valid types: blocks, tracks, related, parent-child, discovered-from, until, caused-by, validates, relates-to, supersedes", depType)
 			}
 
+			// Route to correct storage for the issue
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
 			// Resolve IDs (support prefix matching)
-			issue, err := resolveIssue(app.Storage, ctx, issueID)
+			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			dependency, err := resolveIssue(app.Storage, ctx, dependencyID)
+			dependency, err := resolveIssue(store, ctx, dependencyID)
 			if err != nil {
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
 			// Add the typed dependency (parent-child is handled automatically by AddDependency)
-			if err := app.Storage.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
+			if err := store.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
 				if err == storage.ErrCycle {
 					return fmt.Errorf("cannot add dependency: would create a cycle")
 				}
@@ -135,19 +141,25 @@ Examples:
 			issueID := args[0]
 			dependencyID := args[1]
 
+			// Route to correct storage
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
 			// Resolve IDs (support prefix matching)
-			issue, err := resolveIssue(app.Storage, ctx, issueID)
+			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			dependency, err := resolveIssue(app.Storage, ctx, dependencyID)
+			dependency, err := resolveIssue(store, ctx, dependencyID)
 			if err != nil {
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
 			// RemoveDependency handles parent-child cleanup automatically
-			if err := app.Storage.RemoveDependency(ctx, issue.ID, dependency.ID); err != nil {
+			if err := store.RemoveDependency(ctx, issue.ID, dependency.ID); err != nil {
 				return fmt.Errorf("removing dependency: %w", err)
 			}
 
@@ -219,8 +231,14 @@ Examples:
 				typeFilter = &dt
 			}
 
+			// Route to correct storage
+			store, err := app.StorageFor(ctx, issueID)
+			if err != nil {
+				return fmt.Errorf("routing issue %s: %w", issueID, err)
+			}
+
 			// Resolve ID (support prefix matching)
-			issue, err := resolveIssue(app.Storage, ctx, issueID)
+			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
