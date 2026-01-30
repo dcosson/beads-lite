@@ -49,10 +49,10 @@ func New(root string, opts ...Option) *FilesystemStorage {
 
 // Init initializes the storage by creating the required directories.
 func (fs *FilesystemStorage) Init(ctx context.Context) error {
-	if err := os.MkdirAll(filepath.Join(fs.root, "open"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirOpen), 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(fs.root, "closed"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirClosed), 0755); err != nil {
 		return err
 	}
 	// Clean up any stale lock files from previous crashed processes
@@ -63,7 +63,7 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 // CleanupStaleLocks removes lock files that don't have an active flock.
 // This handles the case where a process was killed before it could clean up.
 func (fs *FilesystemStorage) CleanupStaleLocks() {
-	openDir := filepath.Join(fs.root, "open")
+	openDir := filepath.Join(fs.root, storage.DirOpen)
 	entries, err := os.ReadDir(openDir)
 	if err != nil {
 		return // Best effort cleanup
@@ -95,15 +95,15 @@ func (fs *FilesystemStorage) CleanupStaleLocks() {
 }
 
 func (fs *FilesystemStorage) issuePath(id string, closed bool) string {
-	dir := "open"
+	dir := storage.DirOpen
 	if closed {
-		dir = "closed"
+		dir = storage.DirClosed
 	}
 	return filepath.Join(fs.root, dir, id+".json")
 }
 
 func (fs *FilesystemStorage) lockPath(id string) string {
-	return filepath.Join(fs.root, "open", id+".lock")
+	return filepath.Join(fs.root, storage.DirOpen, id+".lock")
 }
 
 // issueLock holds a file lock and its path for cleanup.
@@ -377,7 +377,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	}
 
 	if scanOpen {
-		openIssues, err := fs.listDir(filepath.Join(fs.root, "open"), filter)
+		openIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirOpen), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -385,7 +385,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	}
 
 	if scanClosed {
-		closedIssues, err := fs.listDir(filepath.Join(fs.root, "closed"), filter)
+		closedIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirClosed), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -763,7 +763,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	allIssues := make(map[string]*storage.Issue)
 
 	// Scan open/ directory
-	openEntries, err := os.ReadDir(filepath.Join(fs.root, "open"))
+	openEntries, err := os.ReadDir(filepath.Join(fs.root, storage.DirOpen))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -774,9 +774,9 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 
 		// Check for orphaned temp files
 		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: open/%s", name))
+			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", storage.DirOpen, name))
 			if fix {
-				os.Remove(filepath.Join(fs.root, "open", name))
+				os.Remove(filepath.Join(fs.root, storage.DirOpen, name))
 			}
 			continue
 		}
@@ -784,11 +784,11 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		// Check for orphaned lock files
 		if ext == ".lock" {
 			id := name[:len(name)-5]
-			jsonPath := filepath.Join(fs.root, "open", id+".json")
+			jsonPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
 			if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
-				problems = append(problems, fmt.Sprintf("orphaned lock file: open/%s", name))
+				problems = append(problems, fmt.Sprintf("orphaned lock file: %s/%s", storage.DirOpen, name))
 				if fix {
-					os.Remove(filepath.Join(fs.root, "open", name))
+					os.Remove(filepath.Join(fs.root, storage.DirOpen, name))
 				}
 			}
 			continue
@@ -799,16 +799,16 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		}
 
 		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, "open", name)
+		path := filepath.Join(fs.root, storage.DirOpen, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: open/%s: %v", name, err))
+			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", storage.DirOpen, name, err))
 			continue
 		}
 
 		var issue storage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: open/%s: %v", name, err))
+			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", storage.DirOpen, name, err))
 			continue
 		}
 
@@ -817,7 +817,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	}
 
 	// Scan closed/ directory
-	closedEntries, err := os.ReadDir(filepath.Join(fs.root, "closed"))
+	closedEntries, err := os.ReadDir(filepath.Join(fs.root, storage.DirClosed))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -828,9 +828,9 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 
 		// Check for orphaned temp files
 		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: closed/%s", name))
+			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", storage.DirClosed, name))
 			if fix {
-				os.Remove(filepath.Join(fs.root, "closed", name))
+				os.Remove(filepath.Join(fs.root, storage.DirClosed, name))
 			}
 			continue
 		}
@@ -840,16 +840,16 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		}
 
 		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, "closed", name)
+		path := filepath.Join(fs.root, storage.DirClosed, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: closed/%s: %v", name, err))
+			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", storage.DirClosed, name, err))
 			continue
 		}
 
 		var issue storage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: closed/%s: %v", name, err))
+			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", storage.DirClosed, name, err))
 			continue
 		}
 
@@ -864,20 +864,20 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	for id := range openIssues {
 		if closedIssue, exists := closedIssues[id]; exists {
 			openIssue := openIssues[id]
-			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both open/ and closed/", id))
+			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, storage.DirOpen, storage.DirClosed))
 			if fix {
 				// Prefer the version with Status=closed if in closed/, otherwise keep the newer one
 				if closedIssue.Status == storage.StatusClosed {
 					// Remove from open/
-					os.Remove(filepath.Join(fs.root, "open", id+".json"))
+					os.Remove(filepath.Join(fs.root, storage.DirOpen, id+".json"))
 					allIssues[id] = closedIssue
 				} else if openIssue.Status == storage.StatusClosed {
 					// Remove from closed/
-					os.Remove(filepath.Join(fs.root, "closed", id+".json"))
+					os.Remove(filepath.Join(fs.root, storage.DirClosed, id+".json"))
 					allIssues[id] = openIssue
 				} else {
 					// Both have non-closed status, keep the one in open/ and remove from closed/
-					os.Remove(filepath.Join(fs.root, "closed", id+".json"))
+					os.Remove(filepath.Join(fs.root, storage.DirClosed, id+".json"))
 					allIssues[id] = openIssue
 				}
 			}
@@ -890,11 +890,11 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 			continue // Already handled above
 		}
 		if issue.Status == storage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in open/", id))
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in %s/", id, storage.DirOpen))
 			if fix {
 				// Move to closed/
-				openPath := filepath.Join(fs.root, "open", id+".json")
-				closedPath := filepath.Join(fs.root, "closed", id+".json")
+				openPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
+				closedPath := filepath.Join(fs.root, storage.DirClosed, id+".json")
 				if err := atomicWriteJSON(closedPath, issue); err == nil {
 					os.Remove(openPath)
 				}
@@ -907,11 +907,11 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 			continue // Already handled above
 		}
 		if issue.Status != storage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in closed/", id, issue.Status))
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, issue.Status, storage.DirClosed))
 			if fix {
 				// Move to open/
-				closedPath := filepath.Join(fs.root, "closed", id+".json")
-				openPath := filepath.Join(fs.root, "open", id+".json")
+				closedPath := filepath.Join(fs.root, storage.DirClosed, id+".json")
+				openPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
 				if err := atomicWriteJSON(openPath, issue); err == nil {
 					os.Remove(closedPath)
 				}

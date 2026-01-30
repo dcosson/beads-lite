@@ -15,6 +15,17 @@ import (
 // allowed in hierarchical child IDs (e.g., bd-a3f8.1.2.3 = depth 3).
 const DefaultMaxHierarchyDepth = 3
 
+// Directory names used by filesystem storage within the project data dir.
+const (
+	DirOpen    = "open"
+	DirClosed  = "closed"
+	DirDeleted = "deleted"
+)
+
+// ReservedDirs lists all directory names used by issue storage.
+// Other storage systems (e.g., kvstorage) should not use these names.
+var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted}
+
 // DependencyType represents the type of relationship between two issues.
 type DependencyType string
 
