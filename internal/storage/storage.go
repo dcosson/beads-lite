@@ -69,6 +69,7 @@ type Issue struct {
 
 	Labels    []string  `json:"labels,omitempty"`
 	Assignee  string    `json:"assignee,omitempty"`
+	Ephemeral bool      `json:"ephemeral,omitempty"` // If true, not exported to JSONL
 	Comments  []Comment `json:"comments,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
