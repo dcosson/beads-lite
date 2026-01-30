@@ -193,6 +193,7 @@ Examples:
 				return nil
 			}
 
+			fmt.Fprintf(app.Out, "Molecule: %s (%s)\n", result.RootID, result.Title)
 			for _, s := range result.Steps {
 				assignee := ""
 				if s.Assignee != "" {
@@ -200,6 +201,8 @@ Examples:
 				}
 				fmt.Fprintf(app.Out, "  [%s] %s: %s%s\n", s.Status, s.ID, s.Title, assignee)
 			}
+			fmt.Fprintf(app.Out, "Progress: %d/%d (%.0f%%)\n",
+				result.Progress.Completed, result.Progress.Total, result.Progress.Percent)
 			return nil
 		},
 	}
@@ -238,13 +241,11 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Progress: %d/%d (%.0f%%)\n", result.Complete, result.Total, result.Percent)
-			if result.Rate != "" {
-				fmt.Fprintf(app.Out, "  Rate: %s\n", result.Rate)
-			}
-			if result.ETA != "" {
-				fmt.Fprintf(app.Out, "  ETA:  %s\n", result.ETA)
-			}
+			fmt.Fprintf(app.Out, "Progress: %d/%d (%.0f%%)\n", result.Completed, result.Total, result.Percent)
+			fmt.Fprintf(app.Out, "  In Progress: %d\n", result.InProgress)
+			fmt.Fprintf(app.Out, "  Ready:       %d\n", result.Ready)
+			fmt.Fprintf(app.Out, "  Blocked:     %d\n", result.Blocked)
+			fmt.Fprintf(app.Out, "  Pending:     %d\n", result.Pending)
 			return nil
 		},
 	}
