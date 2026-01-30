@@ -89,6 +89,14 @@ Examples:
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
+			// Reject adding dependencies on tombstoned issues
+			if issue.Status == storage.StatusTombstone {
+				return fmt.Errorf("cannot add dependency: issue %s is tombstoned", issue.ID)
+			}
+			if dependency.Status == storage.StatusTombstone {
+				return fmt.Errorf("cannot add dependency on tombstoned issue %s", dependency.ID)
+			}
+
 			// Add the typed dependency (parent-child is handled automatically by AddDependency)
 			if err := store.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
 				if err == storage.ErrCycle {
@@ -434,6 +442,8 @@ func statusIndicator(status storage.Status) string {
 		return "●"
 	case storage.StatusBlocked:
 		return "✗"
+	case storage.StatusTombstone:
+		return "†"
 	default:
 		return "○"
 	}

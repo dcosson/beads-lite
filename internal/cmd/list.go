@@ -63,11 +63,18 @@ Examples:
 				s := storage.StatusClosed
 				filter.Status = &s
 			} else if status != "" {
-				s, err := parseStatus(status)
-				if err != nil {
-					return err
+				// Allow tombstone as a valid filter for list (even though
+				// update rejects it — listing tombstones is an admin query)
+				if strings.ToLower(status) == "tombstone" {
+					s := storage.StatusTombstone
+					filter.Status = &s
+				} else {
+					s, err := parseStatus(status)
+					if err != nil {
+						return err
+					}
+					filter.Status = &s
 				}
-				filter.Status = &s
 			} else {
 				// Default: list open issues
 				s := storage.StatusOpen

@@ -78,8 +78,16 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 				}
 			}
 
+			// Count tombstoned issues
+			tombstoneStatus := storage.StatusTombstone
+			tombstones, err := app.Storage.List(ctx, &storage.ListFilter{Status: &tombstoneStatus})
+			if err != nil {
+				return fmt.Errorf("listing tombstoned issues: %w", err)
+			}
+			summary.TombstoneIssues = len(tombstones)
+
 			summary.ClosedIssues = len(closedIssues)
-			summary.TotalIssues = len(openIssues) + summary.ClosedIssues
+			summary.TotalIssues = len(openIssues) + summary.ClosedIssues + summary.TombstoneIssues
 
 			// Calculate average lead time (simplified - would need closed_at tracking)
 			// For now, just use a placeholder calculation

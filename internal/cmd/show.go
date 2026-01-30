@@ -78,7 +78,11 @@ func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	}
 
 	// Header: ID and Title with status
-	fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
+	if issue.Status == storage.StatusTombstone {
+		fmt.Fprintf(app.Out, "%s: %s [TOMBSTONE]\n", issue.ID, issue.Title)
+	} else {
+		fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
+	}
 	fmt.Fprintln(app.Out, strings.Repeat("-", len(issue.ID)+len(issue.Title)+2))
 
 	// Basic metadata
@@ -99,6 +103,18 @@ func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	fmt.Fprintf(app.Out, "Updated:  %s\n", issue.UpdatedAt.Format("2006-01-02 15:04:05"))
 	if issue.ClosedAt != nil {
 		fmt.Fprintf(app.Out, "Closed:   %s\n", issue.ClosedAt.Format("2006-01-02 15:04:05"))
+	}
+	if issue.DeletedAt != nil {
+		fmt.Fprintf(app.Out, "Deleted:  %s\n", issue.DeletedAt.Format("2006-01-02 15:04:05"))
+		if issue.DeletedBy != "" {
+			fmt.Fprintf(app.Out, "Deleted By: %s\n", issue.DeletedBy)
+		}
+		if issue.DeleteReason != "" {
+			fmt.Fprintf(app.Out, "Reason:   %s\n", issue.DeleteReason)
+		}
+		if issue.OriginalType != "" {
+			fmt.Fprintf(app.Out, "Original Type: %s\n", issue.OriginalType)
+		}
 	}
 
 	// Hierarchy
