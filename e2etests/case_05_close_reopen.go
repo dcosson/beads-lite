@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 06: Close and reopen lifecycle.
+// 05: Close and reopen lifecycle.
 func caseCloseReopen(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
@@ -31,7 +31,7 @@ func caseCloseReopen(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	section(&out, "show closed issue", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Verify in closed list
-	result, err = mustRun(r, sandbox, "list", "--closed", "--json")
+	result, err = mustRun(r, sandbox, "list", "--status", "closed", "--json")
 	if err != nil {
 		return "", err
 	}
