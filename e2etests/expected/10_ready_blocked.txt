@@ -1,0 +1,73 @@
+=== ready issues ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Blocker task",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Independent task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== blocked issues ===
+[
+  {
+    "blocked_by": [
+      "ISSUE_1"
+    ],
+    "blocked_by_count": 1,
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "priority": 2,
+    "status": "open",
+    "title": "Blocked task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== ready after closing blocker ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Blocked task",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Independent task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== blocked after closing blocker ===
+[]
+
