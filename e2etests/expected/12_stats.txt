@@ -1,0 +1,17 @@
+=== stats ===
+{
+  "summary": {
+    "average_lead_time_hours": "FLOAT",
+    "blocked_issues": 0,
+    "closed_issues": 1,
+    "deferred_issues": 0,
+    "epics_eligible_for_closure": 0,
+    "in_progress_issues": 1,
+    "open_issues": 2,
+    "pinned_issues": 0,
+    "ready_issues": 2,
+    "tombstone_issues": 0,
+    "total_issues": 4
+  }
+}
+
