@@ -1,0 +1,134 @@
+=== create basic task ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_1",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Fix login bug",
+  "updated_at": "TIMESTAMP"
+}
+
+=== show the created issue ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix login bug",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list all issues ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix login bug",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== create dependency target ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_2",
+  "issue_type": "task",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Dependency target",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create parent issue ===
+{
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "id": "ISSUE_3",
+  "issue_type": "epic",
+  "owner": "dcosson@gmail.com",
+  "priority": 2,
+  "status": "open",
+  "title": "Parent issue",
+  "updated_at": "TIMESTAMP"
+}
+
+=== create with all flags ===
+{
+  "assignee": "alice",
+  "created_at": "TIMESTAMP",
+  "created_by": "Danny Cosson",
+  "description": "A detailed description",
+  "id": "ISSUE_4",
+  "issue_type": "feature",
+  "owner": "dcosson@gmail.com",
+  "priority": 1,
+  "status": "open",
+  "title": "Full featured issue",
+  "updated_at": "TIMESTAMP"
+}
+
+=== show issue created with flags ===
+[
+  {
+    "assignee": "alice",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_2",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Dependency target",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_3",
+        "issue_type": "epic",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Parent issue",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "description": "A detailed description",
+    "id": "ISSUE_4",
+    "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_3",
+    "priority": 1,
+    "status": "open",
+    "title": "Full featured issue",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
