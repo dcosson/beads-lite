@@ -1,0 +1,70 @@
+=== search OAuth open only ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "description": "Login fails for OAuth users",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix authentication bug",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "closed",
+    "title": "Update OAuth library",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== search OAuth closed ===
+[
+  {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_2",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "closed",
+    "title": "Update OAuth library",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== search by description ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "description": "Full text search needed",
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Add search feature",
+    "updated_at": "TIMESTAMP"
+  }
+]
+

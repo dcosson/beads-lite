@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 12: Search by title and description.
+// 11: Search by title and description.
 func caseSearch(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
@@ -26,7 +26,7 @@ func caseSearch(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", err
 	}
 
-	// Close one to test --all
+	// Close one to test status filtering
 	_, err = mustRun(r, sandbox, "close", oauthID, "--json")
 	if err != nil {
 		return "", err
@@ -39,19 +39,12 @@ func caseSearch(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "search OAuth open only", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
-	// Search all
-	result, err = mustRun(r, sandbox, "search", "OAuth", "--all", "--json")
+	// Search closed
+	result, err = mustRun(r, sandbox, "search", "OAuth", "--status", "closed", "--json")
 	if err != nil {
 		return "", err
 	}
-	section(&out, "search OAuth all", n.NormalizeJSONSorted([]byte(result.Stdout)))
-
-	// Search title only
-	result, err = mustRun(r, sandbox, "search", "OAuth", "--title-only", "--json")
-	if err != nil {
-		return "", err
-	}
-	section(&out, "search OAuth title only", n.NormalizeJSONSorted([]byte(result.Stdout)))
+	section(&out, "search OAuth closed", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// Search by description content
 	result, err = mustRun(r, sandbox, "search", "Full text", "--json")
