@@ -1,0 +1,67 @@
+=== add first comment ===
+{
+  "author": "Danny Cosson",
+  "created_at": "TIMESTAMP",
+  "id": 1,
+  "issue_id": "ISSUE_1",
+  "text": "First comment"
+}
+
+=== add second comment ===
+{
+  "author": "Danny Cosson",
+  "created_at": "TIMESTAMP",
+  "id": 2,
+  "issue_id": "ISSUE_1",
+  "text": "Second comment"
+}
+
+=== list comments ===
+[
+  {
+    "author": "Danny Cosson",
+    "created_at": "TIMESTAMP",
+    "id": 1,
+    "issue_id": "ISSUE_1",
+    "text": "First comment"
+  },
+  {
+    "author": "Danny Cosson",
+    "created_at": "TIMESTAMP",
+    "id": 2,
+    "issue_id": "ISSUE_1",
+    "text": "Second comment"
+  }
+]
+
+=== show issue with comments ===
+[
+  {
+    "comments": [
+      {
+        "author": "Danny Cosson",
+        "created_at": "TIMESTAMP",
+        "id": 1,
+        "issue_id": "ISSUE_1",
+        "text": "First comment"
+      },
+      {
+        "author": "Danny Cosson",
+        "created_at": "TIMESTAMP",
+        "id": 2,
+        "issue_id": "ISSUE_1",
+        "text": "Second comment"
+      }
+    ],
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Commentable task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
