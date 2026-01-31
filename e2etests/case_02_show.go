@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 03: Show a fully populated issue (with comments, deps, parent, children).
+// 02: Show a fully populated issue (with comments, deps, parent, children).
 func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
@@ -57,7 +57,7 @@ func caseShow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 
 	// Add comment
-	_, err = mustRun(r, sandbox, "comment", "add", mainID, "This is a comment", "--json")
+	_, err = mustRun(r, sandbox, "comments", "add", mainID, "This is a comment", "--json")
 	if err != nil {
 		return "", err
 	}

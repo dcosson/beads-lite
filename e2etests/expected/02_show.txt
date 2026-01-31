@@ -1,0 +1,70 @@
+=== show fully populated issue ===
+[
+  {
+    "assignee": "bob",
+    "comments": [
+      {
+        "author": "Danny Cosson",
+        "created_at": "TIMESTAMP",
+        "id": 1,
+        "issue_id": "ISSUE_1",
+        "text": "This is a comment"
+      }
+    ],
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_2",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Dependency task",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_3",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Parent task",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_1.1",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Child task",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "description": "Main task description",
+    "id": "ISSUE_1",
+    "issue_type": "feature",
+    "labels": [
+      "important"
+    ],
+    "owner": "dcosson@gmail.com",
+    "parent": "ISSUE_3",
+    "priority": 1,
+    "status": "open",
+    "title": "Main task",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
