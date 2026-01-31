@@ -41,11 +41,16 @@ make test
 
 ## Generating Expected Output
 
-Standard test cases (01-15) use the **reference beads binary** to generate golden output:
+Standard test cases (01-15) use the **reference beads binary** — the original `beads` CLI (not beads-lite) — to generate golden output. This ensures beads-lite produces output identical to the original implementation.
+
+The `BD_REF_CMD` environment variable specifies the path to the reference binary. If unset, the Makefile assumes `beads` is available in your `PATH`.
 
 ```bash
-# Reference binary must be in PATH or set via BD_REF_CMD
+# Uses BD_REF_CMD if set, otherwise looks for 'beads' in PATH
 make update-e2e
+
+# Or explicitly specify the reference binary:
+BD_REF_CMD=/path/to/beads make update-e2e
 ```
 
 Beads-lite-specific test cases (e.g., 16_meow for MEOW commands) use a dedicated generator since the reference binary doesn't have these commands:
