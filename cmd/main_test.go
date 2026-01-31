@@ -279,8 +279,8 @@ func TestWorkflow(t *testing.T) {
 		t.Error("reopen failed")
 	}
 
-	// Delete the issue
-	_, _, exitCode = runBd(t, dir, "delete", "--force", issueID)
+	// Delete the issue (hard delete for permanent removal)
+	_, _, exitCode = runBd(t, dir, "delete", "--force", "--hard", issueID)
 	if exitCode != 0 {
 		t.Error("delete failed")
 	}
