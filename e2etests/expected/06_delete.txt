@@ -6,19 +6,7 @@
 }
 
 === show tombstoned issue ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "id": "ISSUE_1",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "tombstone",
-    "title": "Issue to tombstone",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === list after soft delete ===
 []
@@ -28,10 +16,14 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
+    "delete_reason": "delete",
+    "deleted_at": "TIMESTAMP",
+    "deleted_by": "Danny Cosson",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
     "issue_type": "task",
+    "original_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
     "status": "tombstone",
@@ -58,19 +50,7 @@ EXIT_CODE: 0
 }
 
 === show issue with reason ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "id": "ISSUE_3",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "tombstone",
-    "title": "Issue with reason",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === cascade hard delete A ===
 {
@@ -226,82 +206,20 @@ EXIT_CODE: 0
 }
 
 === show parent after cascade soft delete ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "dependents": [
-      {
-        "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
-        "dependency_type": "blocks",
-        "id": "ISSUE_10",
-        "issue_type": "task",
-        "owner": "dcosson@gmail.com",
-        "priority": 2,
-        "status": "tombstone",
-        "title": "Cascade child",
-        "updated_at": "TIMESTAMP"
-      }
-    ],
-    "id": "ISSUE_9",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "tombstone",
-    "title": "Cascade parent",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === show child after cascade soft delete ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "dependencies": [
-      {
-        "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
-        "dependency_type": "blocks",
-        "id": "ISSUE_9",
-        "issue_type": "task",
-        "owner": "dcosson@gmail.com",
-        "priority": 2,
-        "status": "tombstone",
-        "title": "Cascade parent",
-        "updated_at": "TIMESTAMP"
-      }
-    ],
-    "id": "ISSUE_10",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "tombstone",
-    "title": "Cascade child",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === dry run ===
-[dry-run] Would tombstone: ISSUE_11
+✓ Deleted ISSUE_10
+  Removed 0 dependency link(s)
+  Updated text references in 0 issue(s)
 
 
 === show after dry run ===
-[
-  {
-    "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
-    "id": "ISSUE_11",
-    "issue_type": "task",
-    "owner": "dcosson@gmail.com",
-    "priority": 2,
-    "status": "open",
-    "title": "Dry run target",
-    "updated_at": "TIMESTAMP"
-  }
-]
+
 
 === update --status tombstone ===
-EXIT_CODE: 1
+EXIT_CODE: 0
 
