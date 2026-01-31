@@ -13,23 +13,21 @@ type TestCase struct {
 
 // testCases is the ordered registry of all e2e test cases.
 var testCases = []TestCase{
-	{"01_create_basic", caseCreateBasic},
-	{"02_create_with_flags", caseCreateWithFlags},
-	{"03_show", caseShow},
-	{"04_update", caseUpdate},
-	{"05_list", caseList},
-	{"06_close_reopen", caseCloseReopen},
-	{"07_delete", caseDelete},
-	{"08_deps", caseDeps},
-	{"09_parent_children", caseParentChildren},
-	{"10_comment", caseComment},
-	{"11_ready_blocked", caseReadyBlocked},
-	{"12_search", caseSearch},
-	{"13_stats", caseStats},
-	{"14_config", caseConfig},
-	{"15_dot_notation_ids", caseDotNotationIDs},
-	{"16_meow", caseMeow},
-	{"17_delete_tombstone", caseDeleteTombstone},
+	{"01_create", caseCreate},
+	{"02_show", caseShow},
+	{"03_update", caseUpdate},
+	{"04_list", caseList},
+	{"05_close_reopen", caseCloseReopen},
+	{"06_delete", caseDelete},
+	{"07_deps", caseDeps},
+	{"08_parent_children", caseParentChildren},
+	{"09_comment", caseComment},
+	{"10_ready_blocked", caseReadyBlocked},
+	{"11_search", caseSearch},
+	{"12_stats", caseStats},
+	{"13_config", caseConfig},
+	{"14_dot_notation_ids", caseDotNotationIDs},
+	{"15_meow", caseMeow},
 }
 
 // section writes a section header and normalized JSON content to the builder.

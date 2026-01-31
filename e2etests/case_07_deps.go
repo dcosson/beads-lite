@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 08: Dependency lifecycle (add, list, remove, verify symmetry).
+// 07: Dependency lifecycle (add, list, remove, verify symmetry).
 func caseDeps(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

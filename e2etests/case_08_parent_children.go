@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 09: Parent/children lifecycle.
+// 08: Parent/children lifecycle.
 func caseParentChildren(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 13: Stats with issues in various states.
+// 12: Stats with issues in various states.
 func caseStats(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

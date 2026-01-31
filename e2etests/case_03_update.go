@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 04: Update all fields and verify via show.
+// 03: Update all fields and verify via show.
 func caseUpdate(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

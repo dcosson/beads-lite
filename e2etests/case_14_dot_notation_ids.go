@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 15: Dot-notation hierarchical child ID lifecycle.
+// 14: Dot-notation hierarchical child ID lifecycle.
 func caseDotNotationIDs(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

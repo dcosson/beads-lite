@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 11: Ready and blocked queries affected by dependencies.
+// 10: Ready and blocked queries affected by dependencies.
 func caseReadyBlocked(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

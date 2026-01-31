@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 14: Config lifecycle — set, get, list, unset, validate.
+// 13: Config lifecycle — set, get, list, unset, validate.
 func caseConfig(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

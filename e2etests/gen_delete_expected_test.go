@@ -6,15 +6,18 @@ import (
 	"testing"
 )
 
-var genTombstone = flag.Bool("gen-tombstone", false, "generate expected output for tombstone test")
+var genDelete = flag.Bool("gen-delete", false, "generate expected output for delete test")
 
-// TestGenTombstoneExpected generates the expected output file for the
-// tombstone e2e test case. Run with:
+// TestGenDeleteExpected generates the expected output file for the delete e2e
+// test case. This is separate from the standard -update flow because the
+// delete test includes tombstone behavior that is beads-lite-specific.
 //
-//	BD_CMD=/path/to/bd go test ./e2etests/ -run TestGenTombstoneExpected -gen-tombstone
-func TestGenTombstoneExpected(t *testing.T) {
-	if !*genTombstone {
-		t.Skip("run with -gen-tombstone to generate expected output")
+// Run with:
+//
+//	BD_CMD=./bd go test ./e2etests/ -run TestGenDeleteExpected -gen-delete
+func TestGenDeleteExpected(t *testing.T) {
+	if !*genDelete {
+		t.Skip("run with -gen-delete to generate expected output")
 	}
 
 	bdCmd := os.Getenv("BD_CMD")
@@ -30,7 +33,7 @@ func TestGenTombstoneExpected(t *testing.T) {
 	defer runner.TeardownSandbox(sandbox)
 
 	norm := NewNormalizer()
-	actual, err := caseDeleteTombstone(runner, norm, sandbox)
+	actual, err := caseDelete(runner, norm, sandbox)
 	if err != nil {
 		t.Fatalf("test case failed: %v", err)
 	}
@@ -38,8 +41,8 @@ func TestGenTombstoneExpected(t *testing.T) {
 	if err := os.MkdirAll("expected", 0755); err != nil {
 		t.Fatalf("failed to create expected dir: %v", err)
 	}
-	if err := os.WriteFile("expected/17_delete_tombstone.txt", []byte(actual), 0644); err != nil {
+	if err := os.WriteFile("expected/06_delete.txt", []byte(actual), 0644); err != nil {
 		t.Fatalf("failed to write expected file: %v", err)
 	}
-	t.Logf("updated expected/17_delete_tombstone.txt")
+	t.Logf("updated expected/06_delete.txt")
 }

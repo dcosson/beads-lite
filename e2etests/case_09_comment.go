@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 10: Comments add and list.
+// 09: Comments add and list.
 func caseComment(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

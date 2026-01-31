@@ -30,7 +30,7 @@ func TestGenerateMeowExpected(t *testing.T) {
 		t.Fatalf("caseMeow failed: %v", err)
 	}
 
-	expectedFile := filepath.Join("expected", "16_meow.txt")
+	expectedFile := filepath.Join("expected", "15_meow.txt")
 	if err := os.MkdirAll("expected", 0755); err != nil {
 		t.Fatalf("mkdir expected: %v", err)
 	}

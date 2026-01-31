@@ -2,7 +2,7 @@ package e2etests
 
 import "strings"
 
-// 05: List with various filters.
+// 04: List with various filters.
 func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
