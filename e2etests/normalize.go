@@ -153,6 +153,18 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 		return result
 
 	case []interface{}:
+		// Sort arrays of objects by "title" for deterministic ordering.
+		// Sort BEFORE normalization so IDs are encountered in deterministic order.
+		sort.SliceStable(val, func(i, j int) bool {
+			mi, oki := val[i].(map[string]interface{})
+			mj, okj := val[j].(map[string]interface{})
+			if !oki || !okj {
+				return false
+			}
+			ti, _ := mi["title"].(string)
+			tj, _ := mj["title"].(string)
+			return ti < tj
+		})
 		result := make([]interface{}, len(val))
 		for i, v := range val {
 			result[i] = n.walkAndNormalize(v)
