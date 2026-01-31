@@ -22,8 +22,8 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", err
 	}
 
-	// Delete the second
-	result, err = mustRun(r, sandbox, "delete", deleteID, "--force", "--json")
+	// Delete the second (hard delete to permanently remove)
+	result, err = mustRun(r, sandbox, "delete", deleteID, "--force", "--hard", "--json")
 	if err != nil {
 		return "", err
 	}
@@ -155,8 +155,8 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "show E before cascade (depends on A)", n.NormalizeJSON([]byte(result.Stdout)))
 
-	// Cascade delete A
-	result, err = mustRun(r, sandbox, "delete", idA, "--cascade", "--force", "--json")
+	// Cascade delete A (hard delete for permanent removal)
+	result, err = mustRun(r, sandbox, "delete", idA, "--cascade", "--force", "--hard", "--json")
 	if err != nil {
 		return "", err
 	}
