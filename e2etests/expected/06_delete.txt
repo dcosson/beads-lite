@@ -1,0 +1,307 @@
+=== soft delete ===
+{
+  "deleted": "ISSUE_1",
+  "dependencies_removed": 0,
+  "references_updated": 0
+}
+
+=== show tombstoned issue ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "tombstone",
+    "title": "Issue to tombstone",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list after soft delete ===
+[]
+
+=== list tombstones ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "tombstone",
+    "title": "Issue to tombstone",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== hard delete ===
+{
+  "deleted": "ISSUE_2",
+  "dependencies_removed": 0,
+  "references_updated": 0
+}
+
+=== show hard-deleted issue ===
+EXIT_CODE: 0
+
+=== delete with reason ===
+{
+  "deleted": "ISSUE_3",
+  "dependencies_removed": 0,
+  "references_updated": 0
+}
+
+=== show issue with reason ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_3",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "tombstone",
+    "title": "Issue with reason",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== cascade hard delete A ===
+{
+  "deleted": [
+    "ISSUE_4"
+  ],
+  "deleted_count": 3,
+  "dependencies_removed": 4,
+  "events_removed": 7,
+  "labels_removed": 0,
+  "orphaned_issues": null,
+  "references_updated": 0
+}
+
+=== show A after cascade ===
+
+
+=== show E after cascade ===
+
+
+=== show F after cascade ===
+
+
+=== show B after cascade (still exists) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_5",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Issue C",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_6",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show G after cascade (still exists) ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_7",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue G",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== list after cascade ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_5",
+        "issue_id": "ISSUE_6",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_6",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue B",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 2,
+    "id": "ISSUE_5",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue C",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "depends_on_id": "ISSUE_5",
+        "issue_id": "ISSUE_8",
+        "type": "blocks"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "id": "ISSUE_8",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue D",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependency_count": 0,
+    "dependent_count": 0,
+    "id": "ISSUE_7",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Issue G",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== cascade soft delete ===
+{
+  "deleted": [
+    "ISSUE_9"
+  ],
+  "deleted_count": 2,
+  "dependencies_removed": 1,
+  "events_removed": 3,
+  "labels_removed": 0,
+  "orphaned_issues": null,
+  "references_updated": 0
+}
+
+=== show parent after cascade soft delete ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_10",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "tombstone",
+        "title": "Cascade child",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_9",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "tombstone",
+    "title": "Cascade parent",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show child after cascade soft delete ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "Danny Cosson",
+        "dependency_type": "blocks",
+        "id": "ISSUE_9",
+        "issue_type": "task",
+        "owner": "dcosson@gmail.com",
+        "priority": 2,
+        "status": "tombstone",
+        "title": "Cascade parent",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_10",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "tombstone",
+    "title": "Cascade child",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== dry run ===
+[dry-run] Would tombstone: ISSUE_11
+
+
+=== show after dry run ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_11",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Dry run target",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update --status tombstone ===
+EXIT_CODE: 1
+
