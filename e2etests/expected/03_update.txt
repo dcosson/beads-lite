@@ -1,0 +1,158 @@
+=== update title ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update description ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update priority ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update type ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "open",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update status ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in_progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== add labels ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in_progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== remove label ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in_progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== update assignee ===
+[
+  {
+    "assignee": "charlie",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in_progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show after all updates ===
+[
+  {
+    "assignee": "charlie",
+    "created_at": "TIMESTAMP",
+    "created_by": "Danny Cosson",
+    "description": "New description",
+    "id": "ISSUE_1",
+    "issue_type": "bug",
+    "labels": [
+      "v2"
+    ],
+    "owner": "dcosson@gmail.com",
+    "priority": 0,
+    "status": "in_progress",
+    "title": "Updated title",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
