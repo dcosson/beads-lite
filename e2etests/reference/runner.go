@@ -1,4 +1,4 @@
-package e2etests
+package reference
 
 import (
 	"bytes"
@@ -55,11 +55,18 @@ type RunResult struct {
 }
 
 // Run executes a bd command with the given arguments.
-// If sandbox is non-empty, BEADS_DIR is set so the command finds the right .beads directory.
+// If sandbox is non-empty, BEADS_DIR is set and the working directory is changed
+// to the sandbox so the command finds the right data directory. The --no-daemon
+// flag is prepended to bypass the reference binary's daemon (which can interfere
+// with tombstone show, mol pour, etc.). Beads-lite accepts --no-daemon as a no-op.
 // Pass an empty sandbox for commands that don't need one (e.g., --help).
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
+	if sandbox != "" {
+		args = append([]string{"--no-daemon"}, args...)
+	}
 	cmd := exec.Command(r.BdCmd, args...)
 	if sandbox != "" {
+		cmd.Dir = sandbox
 		cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
 	}
 
@@ -86,12 +93,15 @@ func (r *Runner) Run(sandbox string, args ...string) RunResult {
 
 // projectRoot returns the root directory of the project (parent of e2etests/).
 func projectRoot() string {
-	// This file is in e2etests/, so project root is one level up
 	dir, err := os.Getwd()
 	if err != nil {
 		panic(fmt.Sprintf("cannot get working directory: %v", err))
 	}
-	// If we're running from e2etests/, go up one level
+	// This file is in e2etests/reference/, so project root is two levels up
+	if filepath.Base(dir) == "reference" && filepath.Base(filepath.Dir(dir)) == "e2etests" {
+		return filepath.Dir(filepath.Dir(dir))
+	}
+	// Fallback: if running from e2etests/, go up one level
 	if filepath.Base(dir) == "e2etests" {
 		return filepath.Dir(dir)
 	}

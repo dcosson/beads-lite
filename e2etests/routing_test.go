@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"beads-lite/e2etests/reference"
 )
 
 // seedIssue writes a minimal issue JSON file into the given .beads data directory.
@@ -45,7 +47,7 @@ func TestRouting(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &Runner{BdCmd: bdCmd}
+	r := &reference.Runner{BdCmd: bdCmd}
 
 	// Build a multi-rig town layout:
 	//   town_root/
@@ -204,15 +206,6 @@ func mustWriteFile(t *testing.T, path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func mustExtractIDT(t *testing.T, result RunResult) string {
-	t.Helper()
-	id := ExtractID([]byte(result.Stdout))
-	if id == "" {
-		t.Fatalf("failed to extract ID from: %s", result.Stdout)
-	}
-	return id
 }
 
 func extractTitleFromJSON(t *testing.T, jsonOutput string) string {

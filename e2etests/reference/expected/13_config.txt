@@ -1,0 +1,98 @@
+=== config list empty ===
+{
+  "auto_compact_enabled": "false",
+  "compact_batch_size": "50",
+  "compact_model": "claude-3-5-haiku-20241022",
+  "compact_parallel_workers": "5",
+  "compact_tier1_days": "30",
+  "compact_tier1_dep_levels": "2",
+  "compact_tier2_commits": "100",
+  "compact_tier2_days": "90",
+  "compact_tier2_dep_levels": "5",
+  "compaction_enabled": "false",
+  "issue_prefix": "beads-sandbox-tHl4rKiJ"
+}
+
+=== config get actor (not set) ===
+{
+  "key": "actor",
+  "location": "config.yaml",
+  "value": "testactor"
+}
+
+=== config set actor ===
+{
+  "key": "actor",
+  "location": "config.yaml",
+  "value": "testuser"
+}
+
+=== config set defaults.priority ===
+{
+  "key": "defaults.priority",
+  "value": "high"
+}
+
+=== config set custom key ===
+{
+  "key": "custom.key",
+  "value": "myvalue"
+}
+
+=== config get actor (set) ===
+{
+  "key": "actor",
+  "location": "config.yaml",
+  "value": "testactor"
+}
+
+=== config list with entries ===
+{
+  "auto_compact_enabled": "false",
+  "compact_batch_size": "50",
+  "compact_model": "claude-3-5-haiku-20241022",
+  "compact_parallel_workers": "5",
+  "compact_tier1_days": "30",
+  "compact_tier1_dep_levels": "2",
+  "compact_tier2_commits": "100",
+  "compact_tier2_days": "90",
+  "compact_tier2_dep_levels": "5",
+  "compaction_enabled": "false",
+  "custom.key": "myvalue",
+  "defaults.priority": "high",
+  "issue_prefix": "beads-sandbox-tHl4rKiJ"
+}
+
+=== config validate clean ===
+{
+  "issues": [],
+  "valid": true
+}
+
+=== config unset custom key ===
+{
+  "key": "custom.key"
+}
+
+=== config get custom key (after unset) ===
+{
+  "key": "custom.key",
+  "value": ""
+}
+
+=== config list after unset ===
+{
+  "auto_compact_enabled": "false",
+  "compact_batch_size": "50",
+  "compact_model": "claude-3-5-haiku-20241022",
+  "compact_parallel_workers": "5",
+  "compact_tier1_days": "30",
+  "compact_tier1_dep_levels": "2",
+  "compact_tier2_commits": "100",
+  "compact_tier2_days": "90",
+  "compact_tier2_dep_levels": "5",
+  "compaction_enabled": "false",
+  "defaults.priority": "high",
+  "issue_prefix": "beads-sandbox-tHl4rKiJ"
+}
+

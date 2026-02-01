@@ -1,4 +1,4 @@
-package e2etests
+package reference
 
 import (
 	"encoding/json"
@@ -53,16 +53,17 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	section(&out, "pour molecule", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Extract IDs from pour result for subsequent commands.
-	rootID, childIDs, err := extractPourIDs(result.Stdout)
+	pourResult, err := extractPourResult(result.Stdout)
 	if err != nil {
 		return "", err
 	}
-	if len(childIDs) != 3 {
-		return "", fmt.Errorf("expected 3 child IDs from pour, got %d", len(childIDs))
+	rootID := pourResult.RootID
+	step1ID := pourResult.StepIDs["setup"]
+	step2ID := pourResult.StepIDs["build"]
+	step3ID := pourResult.StepIDs["test"]
+	if step1ID == "" || step2ID == "" || step3ID == "" {
+		return "", fmt.Errorf("missing step IDs from pour: setup=%q build=%q test=%q", step1ID, step2ID, step3ID)
 	}
-	step1ID := childIDs[0] // setup
-	step2ID := childIDs[1] // build
-	step3ID := childIDs[2] // test
 
 	// 4. Mol current — show all steps with status markers.
 	result, err = mustRun(r, sandbox, "mol", "current", rootID, "--json")
@@ -122,10 +123,11 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "pour for burn", n.NormalizeJSON([]byte(result.Stdout)))
 
-	burnRootID, _, err := extractPourIDs(result.Stdout)
+	burnResult, err := extractPourResult(result.Stdout)
 	if err != nil {
 		return "", err
 	}
+	burnRootID := burnResult.RootID
 
 	result, err = mustRun(r, sandbox, "mol", "burn", burnRootID, "--json")
 	if err != nil {
@@ -142,10 +144,11 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "wisp molecule", n.NormalizeJSON([]byte(result.Stdout)))
 
-	wispRootID, _, err := extractPourIDs(result.Stdout)
+	wispResult, err := extractPourResult(result.Stdout)
 	if err != nil {
 		return "", err
 	}
+	wispRootID := wispResult.RootID
 
 	// Ready — verify wisp steps excluded from ready output.
 	result, err = mustRun(r, sandbox, "ready", "--json")
@@ -176,20 +179,64 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	return out.String(), nil
 }
 
-// extractPourIDs parses the JSON output of "mol pour" or "mol wisp" and
-// returns the root ID and child IDs.
-func extractPourIDs(jsonOutput string) (string, []string, error) {
-	var result struct {
-		RootID   string   `json:"RootID"`
-		ChildIDs []string `json:"ChildIDs"`
+// pourResult holds the parsed output of "mol pour" or "mol wisp".
+type pourResult struct {
+	RootID  string
+	StepIDs map[string]string // step name -> issue ID
+}
+
+// extractPourResult parses the JSON output of "mol pour" or "mol wisp".
+// Handles both the reference binary format (new_epic_id/id_mapping) and
+// the beads-lite format (RootID/ChildIDs).
+// TODO: investigate, I think this should be the same
+func extractPourResult(jsonOutput string) (pourResult, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal([]byte(jsonOutput), &raw); err != nil {
+		return pourResult{}, fmt.Errorf("parsing pour/wisp result: %w\nraw: %s", err, jsonOutput)
 	}
-	if err := json.Unmarshal([]byte(jsonOutput), &result); err != nil {
-		return "", nil, fmt.Errorf("parsing pour/wisp result: %w\nraw: %s", err, jsonOutput)
+
+	// Reference binary format: {new_epic_id, id_mapping}
+	if epicID, ok := raw["new_epic_id"].(string); ok && epicID != "" {
+		idMapping, _ := raw["id_mapping"].(map[string]interface{})
+		stepIDs := make(map[string]string)
+		// Find the formula name (the key that maps to the root ID)
+		var formulaName string
+		for key, val := range idMapping {
+			if id, ok := val.(string); ok && id == epicID {
+				formulaName = key
+				break
+			}
+		}
+		// Extract child step IDs: keys are "formula.step_name"
+		prefix := formulaName + "."
+		for key, val := range idMapping {
+			if strings.HasPrefix(key, prefix) {
+				stepName := strings.TrimPrefix(key, prefix)
+				if id, ok := val.(string); ok {
+					stepIDs[stepName] = id
+				}
+			}
+		}
+		return pourResult{RootID: epicID, StepIDs: stepIDs}, nil
 	}
-	if result.RootID == "" {
-		return "", nil, fmt.Errorf("pour/wisp result has empty RootID, raw: %s", jsonOutput)
+
+	// Beads-lite format: {RootID, ChildIDs}
+	if rootID, ok := raw["RootID"].(string); ok && rootID != "" {
+		childIDs, _ := raw["ChildIDs"].([]interface{})
+		stepIDs := make(map[string]string)
+		// ChildIDs are in formula step order; map them to step names
+		// by looking up step names from the id_mapping if available,
+		// otherwise fall back to index-based names.
+		stepNames := []string{"setup", "build", "test"}
+		for i, id := range childIDs {
+			if idStr, ok := id.(string); ok && i < len(stepNames) {
+				stepIDs[stepNames[i]] = idStr
+			}
+		}
+		return pourResult{RootID: rootID, StepIDs: stepIDs}, nil
 	}
-	return result.RootID, result.ChildIDs, nil
+
+	return pourResult{}, fmt.Errorf("unrecognized pour/wisp output format, raw: %s", jsonOutput)
 }
 
 // extractSquashDigestID parses the JSON output of "mol squash" and returns
