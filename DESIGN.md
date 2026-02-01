@@ -558,14 +558,14 @@ Create a new issue.
 bd create "Fix login bug"
 bd create "Add OAuth support" --type feature --priority high
 bd create "Implement caching" --parent bd-a1b2
-bd create "Write tests" --depends-on bd-e5f6
+bd create "Write tests" --deps bd-e5f6
 ```
 
 **Flags:**
 - `--type, -t` - Issue type (task, bug, feature, epic, chore). Default: task
 - `--priority, -p` - Priority (critical, high, medium, low). Default: medium
 - `--parent` - Parent issue ID
-- `--depends-on, -d` - Issue ID this depends on (can repeat)
+- `--deps, -d` - Dependencies in format 'type:id' or 'id' (can repeat)
 - `--label, -l` - Add label (can repeat)
 - `--assignee, -a` - Assign to user
 - `--description` - Full description (or read from stdin with `-`)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"beads-lite/internal/storage"
@@ -20,7 +21,7 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		typeFlag    string
 		priority    string
 		parent      string
-		dependsOn   []string
+		deps        []string
 		labels      []string
 		assignee    string
 		description string
@@ -37,7 +38,7 @@ Examples:
   bd create --title "Fix login bug"
   bd create "Add OAuth support" --type feature --priority high
   bd create "Implement caching" --parent bd-a1b2
-  bd create "Write tests" --depends-on bd-e5f6
+  bd create "Write tests" --deps bd-e5f6
   bd create "Task" --description -   # read description from stdin`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -140,8 +141,13 @@ Examples:
 			}
 
 			// Add dependencies if specified (default type: blocks)
-			for _, depID := range dependsOn {
-				if err := app.Storage.AddDependency(ctx, id, depID, storage.DepTypeBlocks); err != nil {
+			for _, dep := range deps {
+				depType, depID, err := parseCreateDependency(dep)
+				if err != nil {
+					app.Storage.Delete(context.Background(), id)
+					return err
+				}
+				if err := app.Storage.AddDependency(ctx, id, depID, depType); err != nil {
 					// Clean up on failure
 					app.Storage.Delete(context.Background(), id)
 					return fmt.Errorf("adding dependency on %s: %w", depID, err)
@@ -178,7 +184,7 @@ Examples:
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "Issue type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority (0-4 or P0-P4)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Parent issue ID")
-	cmd.Flags().StringSliceVarP(&dependsOn, "depends-on", "d", nil, "Issue ID this depends on (can repeat)")
+	cmd.Flags().StringSliceVarP(&deps, "deps", "d", nil, "Dependencies in format 'type:id' or 'id' (can repeat)")
 	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Add label (can repeat)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user")
 	cmd.Flags().StringVar(&description, "description", "", "Full description (use - for stdin)")
@@ -201,4 +207,43 @@ func parsePriorityInput(s string) (storage.Priority, error) {
 	default:
 		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
 	}
+}
+
+func parseCreateDependency(input string) (storage.DependencyType, string, error) {
+	trimmed := strings.TrimSpace(input)
+	if trimmed == "" {
+		return "", "", fmt.Errorf("dependency cannot be empty")
+	}
+
+	depType := storage.DepTypeBlocks
+	depID := trimmed
+
+	if strings.Count(trimmed, ":") > 1 {
+		return "", "", fmt.Errorf("invalid dependency %q (expected 'type:id' or 'id')", input)
+	}
+	if strings.Contains(trimmed, ":") {
+		parts := strings.SplitN(trimmed, ":", 2)
+		typePart := strings.ToLower(strings.TrimSpace(parts[0]))
+		idPart := strings.TrimSpace(parts[1])
+		if typePart == "" || idPart == "" {
+			return "", "", fmt.Errorf("invalid dependency %q (expected 'type:id' or 'id')", input)
+		}
+		depType = storage.DependencyType(typePart)
+		depID = idPart
+	}
+
+	if !storage.ValidDependencyTypes[depType] {
+		return "", "", fmt.Errorf("invalid dependency type %q; valid types: %s", depType, validDependencyTypeList())
+	}
+
+	return depType, depID, nil
+}
+
+func validDependencyTypeList() string {
+	types := make([]string, 0, len(storage.ValidDependencyTypes))
+	for depType := range storage.ValidDependencyTypes {
+		types = append(types, string(depType))
+	}
+	sort.Strings(types)
+	return strings.Join(types, ", ")
 }

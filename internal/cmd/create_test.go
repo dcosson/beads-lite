@@ -374,7 +374,7 @@ func TestCreateWithParentDepthLimit(t *testing.T) {
 	}
 }
 
-func TestCreateWithDependsOn(t *testing.T) {
+func TestCreateWithDeps(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create dependency issue first
@@ -386,7 +386,7 @@ func TestCreateWithDependsOn(t *testing.T) {
 
 	out := app.Out.(*bytes.Buffer)
 	cmd := newCreateCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"Dependent task", "--depends-on", depID})
+	cmd.SetArgs([]string{"Dependent task", "--deps", depID})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -394,7 +394,16 @@ func TestCreateWithDependsOn(t *testing.T) {
 	dependentID := extractCreatedID(out.String())
 	dependent, _ := store.Get(context.Background(), dependentID)
 
-	if !dependent.HasDependency(depID) {
+	found := false
+	for _, dep := range dependent.Dependencies {
+		if dep.ID == depID {
+			found = true
+			if dep.Type != storage.DepTypeBlocks {
+				t.Errorf("expected dependency type %q, got %q", storage.DepTypeBlocks, dep.Type)
+			}
+		}
+	}
+	if !found {
 		t.Errorf("issue should have dependency in dependencies list")
 	}
 
@@ -402,6 +411,76 @@ func TestCreateWithDependsOn(t *testing.T) {
 	dep, _ := store.Get(context.Background(), depID)
 	if !dep.HasDependent(dependentID) {
 		t.Errorf("dependency should have dependent in dependents list")
+	}
+}
+
+func TestCreateWithTypedDep(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	if err != nil {
+		t.Fatalf("failed to create dependency: %v", err)
+	}
+
+	out := app.Out.(*bytes.Buffer)
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Dependent task", "--deps", "tracks:" + depID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	dependentID := extractCreatedID(out.String())
+	dependent, _ := store.Get(context.Background(), dependentID)
+
+	found := false
+	for _, dep := range dependent.Dependencies {
+		if dep.ID == depID {
+			found = true
+			if dep.Type != storage.DepTypeTracks {
+				t.Errorf("expected dependency type %q, got %q", storage.DepTypeTracks, dep.Type)
+			}
+		}
+	}
+	if !found {
+		t.Errorf("expected dependency %s to be present", depID)
+	}
+}
+
+func TestCreateWithDepsInvalidType(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	if err != nil {
+		t.Fatalf("failed to create dependency: %v", err)
+	}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Dependent task", "--deps", "invalid:" + depID})
+	err = cmd.Execute()
+	if err == nil {
+		t.Fatalf("expected error for invalid dependency type")
+	}
+	if !strings.Contains(err.Error(), "invalid dependency type") {
+		t.Fatalf("expected error about invalid dependency type, got: %v", err)
+	}
+}
+
+func TestCreateWithDepsTooManyColons(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	if err != nil {
+		t.Fatalf("failed to create dependency: %v", err)
+	}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Dependent task", "--deps", "tracks:" + depID + ":extra"})
+	err = cmd.Execute()
+	if err == nil {
+		t.Fatalf("expected error for invalid dependency format")
+	}
+	if !strings.Contains(err.Error(), "invalid dependency") {
+		t.Fatalf("expected error about invalid dependency format, got: %v", err)
 	}
 }
 
@@ -414,7 +493,7 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 
 	out := app.Out.(*bytes.Buffer)
 	cmd := newCreateCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"Dependent task", "-d", dep1, "-d", dep2})
+	cmd.SetArgs([]string{"Dependent task", "-d", dep1, "-d", "tracks:" + dep2})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("create failed: %v", err)
 	}
@@ -424,6 +503,18 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 
 	if len(dependent.Dependencies) != 2 {
 		t.Errorf("expected 2 dependencies, got %d", len(dependent.Dependencies))
+	}
+	for _, dep := range dependent.Dependencies {
+		switch dep.ID {
+		case dep1:
+			if dep.Type != storage.DepTypeBlocks {
+				t.Errorf("expected dependency %s type %q, got %q", dep1, storage.DepTypeBlocks, dep.Type)
+			}
+		case dep2:
+			if dep.Type != storage.DepTypeTracks {
+				t.Errorf("expected dependency %s type %q, got %q", dep2, storage.DepTypeTracks, dep.Type)
+			}
+		}
 	}
 }
 
@@ -519,7 +610,7 @@ func TestCreateDependencyNotFound(t *testing.T) {
 	app, _ := setupTestApp(t)
 
 	cmd := newCreateCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"Test issue", "--depends-on", "bd-nonexistent"})
+	cmd.SetArgs([]string{"Test issue", "--deps", "bd-nonexistent"})
 	err := cmd.Execute()
 	if err == nil {
 		t.Error("expected error for non-existent dependency")
@@ -616,7 +707,7 @@ func TestCreateAllFlags(t *testing.T) {
 		"--type", "feature",
 		"--priority", "1",
 		"--parent", parentID,
-		"--depends-on", depID,
+		"--deps", depID,
 		"--label", "backend",
 		"--label", "api",
 		"--assignee", "bob",
@@ -648,7 +739,7 @@ func TestCreateAllFlags(t *testing.T) {
 	if issue.Parent != parentID {
 		t.Errorf("parent mismatch: got %q", issue.Parent)
 	}
-	// Should have 2 dependencies: parent-child (from --parent) and blocks (from --depends-on)
+	// Should have 2 dependencies: parent-child (from --parent) and blocks (from --deps)
 	if len(issue.Dependencies) != 2 || !issue.HasDependency(depID) || !issue.HasDependency(parentID) {
 		t.Errorf("dependencies mismatch: got %v", issue.Dependencies)
 	}
