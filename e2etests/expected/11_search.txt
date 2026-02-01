@@ -2,7 +2,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "description": "Login fails for OAuth users",
@@ -18,7 +18,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_2",
@@ -37,7 +37,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_2",
@@ -54,7 +54,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "description": "Full text search needed",

@@ -53,7 +53,17 @@ Examples:
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(issue.Comments)
+				comments := make([]CommentJSON, len(issue.Comments))
+				for i, c := range issue.Comments {
+					comments[i] = CommentJSON{
+						Author:    c.Author,
+						CreatedAt: formatTime(c.CreatedAt),
+						ID:        c.ID,
+						IssueID:   issueID,
+						Text:      c.Text,
+					}
+				}
+				return json.NewEncoder(app.Out).Encode(comments)
 			}
 
 			if len(issue.Comments) == 0 {
@@ -64,9 +74,9 @@ Examples:
 			for _, c := range issue.Comments {
 				timestamp := c.CreatedAt.Format("2006-01-02 15:04")
 				if c.Author != "" {
-					fmt.Fprintf(app.Out, "[%s] %s: %s\n", timestamp, c.Author, c.Body)
+					fmt.Fprintf(app.Out, "[%s] %s: %s\n", timestamp, c.Author, c.Text)
 				} else {
-					fmt.Fprintf(app.Out, "[%s] %s\n", timestamp, c.Body)
+					fmt.Fprintf(app.Out, "[%s] %s\n", timestamp, c.Text)
 				}
 			}
 
@@ -133,9 +143,17 @@ Examples:
 				return fmt.Errorf("comment message cannot be empty")
 			}
 
+			// Default author to resolved actor if not specified
+			if author == "" {
+				resolved, err := resolveActor(app)
+				if err == nil {
+					author = resolved
+				}
+			}
+
 			comment := &storage.Comment{
 				Author:    author,
-				Body:      message,
+				Text:      message,
 				CreatedAt: time.Now(),
 			}
 
@@ -152,9 +170,12 @@ Examples:
 			}
 
 			if app.JSON {
-				result := map[string]interface{}{
-					"issue_id": issueID,
-					"comment":  comment,
+				result := CommentJSON{
+					Author:    comment.Author,
+					CreatedAt: formatTime(comment.CreatedAt),
+					ID:        comment.ID,
+					IssueID:   issueID,
+					Text:      comment.Text,
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}

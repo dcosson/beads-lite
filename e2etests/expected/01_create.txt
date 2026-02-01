@@ -1,7 +1,7 @@
 === create basic task ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_1",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -15,7 +15,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -30,7 +30,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
@@ -46,7 +46,7 @@
 === create dependency target ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_2",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -59,7 +59,7 @@
 === create parent issue ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_3",
   "issue_type": "epic",
   "owner": "dcosson@gmail.com",
@@ -73,7 +73,7 @@
 {
   "assignee": "alice",
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "description": "A detailed description",
   "id": "ISSUE_4",
   "issue_type": "feature",
@@ -89,11 +89,11 @@
   {
     "assignee": "alice",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "blocks",
         "id": "ISSUE_2",
         "issue_type": "task",
@@ -105,7 +105,7 @@
       },
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_3",
         "issue_type": "epic",

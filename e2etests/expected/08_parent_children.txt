@@ -1,7 +1,7 @@
 === create parent ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_1",
   "issue_type": "epic",
   "owner": "dcosson@gmail.com",
@@ -14,7 +14,7 @@
 === create child ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_2",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -28,7 +28,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -43,11 +43,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_1",
         "issue_type": "epic",
@@ -73,11 +73,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_2",
         "type": "parent-child"
@@ -95,7 +95,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 1,
     "id": "ISSUE_1",
@@ -112,11 +112,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_2",
         "type": "parent-child"
@@ -138,7 +138,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -153,7 +153,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",

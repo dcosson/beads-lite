@@ -3,11 +3,11 @@
   {
     "assignee": "alice",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_2",
         "type": "parent-child"
@@ -30,7 +30,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_3",
@@ -43,7 +43,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 1,
     "id": "ISSUE_1",
@@ -61,11 +61,11 @@
   {
     "assignee": "alice",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_2",
         "type": "parent-child"
@@ -90,7 +90,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_4",
@@ -103,7 +103,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_3",
@@ -116,7 +116,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 1,
     "id": "ISSUE_1",
@@ -135,7 +135,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_4",
@@ -153,11 +153,11 @@
   {
     "assignee": "alice",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_2",
         "type": "parent-child"

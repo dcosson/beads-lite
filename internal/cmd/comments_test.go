@@ -45,8 +45,8 @@ func TestCommentsAddBasic(t *testing.T) {
 	if len(got.Comments) != 1 {
 		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
 	}
-	if got.Comments[0].Body != "This is a test comment" {
-		t.Errorf("expected comment body %q, got %q", "This is a test comment", got.Comments[0].Body)
+	if got.Comments[0].Text != "This is a test comment" {
+		t.Errorf("expected comment body %q, got %q", "This is a test comment", got.Comments[0].Text)
 	}
 }
 
@@ -116,8 +116,8 @@ func TestCommentsAddFromFile(t *testing.T) {
 	if len(got.Comments) != 1 {
 		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
 	}
-	if got.Comments[0].Body != "Comment from file" {
-		t.Errorf("expected comment body %q, got %q", "Comment from file", got.Comments[0].Body)
+	if got.Comments[0].Text != "Comment from file" {
+		t.Errorf("expected comment body %q, got %q", "Comment from file", got.Comments[0].Text)
 	}
 }
 
@@ -190,16 +190,11 @@ func TestCommentsAddJSON(t *testing.T) {
 	if result["issue_id"] != id {
 		t.Errorf("expected issue_id %q, got %q", id, result["issue_id"])
 	}
-
-	comment, ok := result["comment"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected comment to be a map, got %T", result["comment"])
+	if result["text"] != "JSON comment" {
+		t.Errorf("expected text %q, got %q", "JSON comment", result["text"])
 	}
-	if comment["body"] != "JSON comment" {
-		t.Errorf("expected body %q, got %q", "JSON comment", comment["body"])
-	}
-	if comment["author"] != "bob" {
-		t.Errorf("expected author %q, got %q", "bob", comment["author"])
+	if result["author"] != "bob" {
+		t.Errorf("expected author %q, got %q", "bob", result["author"])
 	}
 }
 
@@ -218,8 +213,8 @@ func TestCommentsListBasic(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment1 := &storage.Comment{Author: "alice", Body: "First comment"}
-	comment2 := &storage.Comment{Author: "bob", Body: "Second comment"}
+	comment1 := &storage.Comment{Author: "alice", Text: "First comment"}
+	comment2 := &storage.Comment{Author: "bob", Text: "Second comment"}
 	if err := store.AddComment(context.Background(), id, comment1); err != nil {
 		t.Fatalf("failed to add comment 1: %v", err)
 	}
@@ -305,7 +300,7 @@ func TestCommentsListJSON(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Author: "alice", Body: "Test comment"}
+	comment := &storage.Comment{Author: "alice", Text: "Test comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
@@ -327,8 +322,8 @@ func TestCommentsListJSON(t *testing.T) {
 	if result[0]["author"] != "alice" {
 		t.Errorf("expected author %q, got %q", "alice", result[0]["author"])
 	}
-	if result[0]["body"] != "Test comment" {
-		t.Errorf("expected body %q, got %q", "Test comment", result[0]["body"])
+	if result[0]["text"] != "Test comment" {
+		t.Errorf("expected text %q, got %q", "Test comment", result[0]["text"])
 	}
 }
 
@@ -347,7 +342,7 @@ func TestCommentsListNoAuthor(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Body: "Anonymous comment"}
+	comment := &storage.Comment{Text: "Anonymous comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}

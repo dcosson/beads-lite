@@ -19,7 +19,6 @@ blocked
 branch
 children
 close
-comment add
 comments add
 config get
 config list

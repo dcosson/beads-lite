@@ -68,7 +68,6 @@ An issue is blocked if:
 
 			// Find blocked issues and what they're waiting on
 			blocked := []BlockedIssueJSON{} // Initialize as empty slice (marshals to [] not null)
-			name, _ := getGitUser()
 			for _, issue := range issues {
 				// Ephemeral issues are never shown in blocked output (hardcoded exclusion).
 				if issue.Ephemeral {
@@ -80,7 +79,7 @@ An issue is blocked if:
 						BlockedBy:      waitingOn,
 						BlockedByCount: len(waitingOn),
 						CreatedAt:      formatTime(issue.CreatedAt),
-						CreatedBy:      name,
+						CreatedBy:      issue.CreatedBy,
 						ID:             issue.ID,
 						IssueType:      string(issue.Type),
 						Priority:       priorityToInt(issue.Priority),

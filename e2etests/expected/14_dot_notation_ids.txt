@@ -1,7 +1,7 @@
 === create parent ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_1",
   "issue_type": "epic",
   "owner": "dcosson@gmail.com",
@@ -14,7 +14,7 @@
 === create child 1 with --parent ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_2",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -27,7 +27,7 @@
 === create child 2 with --parent ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_3",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -40,8 +40,8 @@
 === create grandchild with --parent ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
-  "id": "ISSUE_2.1",
+  "created_by": "testactor",
+  "id": "ISSUE_4",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
   "priority": 2,
@@ -54,11 +54,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependents": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_2",
         "issue_type": "task",
@@ -70,7 +70,7 @@
       },
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_3",
         "issue_type": "task",
@@ -95,11 +95,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_1",
         "issue_type": "epic",
@@ -113,9 +113,9 @@
     "dependents": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
-        "id": "ISSUE_2.1",
+        "id": "ISSUE_4",
         "issue_type": "task",
         "owner": "dcosson@gmail.com",
         "priority": 2,
@@ -143,8 +143,8 @@
 === create child 3 after deletion (no reuse) ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
-  "id": "ISSUE_4",
+  "created_by": "testactor",
+  "id": "ISSUE_5",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
   "priority": 2,
@@ -157,11 +157,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
         "issue_id": "ISSUE_3",
         "type": "parent-child"
@@ -179,19 +179,19 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_1",
-        "issue_id": "ISSUE_4",
+        "issue_id": "ISSUE_5",
         "type": "parent-child"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_4",
+    "id": "ISSUE_5",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,

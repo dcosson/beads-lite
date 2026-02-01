@@ -1,7 +1,7 @@
 === create issue A ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_1",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -14,7 +14,7 @@
 === create issue B ===
 {
   "created_at": "TIMESTAMP",
-  "created_by": "Danny Cosson",
+  "created_by": "testactor",
   "id": "ISSUE_2",
   "issue_type": "task",
   "owner": "dcosson@gmail.com",
@@ -36,11 +36,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "blocks",
         "id": "ISSUE_2",
         "issue_type": "task",
@@ -65,11 +65,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependents": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "blocks",
         "id": "ISSUE_1",
         "issue_type": "task",
@@ -94,11 +94,11 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_2",
         "issue_id": "ISSUE_1",
         "type": "blocks"
@@ -116,7 +116,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 1,
     "id": "ISSUE_2",
@@ -133,7 +133,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_type": "blocks",
     "id": "ISSUE_2",
     "issue_type": "task",
@@ -156,7 +156,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -171,7 +171,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
@@ -184,7 +184,7 @@
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_2",

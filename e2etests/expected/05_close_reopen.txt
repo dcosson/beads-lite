@@ -4,7 +4,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -21,7 +21,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -38,7 +38,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
@@ -55,7 +55,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -70,7 +70,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -85,7 +85,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",

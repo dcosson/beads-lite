@@ -110,16 +110,9 @@
 [
   {
     "assignee": "testuser",
-    "children": [
-      "ISSUE_1",
-      "ISSUE_2",
-      "ISSUE_3"
-    ],
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
     "id": "ISSUE_4",
     "issue_type": "epic",
-    "owner": "dcosson@gmail.com",
     "priority": 2,
     "status": "in_progress",
     "title": "Test workflow",
@@ -132,10 +125,8 @@
   {
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
     "id": "ISSUE_1",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
     "priority": 2,
     "status": "in_progress",
     "title": "Setup demo",
@@ -298,15 +289,12 @@
   {
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
         "dependency_type": "parent-child",
         "id": "ISSUE_12",
         "issue_type": "epic",
-        "owner": "dcosson@gmail.com",
         "priority": 2,
         "status": "open",
         "title": "Test workflow",
@@ -316,7 +304,6 @@
     "description": "Test summary",
     "id": "ISSUE_13",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
     "parent": "ISSUE_12",
     "priority": 2,
     "status": "closed",

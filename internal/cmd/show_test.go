@@ -372,7 +372,7 @@ func TestShowWithComments(t *testing.T) {
 	// Add a comment
 	if err := store.AddComment(ctx, id, &storage.Comment{
 		Author: "bob",
-		Body:   "This is a test comment",
+		Text:   "This is a test comment",
 	}); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}

@@ -25,7 +25,7 @@ func TestCommentListDeprecationWarning(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Author: "alice", Body: "Test comment"}
+	comment := &storage.Comment{Author: "alice", Text: "Test comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestCommentAddDeprecationWarning(t *testing.T) {
 	if len(got.Comments) != 1 {
 		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
 	}
-	if got.Comments[0].Body != "Deprecated add test" {
-		t.Errorf("expected comment body %q, got %q", "Deprecated add test", got.Comments[0].Body)
+	if got.Comments[0].Text != "Deprecated add test" {
+		t.Errorf("expected comment body %q, got %q", "Deprecated add test", got.Comments[0].Text)
 	}
 }

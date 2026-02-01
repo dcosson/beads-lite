@@ -775,9 +775,9 @@ func TestUpdateClaimResolvesBDActorEnv(t *testing.T) {
 func TestUpdateClaimResolvesGitConfig(t *testing.T) {
 	// When BD_ACTOR is not set (config has default "${USER}"),
 	// actor should resolve from git config user.name.
-	name, _ := getGitUser()
-	if name == "" {
-		t.Skip("git config user.name not set, skipping git config resolution test")
+	name, err := resolveActor(&App{})
+	if err != nil || name == "" || name == "unknown" {
+		t.Skip("cannot resolve actor name, skipping git config resolution test")
 	}
 
 	app, store := setupTestApp(t)

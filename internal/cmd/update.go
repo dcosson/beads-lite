@@ -309,25 +309,3 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-// resolveActor determines the current actor identity using a priority chain:
-//  1. BD_ACTOR env var (via config store, set by ApplyEnvOverrides)
-//  2. git config user.name
-//  3. $USER env var (OS username fallback)
-func resolveActor(app *App) (string, error) {
-	if app.ConfigStore != nil {
-		if actor, ok := app.ConfigStore.Get("actor"); ok && actor != "" && actor != "${USER}" {
-			return actor, nil
-		}
-	}
-
-	name, _ := getGitUser()
-	if name != "" {
-		return name, nil
-	}
-
-	if user := os.Getenv("USER"); user != "" {
-		return user, nil
-	}
-
-	return "", fmt.Errorf("cannot determine actor: set BD_ACTOR env var, git config user.name, or $USER")
-}

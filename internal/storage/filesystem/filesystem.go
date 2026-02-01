@@ -830,10 +830,14 @@ func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, com
 		return err
 	}
 
-	if comment.ID == "" {
-		randBytes := make([]byte, 2)
-		rand.Read(randBytes)
-		comment.ID = fmt.Sprintf("c-%s", hex.EncodeToString(randBytes))
+	if comment.ID == 0 {
+		maxID := 0
+		for _, c := range issue.Comments {
+			if c.ID > maxID {
+				maxID = c.ID
+			}
+		}
+		comment.ID = maxID + 1
 	}
 	if comment.CreatedAt.IsZero() {
 		comment.CreatedAt = time.Now()

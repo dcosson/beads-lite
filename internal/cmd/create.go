@@ -107,12 +107,18 @@ Examples:
 				}
 			}
 
+			// Resolve actor identity for created_by/owner
+			actor, _ := resolveActor(app)
+			owner := resolveOwner()
+
 			// Create the issue
 			issue := &storage.Issue{
 				Title:       title,
 				Description: desc,
 				Type:        issueType,
 				Priority:    issuePriority,
+				CreatedBy:   actor,
+				Owner:       owner,
 				Labels:      labels,
 				Assignee:    assignee,
 			}

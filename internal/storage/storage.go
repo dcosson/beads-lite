@@ -78,6 +78,9 @@ type Issue struct {
 	Dependencies []Dependency `json:"dependencies,omitempty"` // issues this one depends on
 	Dependents   []Dependency `json:"dependents,omitempty"`   // issues that depend on this one
 
+	CreatedBy string `json:"created_by,omitempty"`
+	Owner     string `json:"owner,omitempty"`
+
 	Labels    []string  `json:"labels,omitempty"`
 	Assignee  string    `json:"assignee,omitempty"`
 	Ephemeral bool      `json:"ephemeral,omitempty"` // If true, not exported to JSONL
@@ -149,9 +152,9 @@ func (issue *Issue) DependentIDs(filterType *DependencyType) []string {
 
 // Comment represents a comment on an issue.
 type Comment struct {
-	ID        string    `json:"id"`
+	ID        int       `json:"id"`
 	Author    string    `json:"author"`
-	Body      string    `json:"text"`
+	Text      string    `json:"text"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"os/exec"
-	"strings"
 	"time"
 
 	"beads-lite/internal/storage"
@@ -12,48 +10,48 @@ import (
 // IssueJSON is the JSON output format matching original beads.
 // Used for create, show, and list commands.
 type IssueJSON struct {
-	Assignee        string           `json:"assignee,omitempty"`
-	Children        []string         `json:"children,omitempty"`
-	Comments        []CommentJSON    `json:"comments,omitempty"`
-	CreatedAt       string           `json:"created_at"`
-	CreatedBy       string           `json:"created_by,omitempty"`
+	Assignee        string            `json:"assignee,omitempty"`
+	Comments        []CommentJSON     `json:"comments,omitempty"`
+	CreatedAt       string            `json:"created_at"`
+	CreatedBy       string            `json:"created_by,omitempty"`
 	Dependencies    []EnrichedDepJSON `json:"dependencies,omitempty"`
-	DependencyCount *int             `json:"dependency_count,omitempty"`
+	DependencyCount *int              `json:"dependency_count,omitempty"`
 	Dependents      []EnrichedDepJSON `json:"dependents,omitempty"`
-	DependentCount  *int             `json:"dependent_count,omitempty"`
-	Description     string           `json:"description,omitempty"`
-	ID              string           `json:"id"`
-	IssueType       string           `json:"issue_type"`
-	Labels          []string         `json:"labels,omitempty"`
-	Owner           string           `json:"owner,omitempty"`
-	Parent          string           `json:"parent,omitempty"`
-	Priority        int              `json:"priority"`
-	Status          string           `json:"status"`
-	Title           string           `json:"title"`
-	UpdatedAt       string           `json:"updated_at"`
-	ClosedAt        string           `json:"closed_at,omitempty"`
+	DependentCount  *int              `json:"dependent_count,omitempty"`
+	Description     string            `json:"description,omitempty"`
+	ID              string            `json:"id"`
+	IssueType       string            `json:"issue_type"`
+	Labels          []string          `json:"labels,omitempty"`
+	Owner           string            `json:"owner,omitempty"`
+	Parent          string            `json:"parent,omitempty"`
+	Priority        int               `json:"priority"`
+	Status          string            `json:"status"`
+	Title           string            `json:"title"`
+	UpdatedAt       string            `json:"updated_at"`
+	ClosedAt        string            `json:"closed_at,omitempty"`
 }
 
 // EnrichedDepJSON is a dependency with full issue details for JSON output.
 type EnrichedDepJSON struct {
-	CreatedAt       string `json:"created_at"`
-	CreatedBy       string `json:"created_by,omitempty"`
-	DependencyType  string `json:"dependency_type"`
-	ID              string `json:"id"`
-	IssueType       string `json:"issue_type"`
-	Owner           string `json:"owner,omitempty"`
-	Priority        int    `json:"priority"`
-	Status          string `json:"status"`
-	Title           string `json:"title"`
-	UpdatedAt       string `json:"updated_at"`
+	CreatedAt      string `json:"created_at"`
+	CreatedBy      string `json:"created_by,omitempty"`
+	DependencyType string `json:"dependency_type"`
+	ID             string `json:"id"`
+	IssueType      string `json:"issue_type"`
+	Owner          string `json:"owner,omitempty"`
+	Priority       int    `json:"priority"`
+	Status         string `json:"status"`
+	Title          string `json:"title"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
 // CommentJSON is the JSON output format for comments.
 type CommentJSON struct {
 	Author    string `json:"author"`
-	Body      string `json:"body"`
 	CreatedAt string `json:"created_at"`
-	ID        string `json:"id"`
+	ID        int    `json:"id"`
+	IssueID   string `json:"issue_id"`
+	Text      string `json:"text"`
 }
 
 // ListDepJSON is the dependency format used in list command output.
@@ -102,14 +100,12 @@ type IssueSimpleJSON struct {
 
 // ToIssueSimpleJSON converts a storage.Issue to IssueSimpleJSON format.
 func ToIssueSimpleJSON(issue *storage.Issue) IssueSimpleJSON {
-	name, email := getGitUser()
-
 	return IssueSimpleJSON{
 		CreatedAt: formatTime(issue.CreatedAt),
-		CreatedBy: name,
+		CreatedBy: issue.CreatedBy,
 		ID:        issue.ID,
 		IssueType: string(issue.Type),
-		Owner:     email,
+		Owner:     issue.Owner,
 		Priority:  priorityToInt(issue.Priority),
 		Status:    string(issue.Status),
 		Title:     issue.Title,
@@ -140,33 +136,19 @@ func formatTime(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.999999999-07:00")
 }
 
-// getGitUser returns the git user name and email from git config.
-// Returns empty strings if git config is not available.
-func getGitUser() (name, email string) {
-	if out, err := exec.Command("git", "config", "user.name").Output(); err == nil {
-		name = strings.TrimSpace(string(out))
-	}
-	if out, err := exec.Command("git", "config", "user.email").Output(); err == nil {
-		email = strings.TrimSpace(string(out))
-	}
-	return
-}
-
 // ToIssueJSON converts a storage.Issue to IssueJSON format.
 // If enrichDeps is true, fetches full issue details for dependencies.
 // If useCounts is true, uses dependency_count/dependent_count instead of full arrays.
 func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issue, enrichDeps bool, useCounts bool) IssueJSON {
-	name, email := getGitUser()
-
 	out := IssueJSON{
 		Assignee:    issue.Assignee,
 		CreatedAt:   formatTime(issue.CreatedAt),
-		CreatedBy:   name,
+		CreatedBy:   issue.CreatedBy,
 		Description: issue.Description,
 		ID:          issue.ID,
 		IssueType:   string(issue.Type),
 		Labels:      issue.Labels,
-		Owner:       email,
+		Owner:       issue.Owner,
 		Parent:      issue.Parent,
 		Priority:    priorityToInt(issue.Priority),
 		Status:      string(issue.Status),
@@ -178,21 +160,16 @@ func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issu
 		out.ClosedAt = formatTime(*issue.ClosedAt)
 	}
 
-	// Children from dependents with parent-child type
-	children := issue.Children()
-	if len(children) > 0 {
-		out.Children = children
-	}
-
 	// Comments
 	if len(issue.Comments) > 0 {
 		out.Comments = make([]CommentJSON, len(issue.Comments))
 		for i, c := range issue.Comments {
 			out.Comments[i] = CommentJSON{
 				Author:    c.Author,
-				Body:      c.Body,
 				CreatedAt: formatTime(c.CreatedAt),
 				ID:        c.ID,
+				IssueID:   issue.ID,
+				Text:      c.Text,
 			}
 		}
 	}
@@ -218,8 +195,6 @@ func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issu
 
 // ToIssueListJSON converts a storage.Issue to IssueListJSON format for list command.
 func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
-	name, email := getGitUser()
-
 	// Convert dependencies to list format
 	var deps []ListDepJSON
 	if len(issue.Dependencies) > 0 {
@@ -227,7 +202,7 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 		for i, dep := range issue.Dependencies {
 			deps[i] = ListDepJSON{
 				CreatedAt:   formatTime(issue.CreatedAt), // Use issue's created_at as proxy
-				CreatedBy:   name,
+				CreatedBy:   issue.CreatedBy,
 				DependsOnID: dep.ID,
 				IssueID:     issue.ID,
 				Type:        string(dep.Type),
@@ -238,7 +213,7 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 	out := IssueListJSON{
 		Assignee:        issue.Assignee,
 		CreatedAt:       formatTime(issue.CreatedAt),
-		CreatedBy:       name,
+		CreatedBy:       issue.CreatedBy,
 		Dependencies:    deps,
 		DependencyCount: len(issue.Dependencies),
 		DependentCount:  len(issue.Dependents),
@@ -246,7 +221,7 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 		ID:              issue.ID,
 		IssueType:       string(issue.Type),
 		Labels:          issue.Labels,
-		Owner:           email,
+		Owner:           issue.Owner,
 		Priority:        priorityToInt(issue.Priority),
 		Status:          string(issue.Status),
 		Title:           issue.Title,
@@ -265,7 +240,6 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 
 // enrichDependencies fetches full issue details for each dependency.
 func enrichDependencies(ctx context.Context, store storage.Storage, deps []storage.Dependency) []EnrichedDepJSON {
-	name, email := getGitUser()
 	result := make([]EnrichedDepJSON, 0, len(deps))
 
 	for _, dep := range deps {
@@ -281,11 +255,11 @@ func enrichDependencies(ctx context.Context, store storage.Storage, deps []stora
 
 		result = append(result, EnrichedDepJSON{
 			CreatedAt:      formatTime(issue.CreatedAt),
-			CreatedBy:      name,
+			CreatedBy:      issue.CreatedBy,
 			DependencyType: string(dep.Type),
 			ID:             issue.ID,
 			IssueType:      string(issue.Type),
-			Owner:          email,
+			Owner:          issue.Owner,
 			Priority:       priorityToInt(issue.Priority),
 			Status:         string(issue.Status),
 			Title:          issue.Title,

@@ -4,7 +4,7 @@
     "assignee": "bob",
     "comments": [
       {
-        "author": "Danny Cosson",
+        "author": "testactor",
         "created_at": "TIMESTAMP",
         "id": 1,
         "issue_id": "ISSUE_1",
@@ -12,11 +12,11 @@
       }
     ],
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "blocks",
         "id": "ISSUE_2",
         "issue_type": "task",
@@ -28,7 +28,7 @@
       },
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
         "id": "ISSUE_3",
         "issue_type": "task",
@@ -42,9 +42,9 @@
     "dependents": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "parent-child",
-        "id": "ISSUE_1.1",
+        "id": "ISSUE_4",
         "issue_type": "task",
         "owner": "dcosson@gmail.com",
         "priority": 2,

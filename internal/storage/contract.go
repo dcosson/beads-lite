@@ -663,7 +663,7 @@ func testComments(t *testing.T, s Storage) {
 	// Add a comment
 	comment1 := &Comment{
 		Author:    "alice",
-		Body:      "First comment",
+		Text:      "First comment",
 		CreatedAt: time.Now(),
 	}
 	if err := s.AddComment(ctx, id, comment1); err != nil {
@@ -681,17 +681,17 @@ func testComments(t *testing.T, s Storage) {
 	if got.Comments[0].Author != "alice" {
 		t.Errorf("Comment author: got %q, want %q", got.Comments[0].Author, "alice")
 	}
-	if got.Comments[0].Body != "First comment" {
-		t.Errorf("Comment body: got %q, want %q", got.Comments[0].Body, "First comment")
+	if got.Comments[0].Text != "First comment" {
+		t.Errorf("Comment body: got %q, want %q", got.Comments[0].Text, "First comment")
 	}
-	if got.Comments[0].ID == "" {
+	if got.Comments[0].ID == 0 {
 		t.Error("Comment ID should be set")
 	}
 
 	// Add another comment
 	comment2 := &Comment{
 		Author:    "bob",
-		Body:      "Second comment",
+		Text:      "Second comment",
 		CreatedAt: time.Now(),
 	}
 	if err := s.AddComment(ctx, id, comment2); err != nil {

@@ -15,10 +15,10 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "delete_reason": "delete",
     "deleted_at": "TIMESTAMP",
-    "deleted_by": "Danny Cosson",
+    "deleted_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
@@ -78,11 +78,11 @@ EXIT_CODE: 0
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "dependency_type": "blocks",
         "id": "ISSUE_5",
         "issue_type": "task",
@@ -107,7 +107,7 @@ EXIT_CODE: 0
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_7",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -122,11 +122,11 @@ EXIT_CODE: 0
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_5",
         "issue_id": "ISSUE_6",
         "type": "blocks"
@@ -144,7 +144,7 @@ EXIT_CODE: 0
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 2,
     "id": "ISSUE_5",
@@ -157,11 +157,11 @@ EXIT_CODE: 0
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
-        "created_by": "Danny Cosson",
+        "created_by": "testactor",
         "depends_on_id": "ISSUE_5",
         "issue_id": "ISSUE_8",
         "type": "blocks"
@@ -179,7 +179,7 @@ EXIT_CODE: 0
   },
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_7",

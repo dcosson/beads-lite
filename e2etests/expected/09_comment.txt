@@ -1,6 +1,6 @@
 === add first comment ===
 {
-  "author": "Danny Cosson",
+  "author": "testactor",
   "created_at": "TIMESTAMP",
   "id": 1,
   "issue_id": "ISSUE_1",
@@ -9,7 +9,7 @@
 
 === add second comment ===
 {
-  "author": "Danny Cosson",
+  "author": "testactor",
   "created_at": "TIMESTAMP",
   "id": 2,
   "issue_id": "ISSUE_1",
@@ -19,14 +19,14 @@
 === list comments ===
 [
   {
-    "author": "Danny Cosson",
+    "author": "testactor",
     "created_at": "TIMESTAMP",
     "id": 1,
     "issue_id": "ISSUE_1",
     "text": "First comment"
   },
   {
-    "author": "Danny Cosson",
+    "author": "testactor",
     "created_at": "TIMESTAMP",
     "id": 2,
     "issue_id": "ISSUE_1",
@@ -39,14 +39,14 @@
   {
     "comments": [
       {
-        "author": "Danny Cosson",
+        "author": "testactor",
         "created_at": "TIMESTAMP",
         "id": 1,
         "issue_id": "ISSUE_1",
         "text": "First comment"
       },
       {
-        "author": "Danny Cosson",
+        "author": "testactor",
         "created_at": "TIMESTAMP",
         "id": 2,
         "issue_id": "ISSUE_1",
@@ -54,7 +54,7 @@
       }
     ],
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",

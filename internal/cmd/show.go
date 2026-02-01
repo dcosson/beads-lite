@@ -152,9 +152,9 @@ func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	if len(issue.Comments) > 0 {
 		fmt.Fprintf(app.Out, "\nComments (%d):\n", len(issue.Comments))
 		for _, comment := range issue.Comments {
-			fmt.Fprintf(app.Out, "\n  [%s] %s (%s):\n", comment.ID, comment.Author, comment.CreatedAt.Format("2006-01-02 15:04"))
+			fmt.Fprintf(app.Out, "\n  [%d] %s (%s):\n", comment.ID, comment.Author, comment.CreatedAt.Format("2006-01-02 15:04"))
 			// Indent comment body
-			lines := strings.Split(comment.Body, "\n")
+			lines := strings.Split(comment.Text, "\n")
 			for _, line := range lines {
 				fmt.Fprintf(app.Out, "    %s\n", line)
 			}

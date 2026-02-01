@@ -2,7 +2,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
@@ -17,7 +17,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "task",
@@ -33,7 +33,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "task",
@@ -49,7 +49,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
@@ -65,7 +65,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
@@ -81,7 +81,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
@@ -101,7 +101,7 @@
 [
   {
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
@@ -121,7 +121,7 @@
   {
     "assignee": "charlie",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
@@ -141,7 +141,7 @@
   {
     "assignee": "charlie",
     "created_at": "TIMESTAMP",
-    "created_by": "Danny Cosson",
+    "created_by": "testactor",
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
