@@ -43,21 +43,16 @@ Examples:
 
 			// Try exact match first
 			issue, err := store.Get(ctx, query)
-			if err == nil {
-				return outputIssue(app, ctx, issue)
+			if err == nil && issue.Status == storage.StatusTombstone {
+				// Tombstoned issues are not visible to show
+				err = storage.ErrNotFound
 			}
-			if err != storage.ErrNotFound {
-				return fmt.Errorf("getting issue %s: %w", query, err)
+			if err == storage.ErrNotFound {
+				// Exact match failed (or tombstoned), try prefix matching
+				issue, err = findByPrefix(store, ctx, query)
 			}
-
-			// Exact match failed, try prefix matching
-			issue, err = findByPrefix(store, ctx, query)
 			if err != nil {
 				if err == storage.ErrNotFound {
-					// In JSON mode, return empty output with exit 0 (matches original beads behavior)
-					if app.JSON {
-						return nil
-					}
 					return fmt.Errorf("no issue found matching %q", query)
 				}
 				return err

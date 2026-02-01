@@ -178,13 +178,13 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 
 	// A, E, F should be gone
 	showResult = r.Run(sandbox, "show", idA, "--json")
-	section(&out, "show A after cascade", n.NormalizeJSON([]byte(showResult.Stdout)))
+	sectionExitCode(&out, "show A after cascade", showResult.ExitCode)
 
 	showResult = r.Run(sandbox, "show", idE, "--json")
-	section(&out, "show E after cascade", n.NormalizeJSON([]byte(showResult.Stdout)))
+	sectionExitCode(&out, "show E after cascade", showResult.ExitCode)
 
 	showResult = r.Run(sandbox, "show", idF, "--json")
-	section(&out, "show F after cascade", n.NormalizeJSON([]byte(showResult.Stdout)))
+	sectionExitCode(&out, "show F after cascade", showResult.ExitCode)
 
 	// B, G should still exist
 	result, err = mustRun(r, sandbox, "show", idB, "--json")

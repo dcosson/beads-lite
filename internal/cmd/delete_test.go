@@ -38,8 +38,8 @@ func TestDeleteSoftDeleteDefault(t *testing.T) {
 	if issue.DeletedAt == nil {
 		t.Error("DeletedAt should be set")
 	}
-	if issue.DeleteReason != "deleted" {
-		t.Errorf("expected default reason 'deleted', got %q", issue.DeleteReason)
+	if issue.DeleteReason != "batch delete" {
+		t.Errorf("expected default reason 'batch delete', got %q", issue.DeleteReason)
 	}
 }
 
@@ -82,14 +82,11 @@ func TestDeleteWithJSONOutput(t *testing.T) {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	if result["deleted"] != issueID {
-		t.Errorf("expected deleted %q, got %v", issueID, result["deleted"])
+	if result["deleted_count"] != float64(1) {
+		t.Errorf("expected deleted_count 1, got %v", result["deleted_count"])
 	}
-	if result["dependencies_removed"] != float64(0) {
-		t.Errorf("expected dependencies_removed 0, got %v", result["dependencies_removed"])
-	}
-	if result["references_updated"] != float64(0) {
-		t.Errorf("expected references_updated 0, got %v", result["references_updated"])
+	if result["total_count"] != float64(1) {
+		t.Errorf("expected total_count 1, got %v", result["total_count"])
 	}
 }
 
@@ -421,10 +418,11 @@ func TestUpdateRejectsTombstoneStatus(t *testing.T) {
 	cmd := newUpdateCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{issueID, "--status", "tombstone"})
 	err := cmd.Execute()
-	if err == nil {
-		t.Error("expected error when setting status to tombstone")
+	if err != nil {
+		t.Errorf("expected exit 0 (error goes to stderr), got error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "cannot set status to tombstone") {
-		t.Errorf("expected tombstone rejection error, got: %v", err)
+	stderr := app.Err.(*bytes.Buffer).String()
+	if !strings.Contains(stderr, "cannot set status to tombstone") {
+		t.Errorf("expected tombstone rejection in stderr, got: %q", stderr)
 	}
 }

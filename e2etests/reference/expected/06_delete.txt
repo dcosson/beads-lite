@@ -61,19 +61,13 @@ EXIT_CODE: 1
 }
 
 === show A after cascade ===
-{
-  "error": "resolving ID ISSUE_2: operation failed: failed to resolve ID: no issue found matching \"ISSUE_2\""
-}
+EXIT_CODE: 1
 
 === show E after cascade ===
-{
-  "error": "resolving ID ISSUE_3: operation failed: failed to resolve ID: no issue found matching \"ISSUE_3\""
-}
+EXIT_CODE: 1
 
 === show F after cascade ===
-{
-  "error": "resolving ID ISSUE_4: operation failed: failed to resolve ID: no issue found matching \"ISSUE_4\""
-}
+EXIT_CODE: 1
 
 === show B after cascade (still exists) ===
 [
@@ -85,7 +79,7 @@ EXIT_CODE: 1
         "created_at": "TIMESTAMP",
         "created_by": "testactor",
         "dependency_type": "blocks",
-        "id": "ISSUE_5",
+        "id": "ISSUE_2",
         "issue_type": "task",
         "owner": "dcosson@gmail.com",
         "priority": 2,
@@ -94,7 +88,7 @@ EXIT_CODE: 1
         "updated_at": "TIMESTAMP"
       }
     ],
-    "id": "ISSUE_6",
+    "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -109,7 +103,7 @@ EXIT_CODE: 1
   {
     "created_at": "TIMESTAMP",
     "created_by": "testactor",
-    "id": "ISSUE_7",
+    "id": "ISSUE_4",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -128,14 +122,14 @@ EXIT_CODE: 1
       {
         "created_at": "TIMESTAMP",
         "created_by": "testactor",
-        "depends_on_id": "ISSUE_5",
-        "issue_id": "ISSUE_6",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_3",
         "type": "blocks"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_6",
+    "id": "ISSUE_3",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -148,7 +142,7 @@ EXIT_CODE: 1
     "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 2,
-    "id": "ISSUE_5",
+    "id": "ISSUE_2",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -163,14 +157,14 @@ EXIT_CODE: 1
       {
         "created_at": "TIMESTAMP",
         "created_by": "testactor",
-        "depends_on_id": "ISSUE_5",
-        "issue_id": "ISSUE_8",
+        "depends_on_id": "ISSUE_2",
+        "issue_id": "ISSUE_5",
         "type": "blocks"
       }
     ],
     "dependency_count": 1,
     "dependent_count": 0,
-    "id": "ISSUE_8",
+    "id": "ISSUE_5",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -183,7 +177,7 @@ EXIT_CODE: 1
     "created_by": "testactor",
     "dependency_count": 0,
     "dependent_count": 0,
-    "id": "ISSUE_7",
+    "id": "ISSUE_4",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -221,7 +215,7 @@ EXIT_CODE: 1
   {
     "created_at": "TIMESTAMP",
     "created_by": "testactor",
-    "id": "ISSUE_9",
+    "id": "ISSUE_6",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,

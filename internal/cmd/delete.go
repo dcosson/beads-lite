@@ -14,22 +14,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// deleteResultSimple holds the outcome of a simple delete operation (no cascade).
-type deleteResultSimple struct {
-	Deleted             string `json:"deleted"`
-	DependenciesRemoved int    `json:"dependencies_removed"`
-	ReferencesUpdated   int    `json:"references_updated"`
-}
-
-// deleteResultCascade holds the outcome of a cascade delete operation.
-type deleteResultCascade struct {
-	Deleted             []string `json:"deleted"`
-	DeletedCount        int      `json:"deleted_count"`
-	DependenciesRemoved int      `json:"dependencies_removed"`
-	EventsRemoved       int      `json:"events_removed"`
-	LabelsRemoved       int      `json:"labels_removed"`
-	OrphanedIssues      []string `json:"orphaned_issues"` // null when nil
-	ReferencesUpdated   int      `json:"references_updated"`
+// deleteResult holds the JSON output of a delete operation.
+type deleteResult struct {
+	DeletedCount        int  `json:"deleted_count"`
+	EventsRemoved       int  `json:"events_removed"`
+	TotalCount          int  `json:"total_count"`
+	DependenciesRemoved int  `json:"dependencies_removed,omitempty"`
+	DryRun              bool `json:"dry_run,omitempty"`
+	IssueCount          int  `json:"issue_count,omitempty"`
 }
 
 // newDeleteCmd creates the delete command.
@@ -137,6 +129,16 @@ Examples:
 
 			// Dry run: preview and exit
 			if dryRun {
+				if app.JSON {
+					result := deleteResult{
+						DeletedCount:  len(toDelete),
+						EventsRemoved: len(toDelete) + depsRemoved,
+						TotalCount:    1,
+						IssueCount:    len(toDelete),
+						DryRun:        true,
+					}
+					return json.NewEncoder(app.Out).Encode(result)
+				}
 				action := "Tombstone"
 				if hard {
 					action = "Permanently delete"
@@ -215,15 +217,6 @@ Examples:
 				}
 			}
 
-			// Resolve actor for tombstone metadata
-			actor := ""
-			if !hard {
-				actor, _ = resolveActor(app)
-				if actor == "" {
-					actor = "unknown"
-				}
-			}
-
 			// Delete or tombstone all collected issues
 			for _, id := range toDelete {
 				if hard {
@@ -233,8 +226,9 @@ Examples:
 				} else {
 					deleteReason := reason
 					if deleteReason == "" {
-						deleteReason = "deleted"
+						deleteReason = "batch delete"
 					}
+					actor := "batch delete"
 					if err := store.CreateTombstone(ctx, id, actor, deleteReason); err != nil {
 						// Continue trying to process others even if one fails
 					}
@@ -243,22 +237,11 @@ Examples:
 
 			// Output the result
 			if app.JSON {
-				if cascade {
-					result := deleteResultCascade{
-						Deleted:             []string{issue.ID},
-						DeletedCount:        len(toDelete),
-						DependenciesRemoved: depsRemoved,
-						EventsRemoved:       len(toDelete) + depsRemoved,
-						LabelsRemoved:       0,
-						OrphanedIssues:      nil,
-						ReferencesUpdated:   refsUpdated,
-					}
-					return json.NewEncoder(app.Out).Encode(result)
-				}
-				result := deleteResultSimple{
-					Deleted:             issue.ID,
+				result := deleteResult{
+					DeletedCount:        len(toDelete),
+					EventsRemoved:       len(toDelete) + depsRemoved,
+					TotalCount:          1,
 					DependenciesRemoved: depsRemoved,
-					ReferencesUpdated:   refsUpdated,
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}

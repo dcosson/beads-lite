@@ -127,6 +127,11 @@ Examples:
 			if cmd.Flags().Changed("status") {
 				s, err := parseStatus(status)
 				if err != nil {
+					if strings.Contains(err.Error(), "tombstone") {
+						// Tombstone rejection: print to stderr but exit 0 (matches reference)
+						fmt.Fprintf(app.Err, "Error updating %s: validate field update: %v\n", issueID, err)
+						return nil
+					}
 					return err
 				}
 				issue.Status = s

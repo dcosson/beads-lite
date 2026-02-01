@@ -72,6 +72,9 @@ type IssueListJSON struct {
 	ClosedAt        string        `json:"closed_at,omitempty"`
 	CreatedAt       string        `json:"created_at"`
 	CreatedBy       string        `json:"created_by,omitempty"`
+	DeleteReason    string        `json:"delete_reason,omitempty"`
+	DeletedAt       string        `json:"deleted_at,omitempty"`
+	DeletedBy       string        `json:"deleted_by,omitempty"`
 	Dependencies    []ListDepJSON `json:"dependencies,omitempty"`
 	DependencyCount int           `json:"dependency_count"`
 	DependentCount  int           `json:"dependent_count"`
@@ -79,6 +82,7 @@ type IssueListJSON struct {
 	ID              string        `json:"id"`
 	IssueType       string        `json:"issue_type"`
 	Labels          []string      `json:"labels,omitempty"`
+	OriginalType    string        `json:"original_type,omitempty"`
 	Owner           string        `json:"owner,omitempty"`
 	Priority        int           `json:"priority"`
 	Status          string        `json:"status"`
@@ -237,6 +241,18 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 	}
 	if issue.ClosedAt != nil {
 		out.ClosedAt = formatTime(*issue.ClosedAt)
+	}
+	if issue.DeleteReason != "" {
+		out.DeleteReason = issue.DeleteReason
+	}
+	if issue.DeletedAt != nil {
+		out.DeletedAt = formatTime(*issue.DeletedAt)
+	}
+	if issue.DeletedBy != "" {
+		out.DeletedBy = issue.DeletedBy
+	}
+	if issue.OriginalType != "" {
+		out.OriginalType = string(issue.OriginalType)
 	}
 
 	return out

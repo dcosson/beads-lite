@@ -137,8 +137,6 @@
 
 === delete child 1 ===
 ✓ Deleted ISSUE_2
-  Removed 2 dependency link(s)
-  Updated text references in 0 issue(s)
 
 === create child 3 after deletion (no reuse) ===
 {
