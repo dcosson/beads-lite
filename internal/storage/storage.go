@@ -151,7 +151,7 @@ func (issue *Issue) DependentIDs(filterType *DependencyType) []string {
 type Comment struct {
 	ID        string    `json:"id"`
 	Author    string    `json:"author"`
-	Body      string    `json:"body"`
+	Body      string    `json:"text"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
