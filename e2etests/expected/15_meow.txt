@@ -33,9 +33,9 @@
 === pour molecule ===
 {
   "ChildIDs": [
-    "ISSUE_1.1",
-    "ISSUE_1.2",
-    "ISSUE_1.3"
+    "ISSUE_1",
+    "ISSUE_2",
+    "ISSUE_3"
   ],
   "Formula": {
     "description": "Test workflow",
@@ -71,7 +71,7 @@
     },
     "version": 1
   },
-  "RootID": "ISSUE_1"
+  "RootID": "ISSUE_4"
 }
 
 === mol current ===
@@ -85,20 +85,20 @@
     "ready": 1,
     "total": 3
   },
-  "root_id": "ISSUE_1",
+  "root_id": "ISSUE_4",
   "steps": [
     {
-      "id": "ISSUE_1.2",
+      "id": "ISSUE_2",
       "status": "blocked",
       "title": "Build"
     },
     {
-      "id": "ISSUE_1.1",
+      "id": "ISSUE_1",
       "status": "ready",
       "title": "Setup demo"
     },
     {
-      "id": "ISSUE_1.3",
+      "id": "ISSUE_3",
       "status": "blocked",
       "title": "Test"
     }
@@ -111,13 +111,13 @@
   {
     "assignee": "testuser",
     "children": [
-      "ISSUE_1.1",
-      "ISSUE_1.2",
-      "ISSUE_1.3"
+      "ISSUE_1",
+      "ISSUE_2",
+      "ISSUE_3"
     ],
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "ISSUE_1",
+    "id": "ISSUE_4",
     "issue_type": "epic",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -133,7 +133,7 @@
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
     "created_by": "Danny Cosson",
-    "id": "ISSUE_1.1",
+    "id": "ISSUE_1",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
     "priority": 2,
@@ -146,10 +146,10 @@
 === close step 1 continue ===
 {
   "closed": [
-    "ISSUE_1.1"
+    "ISSUE_1"
   ],
   "next_step": {
-    "id": "ISSUE_1.2",
+    "id": "ISSUE_2",
     "status": "in_progress",
     "title": "Build"
   }
@@ -158,10 +158,10 @@
 === close step 2 continue ===
 {
   "closed": [
-    "ISSUE_1.2"
+    "ISSUE_2"
   ],
   "next_step": {
-    "id": "ISSUE_1.3",
+    "id": "ISSUE_3",
     "status": "in_progress",
     "title": "Test"
   }
@@ -170,7 +170,7 @@
 === close step 3 ===
 {
   "closed": [
-    "ISSUE_1.3"
+    "ISSUE_3"
   ]
 }
 
@@ -188,9 +188,9 @@
 === pour for burn ===
 {
   "ChildIDs": [
-    "ISSUE_2.1",
-    "ISSUE_2.2",
-    "ISSUE_2.3"
+    "ISSUE_5",
+    "ISSUE_6",
+    "ISSUE_7"
   ],
   "Formula": {
     "description": "Test workflow",
@@ -226,21 +226,21 @@
     },
     "version": 1
   },
-  "RootID": "ISSUE_2"
+  "RootID": "ISSUE_8"
 }
 
 === burn molecule ===
 {
-  "molecule_id": "ISSUE_2",
+  "molecule_id": "ISSUE_8",
   "status": "burned"
 }
 
 === wisp molecule ===
 {
   "ChildIDs": [
-    "ISSUE_3.1",
-    "ISSUE_3.2",
-    "ISSUE_3.3"
+    "ISSUE_9",
+    "ISSUE_10",
+    "ISSUE_11"
   ],
   "Formula": {
     "description": "Test workflow",
@@ -276,7 +276,7 @@
     },
     "version": 1
   },
-  "RootID": "ISSUE_3"
+  "RootID": "ISSUE_12"
 }
 
 === ready excludes wisp ===
@@ -284,12 +284,12 @@
 
 === squash wisp ===
 {
-  "digest_id": "ISSUE_3.4",
+  "digest_id": "ISSUE_13",
   "keep_children": false,
   "squashed_ids": [
-    "ISSUE_3.1",
-    "ISSUE_3.2",
-    "ISSUE_3.3"
+    "ISSUE_9",
+    "ISSUE_10",
+    "ISSUE_11"
   ]
 }
 
@@ -304,7 +304,7 @@
         "created_at": "TIMESTAMP",
         "created_by": "Danny Cosson",
         "dependency_type": "parent-child",
-        "id": "ISSUE_3",
+        "id": "ISSUE_12",
         "issue_type": "epic",
         "owner": "dcosson@gmail.com",
         "priority": 2,
@@ -314,10 +314,10 @@
       }
     ],
     "description": "Test summary",
-    "id": "ISSUE_3.4",
+    "id": "ISSUE_13",
     "issue_type": "task",
     "owner": "dcosson@gmail.com",
-    "parent": "ISSUE_3",
+    "parent": "ISSUE_12",
     "priority": 2,
     "status": "closed",
     "title": "Digest: Test workflow",

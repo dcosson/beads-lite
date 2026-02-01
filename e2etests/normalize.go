@@ -26,10 +26,11 @@ func NewNormalizer() *Normalizer {
 }
 
 var (
-	// Match beads-lite IDs (bd-XXXX), original beads IDs (e2etests-XXX with optional .N suffix),
-	// or sandbox IDs (beads-sandbox-XXXXXXXX-XXX with optional .N suffix).
-	// The (\.\d+)? captures hierarchical child IDs like e2etests-abc.1
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}|e2etests-[0-9a-z]{3}(\.\d+)?|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(\.\d+)?)`)
+	// Match beads-lite IDs (bd-XXXX with optional .N.N suffix), original beads IDs
+	// (e2etests-XXX with optional .N.N suffix), or sandbox IDs
+	// (beads-sandbox-XXXXXXXX-XXX with optional .N.N suffix).
+	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
