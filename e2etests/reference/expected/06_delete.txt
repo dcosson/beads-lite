@@ -1,12 +1,12 @@
 === soft delete ===
 {
-  "deleted": "ISSUE_1",
-  "dependencies_removed": 0,
-  "references_updated": 0
+  "deleted_count": 1,
+  "events_removed": 1,
+  "total_count": 1
 }
 
 === show tombstoned issue ===
-
+EXIT_CODE: 1
 
 === list after soft delete ===
 []
@@ -16,9 +16,9 @@
   {
     "created_at": "TIMESTAMP",
     "created_by": "testactor",
-    "delete_reason": "delete",
+    "delete_reason": "batch delete",
     "deleted_at": "TIMESTAMP",
-    "deleted_by": "testactor",
+    "deleted_by": "batch delete",
     "dependency_count": 0,
     "dependent_count": 0,
     "id": "ISSUE_1",
@@ -34,45 +34,46 @@
 
 === hard delete ===
 {
-  "deleted": "ISSUE_2",
-  "dependencies_removed": 0,
-  "references_updated": 0
+  "deleted_count": 1,
+  "events_removed": 1,
+  "total_count": 1
 }
 
 === show hard-deleted issue ===
-EXIT_CODE: 0
+EXIT_CODE: 1
 
 === delete with reason ===
 {
-  "deleted": "ISSUE_3",
-  "dependencies_removed": 0,
-  "references_updated": 0
+  "deleted_count": 1,
+  "events_removed": 1,
+  "total_count": 1
 }
 
 === show issue with reason ===
-
+EXIT_CODE: 1
 
 === cascade hard delete A ===
 {
-  "deleted": [
-    "ISSUE_4"
-  ],
   "deleted_count": 3,
   "dependencies_removed": 4,
   "events_removed": 7,
-  "labels_removed": 0,
-  "orphaned_issues": null,
-  "references_updated": 0
+  "total_count": 1
 }
 
 === show A after cascade ===
-
+{
+  "error": "resolving ID ISSUE_2: operation failed: failed to resolve ID: no issue found matching \"ISSUE_2\""
+}
 
 === show E after cascade ===
-
+{
+  "error": "resolving ID ISSUE_3: operation failed: failed to resolve ID: no issue found matching \"ISSUE_3\""
+}
 
 === show F after cascade ===
-
+{
+  "error": "resolving ID ISSUE_4: operation failed: failed to resolve ID: no issue found matching \"ISSUE_4\""
+}
 
 === show B after cascade (still exists) ===
 [
@@ -194,31 +195,41 @@ EXIT_CODE: 0
 
 === cascade soft delete ===
 {
-  "deleted": [
-    "ISSUE_9"
-  ],
   "deleted_count": 2,
   "dependencies_removed": 1,
   "events_removed": 3,
-  "labels_removed": 0,
-  "orphaned_issues": null,
-  "references_updated": 0
+  "total_count": 1
 }
 
 === show parent after cascade soft delete ===
-
+EXIT_CODE: 1
 
 === show child after cascade soft delete ===
-
+EXIT_CODE: 1
 
 === dry run ===
-✓ Deleted ISSUE_10
-  Removed 0 dependency link(s)
-  Updated text references in 0 issue(s)
-
+{
+  "deleted_count": 1,
+  "dry_run": true,
+  "events_removed": 1,
+  "issue_count": 1,
+  "total_count": 1
+}
 
 === show after dry run ===
-
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_9",
+    "issue_type": "task",
+    "owner": "dcosson@gmail.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Dry run target",
+    "updated_at": "TIMESTAMP"
+  }
+]
 
 === update --status tombstone ===
 EXIT_CODE: 0

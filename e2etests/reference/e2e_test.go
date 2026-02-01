@@ -36,19 +36,27 @@ func TestE2E(t *testing.T) {
 		return
 	}
 
-	runner := &Runner{BdCmd: bdCmd}
+	runner := &Runner{BdCmd: bdCmd, KillDaemons: *update}
 
 	if *update {
 		verifyReferenceBeads(t, runner)
 	}
 
+	var prevSandbox string
+
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			// Tear down the previous sandbox (after daemon killall ran in SetupSandbox).
+			if prevSandbox != "" {
+				runner.TeardownSandbox(prevSandbox)
+				prevSandbox = ""
+			}
+
 			sandbox, err := runner.SetupSandbox()
 			if err != nil {
 				t.Fatalf("failed to setup sandbox: %v", err)
 			}
-			defer runner.TeardownSandbox(sandbox)
+			prevSandbox = sandbox
 
 			norm := NewNormalizer()
 			actual, err := tc.Fn(runner, norm, sandbox)
@@ -78,6 +86,14 @@ func TestE2E(t *testing.T) {
 				t.Errorf("output mismatch for %s:\n%s", tc.Name, diff)
 			}
 		})
+	}
+
+	// Kill any daemons left from the last test, then tear down the last sandbox.
+	if prevSandbox != "" {
+		if runner.KillDaemons {
+			runner.KillAllDaemons(prevSandbox)
+		}
+		runner.TeardownSandbox(prevSandbox)
 	}
 }
 

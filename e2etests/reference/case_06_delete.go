@@ -23,11 +23,8 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "soft delete", n.NormalizeJSON([]byte(result.Stdout)))
 
-	result, err = mustRun(r, sandbox, "show", tombstoneID, "--json")
-	if err != nil {
-		return "", err
-	}
-	section(&out, "show tombstoned issue", n.NormalizeJSON([]byte(result.Stdout)))
+	showResult := r.Run(sandbox, "show", tombstoneID, "--json")
+	sectionExitCode(&out, "show tombstoned issue", showResult.ExitCode)
 
 	result, err = mustRun(r, sandbox, "list", "--json")
 	if err != nil {
@@ -58,7 +55,7 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "hard delete", n.NormalizeJSON([]byte(result.Stdout)))
 
-	showResult := r.Run(sandbox, "show", hardDeleteID, "--json")
+	showResult = r.Run(sandbox, "show", hardDeleteID, "--json")
 	sectionExitCode(&out, "show hard-deleted issue", showResult.ExitCode)
 
 	// --- Part 3: Delete with --reason ---
@@ -78,11 +75,8 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "delete with reason", n.NormalizeJSON([]byte(result.Stdout)))
 
-	result, err = mustRun(r, sandbox, "show", reasonID, "--json")
-	if err != nil {
-		return "", err
-	}
-	section(&out, "show issue with reason", n.NormalizeJSON([]byte(result.Stdout)))
+	showResult = r.Run(sandbox, "show", reasonID, "--json")
+	sectionExitCode(&out, "show issue with reason", showResult.ExitCode)
 
 	// --- Part 4: Cascade hard delete ---
 	// Graph: A->B->C, D->C, E->A, F->E, F->G (-> = "depends on")
@@ -242,17 +236,11 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "cascade soft delete", n.NormalizeJSON([]byte(result.Stdout)))
 
-	result, err = mustRun(r, sandbox, "show", cascadeParentID, "--json")
-	if err != nil {
-		return "", err
-	}
-	section(&out, "show parent after cascade soft delete", n.NormalizeJSON([]byte(result.Stdout)))
+	showResult = r.Run(sandbox, "show", cascadeParentID, "--json")
+	sectionExitCode(&out, "show parent after cascade soft delete", showResult.ExitCode)
 
-	result, err = mustRun(r, sandbox, "show", cascadeChildID, "--json")
-	if err != nil {
-		return "", err
-	}
-	section(&out, "show child after cascade soft delete", n.NormalizeJSON([]byte(result.Stdout)))
+	showResult = r.Run(sandbox, "show", cascadeChildID, "--json")
+	sectionExitCode(&out, "show child after cascade soft delete", showResult.ExitCode)
 
 	// --- Part 6: Dry run ---
 
@@ -265,11 +253,11 @@ func caseDelete(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", err
 	}
 
-	result, err = mustRun(r, sandbox, "delete", dryRunID, "--dry-run", "--force")
+	result, err = mustRun(r, sandbox, "delete", dryRunID, "--dry-run", "--force", "--json")
 	if err != nil {
 		return "", err
 	}
-	section(&out, "dry run", n.normalizeText(result.Stdout))
+	section(&out, "dry run", n.NormalizeJSON([]byte(result.Stdout)))
 
 	result, err = mustRun(r, sandbox, "show", dryRunID, "--json")
 	if err != nil {

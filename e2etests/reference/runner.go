@@ -11,7 +11,8 @@ import (
 
 // Runner executes bd commands against a sandbox directory.
 type Runner struct {
-	BdCmd string // path to bd binary
+	BdCmd        string // path to bd binary
+	KillDaemons  bool   // kill reference binary daemons between sandboxes
 }
 
 // SetupSandbox creates a fresh beads sandbox directory by running the setup script.
@@ -29,7 +30,13 @@ func (r *Runner) SetupSandbox() (string, error) {
 		return "", fmt.Errorf("setup sandbox failed: %v\nstderr: %s", err, stderr.String())
 	}
 
-	return strings.TrimSpace(stdout.String()), nil
+	sandbox := strings.TrimSpace(stdout.String())
+
+	if r.KillDaemons {
+		r.KillAllDaemons(sandbox)
+	}
+
+	return sandbox, nil
 }
 
 // TeardownSandbox removes a sandbox directory.
@@ -56,14 +63,9 @@ type RunResult struct {
 
 // Run executes a bd command with the given arguments.
 // If sandbox is non-empty, BEADS_DIR is set and the working directory is changed
-// to the sandbox so the command finds the right data directory. The --no-daemon
-// flag is prepended to bypass the reference binary's daemon (which can interfere
-// with tombstone show, mol pour, etc.). Beads-lite accepts --no-daemon as a no-op.
+// to the sandbox so the command finds the right data directory.
 // Pass an empty sandbox for commands that don't need one (e.g., --help).
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
-	if sandbox != "" {
-		args = append([]string{"--no-daemon"}, args...)
-	}
 	cmd := exec.Command(r.BdCmd, args...)
 	if sandbox != "" {
 		cmd.Dir = sandbox
@@ -89,6 +91,15 @@ func (r *Runner) Run(sandbox string, args ...string) RunResult {
 		Stderr:   stderr.String(),
 		ExitCode: exitCode,
 	}
+}
+
+// KillAllDaemons kills any running reference binary daemons.
+// Requires a valid sandbox path to provide a .beads/ workspace context.
+func (r *Runner) KillAllDaemons(sandbox string) {
+	cmd := exec.Command(r.BdCmd, "daemon", "killall")
+	cmd.Dir = sandbox
+	cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
+	cmd.Run() // best-effort
 }
 
 // projectRoot returns the root directory of the project (parent of e2etests/).
