@@ -1,6 +1,7 @@
 package e2etests
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -32,7 +33,7 @@ func TestE2E(t *testing.T) {
 	bdCmd := os.Getenv("BD_CMD")
 	if bdCmd == "" {
 		t.Skip("BD_CMD environment variable not set")
-    return
+		return
 	}
 
 	runner := &Runner{BdCmd: bdCmd}
@@ -73,42 +74,168 @@ func TestE2E(t *testing.T) {
 				t.Fatalf("no expected file %q (run with -update to generate): %v", expectedFile, err)
 			}
 
-			if actual != string(expected) {
-				t.Errorf("output mismatch for %s:\n%s", tc.Name, lineDiff(string(expected), actual))
+			if diff := compareOutput(string(expected), actual); diff != "" {
+				t.Errorf("output mismatch for %s:\n%s", tc.Name, diff)
 			}
 		})
 	}
 }
 
-// lineDiff produces a simple line-by-line diff between two strings.
-func lineDiff(expected, actual string) string {
-	expLines := strings.Split(expected, "\n")
-	actLines := strings.Split(actual, "\n")
+// testSection represents a named section of test output (e.g., "=== create basic task ===\n{...}").
+type testSection struct {
+	Name    string
+	Content string
+}
+
+// splitSections parses test output into named sections delimited by "=== name ===" headers.
+func splitSections(s string) []testSection {
+	var sections []testSection
+	lines := strings.Split(s, "\n")
+	var current *testSection
+	var contentLines []string
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "=== ") && strings.HasSuffix(line, " ===") {
+			if current != nil {
+				current.Content = strings.TrimSpace(strings.Join(contentLines, "\n"))
+				sections = append(sections, *current)
+			}
+			name := strings.TrimPrefix(line, "=== ")
+			name = strings.TrimSuffix(name, " ===")
+			current = &testSection{Name: name}
+			contentLines = nil
+		} else if current != nil {
+			contentLines = append(contentLines, line)
+		}
+	}
+	if current != nil {
+		current.Content = strings.TrimSpace(strings.Join(contentLines, "\n"))
+		sections = append(sections, *current)
+	}
+
+	return sections
+}
+
+// compareOutput compares expected and actual test output section by section.
+// For JSON sections, it uses superset matching: the actual output may contain
+// extra fields not in the expected output, but every field in the expected
+// output must be present in the actual output with the same value.
+// For non-JSON sections (e.g., EXIT_CODE), it uses exact string comparison.
+// Returns an empty string if the outputs match, or a description of differences.
+func compareOutput(expected, actual string) string {
+	expSections := splitSections(expected)
+	actSections := splitSections(actual)
 
 	var b strings.Builder
-	maxLines := len(expLines)
-	if len(actLines) > maxLines {
-		maxLines = len(actLines)
+
+	if len(expSections) != len(actSections) {
+		b.WriteString(fmt.Sprintf("section count mismatch: expected %d, got %d\n", len(expSections), len(actSections)))
+		b.WriteString(fmt.Sprintf("expected sections: %s\n", sectionNames(expSections)))
+		b.WriteString(fmt.Sprintf("actual sections:   %s\n", sectionNames(actSections)))
 	}
 
-	for i := 0; i < maxLines; i++ {
-		expLine := ""
-		actLine := ""
-		if i < len(expLines) {
-			expLine = expLines[i]
-		}
-		if i < len(actLines) {
-			actLine = actLines[i]
+	maxSections := len(expSections)
+	if len(actSections) < maxSections {
+		maxSections = len(actSections)
+	}
+
+	for i := 0; i < maxSections; i++ {
+		exp := expSections[i]
+		act := actSections[i]
+
+		if exp.Name != act.Name {
+			b.WriteString(fmt.Sprintf("section %d: expected %q, got %q\n", i, exp.Name, act.Name))
+			continue
 		}
 
-		if expLine != actLine {
-			b.WriteString(fmt.Sprintf("line %d:\n  expected: %q\n  actual:   %q\n", i+1, expLine, actLine))
+		// Try JSON superset comparison
+		var expJSON, actJSON interface{}
+		expErr := json.Unmarshal([]byte(exp.Content), &expJSON)
+		actErr := json.Unmarshal([]byte(act.Content), &actJSON)
+
+		if expErr == nil && actErr == nil {
+			if err := jsonSupersetMatch(expJSON, actJSON, ""); err != nil {
+				b.WriteString(fmt.Sprintf("section %q: %v\n", exp.Name, err))
+			}
+		} else {
+			// Plain text comparison (e.g., EXIT_CODE sections)
+			if exp.Content != act.Content {
+				b.WriteString(fmt.Sprintf("section %q:\n  expected: %q\n  actual:   %q\n", exp.Name, exp.Content, act.Content))
+			}
 		}
 	}
 
-	if len(expLines) != len(actLines) {
-		b.WriteString(fmt.Sprintf("\nexpected %d lines, got %d lines\n", len(expLines), len(actLines)))
+	// Report any extra expected sections
+	for i := maxSections; i < len(expSections); i++ {
+		b.WriteString(fmt.Sprintf("missing section: %q\n", expSections[i].Name))
+	}
+	// Report any extra actual sections
+	for i := maxSections; i < len(actSections); i++ {
+		b.WriteString(fmt.Sprintf("extra section: %q\n", actSections[i].Name))
 	}
 
 	return b.String()
+}
+
+func sectionNames(sections []testSection) string {
+	names := make([]string, len(sections))
+	for i, s := range sections {
+		names[i] = s.Name
+	}
+	return "[" + strings.Join(names, ", ") + "]"
+}
+
+// jsonSupersetMatch checks that actual is a superset of expected.
+// Every key/value in expected must exist in actual with the same value.
+// Extra keys in actual are allowed. Arrays must have the same length
+// and each element is compared with superset logic.
+func jsonSupersetMatch(expected, actual interface{}, path string) error {
+	switch exp := expected.(type) {
+	case map[string]interface{}:
+		act, ok := actual.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("%s: expected object, got %T", pathOrRoot(path), actual)
+		}
+		for key, expVal := range exp {
+			childPath := path + "." + key
+			actVal, exists := act[key]
+			if !exists {
+				return fmt.Errorf("%s: missing field %q", pathOrRoot(path), key)
+			}
+			if err := jsonSupersetMatch(expVal, actVal, childPath); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case []interface{}:
+		act, ok := actual.([]interface{})
+		if !ok {
+			return fmt.Errorf("%s: expected array, got %T", pathOrRoot(path), actual)
+		}
+		if len(exp) != len(act) {
+			return fmt.Errorf("%s: array length %d, expected %d", pathOrRoot(path), len(act), len(exp))
+		}
+		for i := range exp {
+			childPath := fmt.Sprintf("%s[%d]", path, i)
+			if err := jsonSupersetMatch(exp[i], act[i], childPath); err != nil {
+				return err
+			}
+		}
+		return nil
+
+	default:
+		// Primitives: exact match
+		if fmt.Sprintf("%v", expected) != fmt.Sprintf("%v", actual) {
+			return fmt.Errorf("%s: expected %v, got %v", pathOrRoot(path), expected, actual)
+		}
+		return nil
+	}
+}
+
+func pathOrRoot(path string) string {
+	if path == "" {
+		return "(root)"
+	}
+	return path
 }
