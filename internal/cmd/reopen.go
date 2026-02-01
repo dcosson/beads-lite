@@ -39,8 +39,12 @@ Examples:
 			}
 
 			if app.JSON {
-				result := map[string]string{"id": issueID, "status": "reopened"}
-				return json.NewEncoder(app.Out).Encode(result)
+				issue, err := store.Get(ctx, issueID)
+				if err != nil {
+					return fmt.Errorf("fetching reopened issue %s: %w", issueID, err)
+				}
+				issues := []IssueJSON{ToIssueJSON(ctx, store, issue, false, false)}
+				return json.NewEncoder(app.Out).Encode(issues)
 			}
 
 			fmt.Fprintf(app.Out, "Reopened %s\n", issueID)

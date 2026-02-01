@@ -58,49 +58,38 @@ Examples:
 
 			// JSON output
 			if app.JSON {
-				result := map[string]interface{}{
-					"closed": closed,
-				}
-				if len(errors) > 0 {
-					errStrings := make([]string, len(errors))
-					for i, e := range errors {
-						errStrings[i] = e.Error()
+				var issues []IssueJSON
+				for _, id := range closed {
+					s, err := app.StorageFor(ctx, id)
+					if err != nil {
+						continue
 					}
-					result["errors"] = errStrings
+					issue, err := s.Get(ctx, id)
+					if err != nil {
+						continue
+					}
+					issues = append(issues, ToIssueJSON(ctx, s, issue, false, false))
 				}
 
 				// --continue logic (JSON)
 				if continueFlag {
 					for _, issueID := range closed {
 						nextStep := findNextMoleculeStep(ctx, store, issueID)
-						if nextStep == nil {
-							result["next_step"] = nil
-							continue
-						}
-						stepInfo := map[string]string{
-							"id":    nextStep.ID,
-							"title": nextStep.Title,
-						}
-						if !noAuto {
+						if nextStep != nil && !noAuto {
 							nextStep.Status = storage.StatusInProgress
-							if err := store.Update(ctx, nextStep); err == nil {
-								stepInfo["status"] = string(storage.StatusInProgress)
-							}
+							store.Update(ctx, nextStep)
 						}
-						result["next_step"] = stepInfo
 					}
 				}
 
 				// --suggest-next logic (JSON)
 				if suggestNext {
-					var unblocked []map[string]string
 					for _, issueID := range closed {
-						unblocked = append(unblocked, findUnblockedDependents(ctx, store, issueID)...)
+						findUnblockedDependents(ctx, store, issueID)
 					}
-					result["unblocked"] = unblocked
 				}
 
-				return json.NewEncoder(app.Out).Encode(result)
+				return json.NewEncoder(app.Out).Encode(issues)
 			}
 
 			// Text output

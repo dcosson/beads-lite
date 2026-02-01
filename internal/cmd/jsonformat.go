@@ -28,6 +28,7 @@ type IssueJSON struct {
 	Status          string            `json:"status"`
 	Title           string            `json:"title"`
 	UpdatedAt       string            `json:"updated_at"`
+	CloseReason     string            `json:"close_reason,omitempty"`
 	ClosedAt        string            `json:"closed_at,omitempty"`
 }
 
@@ -156,6 +157,9 @@ func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issu
 		UpdatedAt:   formatTime(issue.UpdatedAt),
 	}
 
+	if issue.CloseReason != "" {
+		out.CloseReason = issue.CloseReason
+	}
 	if issue.ClosedAt != nil {
 		out.ClosedAt = formatTime(*issue.ClosedAt)
 	}

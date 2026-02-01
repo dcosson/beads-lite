@@ -177,20 +177,19 @@ func TestCloseWithJSONOutput(t *testing.T) {
 		t.Fatalf("close failed: %v", err)
 	}
 
-	var result map[string]interface{}
+	var result []map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	closed, ok := result["closed"].([]interface{})
-	if !ok {
-		t.Fatalf("expected closed to be an array, got %T", result["closed"])
+	if len(result) != 1 {
+		t.Fatalf("expected 1 closed issue, got %d", len(result))
 	}
-	if len(closed) != 1 {
-		t.Errorf("expected 1 closed issue, got %d", len(closed))
+	if result[0]["id"].(string) != id {
+		t.Errorf("expected id to be %q, got %q", id, result[0]["id"])
 	}
-	if closed[0].(string) != id {
-		t.Errorf("expected closed[0] to be %q, got %q", id, closed[0])
+	if result[0]["status"].(string) != "closed" {
+		t.Errorf("expected status to be closed, got %q", result[0]["status"])
 	}
 }
 
@@ -215,27 +214,17 @@ func TestCloseJSONWithErrors(t *testing.T) {
 	cmd.SetArgs([]string{validID, "bd-nonexistent"})
 	_ = cmd.Execute() // Ignore error, we want to check JSON output
 
-	var result map[string]interface{}
+	var result []map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	// Check closed array
-	closed, ok := result["closed"].([]interface{})
-	if !ok {
-		t.Fatalf("expected closed to be an array, got %T", result["closed"])
+	// Only the valid issue should be in the output (nonexistent one errored)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 closed issue, got %d", len(result))
 	}
-	if len(closed) != 1 || closed[0].(string) != validID {
-		t.Errorf("expected closed to contain %q, got %v", validID, closed)
-	}
-
-	// Check errors array
-	errors, ok := result["errors"].([]interface{})
-	if !ok {
-		t.Fatalf("expected errors to be an array, got %T", result["errors"])
-	}
-	if len(errors) != 1 {
-		t.Errorf("expected 1 error, got %d", len(errors))
+	if result[0]["id"].(string) != validID {
+		t.Errorf("expected id to be %q, got %q", validID, result[0]["id"])
 	}
 }
 

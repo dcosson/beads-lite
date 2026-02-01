@@ -145,15 +145,18 @@ func TestReopenJSON(t *testing.T) {
 	}
 
 	// Parse and verify JSON output
-	var result map[string]string
+	var result []map[string]interface{}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
 
-	if result["id"] != id {
-		t.Errorf("expected id %s, got: %s", id, result["id"])
+	if len(result) != 1 {
+		t.Fatalf("expected 1 issue, got %d", len(result))
 	}
-	if result["status"] != "reopened" {
-		t.Errorf("expected status 'reopened', got: %s", result["status"])
+	if result[0]["id"].(string) != id {
+		t.Errorf("expected id %s, got: %s", id, result[0]["id"])
+	}
+	if result[0]["status"].(string) != "open" {
+		t.Errorf("expected status 'open', got: %s", result[0]["status"])
 	}
 }
