@@ -38,14 +38,14 @@ Subcommands:
 
 // SwarmValidateJSON is the JSON output format for "swarm validate".
 type SwarmValidateJSON struct {
-	EpicID         string              `json:"epic_id"`
-	EpicTitle      string              `json:"epic_title"`
-	Swarmable      bool                `json:"swarmable"`
-	Waves          []SwarmWaveJSON     `json:"waves"`
-	MaxParallelism int                 `json:"max_parallelism"`
-	TotalChildren  int                 `json:"total_children"`
-	Warnings       []string            `json:"warnings,omitempty"`
-	Errors         []string            `json:"errors,omitempty"`
+	EpicID         string          `json:"epic_id"`
+	EpicTitle      string          `json:"epic_title"`
+	Swarmable      bool            `json:"swarmable"`
+	Waves          []SwarmWaveJSON `json:"waves"`
+	MaxParallelism int             `json:"max_parallelism"`
+	TotalChildren  int             `json:"total_children"`
+	Warnings       []string        `json:"warnings,omitempty"`
+	Errors         []string        `json:"errors,omitempty"`
 }
 
 // SwarmWaveJSON represents a single wave in the validation output.
@@ -69,16 +69,16 @@ type SwarmCreateJSON struct {
 
 // SwarmStatusJSON is the JSON output format for "swarm status".
 type SwarmStatusJSON struct {
-	EpicID     string              `json:"epic_id"`
-	EpicTitle  string              `json:"epic_title"`
-	MoleculeID string              `json:"molecule_id,omitempty"`
-	Total      int                 `json:"total"`
-	Completed  int                 `json:"completed"`
-	Active     int                 `json:"active"`
-	Ready      int                 `json:"ready"`
-	Blocked    int                 `json:"blocked"`
-	Progress   float64             `json:"progress"`
-	Children   []SwarmChildJSON    `json:"children"`
+	EpicID     string           `json:"epic_id"`
+	EpicTitle  string           `json:"epic_title"`
+	MoleculeID string           `json:"molecule_id,omitempty"`
+	Total      int              `json:"total"`
+	Completed  int              `json:"completed"`
+	Active     int              `json:"active"`
+	Ready      int              `json:"ready"`
+	Blocked    int              `json:"blocked"`
+	Progress   float64          `json:"progress"`
+	Children   []SwarmChildJSON `json:"children"`
 }
 
 // SwarmChildJSON represents a child issue in status output.

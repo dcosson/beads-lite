@@ -11,10 +11,10 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
-	"beads-lite/internal/issuestorage/filesystem"
 
 	"github.com/spf13/cobra"
 )
@@ -117,13 +117,13 @@ func (p *AppProvider) init() (*App, error) {
 		SlotStore:      slotStore,
 		AgentStore:     agentStore,
 		MergeSlotStore: mergeSlotStore,
-		Router:     router,
-		ConfigStore: configStore,
-		ConfigDir:   paths.ConfigDir,
-		FormulaPath: meow.DefaultSearchPath(paths.ConfigDir),
-		Out:         out,
-		Err:         errOut,
-		JSON:        p.JSONOutput,
+		Router:         router,
+		ConfigStore:    configStore,
+		ConfigDir:      paths.ConfigDir,
+		FormulaPath:    meow.DefaultSearchPath(paths.ConfigDir),
+		Out:            out,
+		Err:            errOut,
+		JSON:           p.JSONOutput,
 	}, nil
 }
 

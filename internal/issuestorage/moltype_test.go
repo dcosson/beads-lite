@@ -12,9 +12,9 @@ func TestValidateMolType(t *testing.T) {
 		{"patrol", true},
 		{"work", true},
 		{"invalid", false},
-		{"SWARM", false},   // case-sensitive
-		{"Patrol", false},  // case-sensitive
-		{"Work", false},    // case-sensitive
+		{"SWARM", false},  // case-sensitive
+		{"Patrol", false}, // case-sensitive
+		{"Work", false},   // case-sensitive
 		{"unknown", false},
 	}
 

@@ -12,9 +12,9 @@ import (
 // reference implementation which imports from JSONL exports.
 func newImportCmd(provider *AppProvider) *cobra.Command {
 	var (
-		inputFile          string
-		renameOnImport     bool
-		noGitHistory       bool
+		inputFile           string
+		renameOnImport      bool
+		noGitHistory        bool
 		protectLeftSnapshot bool
 	)
 

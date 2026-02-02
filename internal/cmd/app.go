@@ -7,28 +7,28 @@ import (
 	"os"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 	"beads-lite/internal/kvstorage"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
-	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/issuestorage/filesystem"
 
 	"golang.org/x/term"
 )
 
 // App holds application state shared across commands.
 type App struct {
-	Storage    issuestorage.IssueStore
+	Storage        issuestorage.IssueStore
 	SlotStore      kvstorage.KVStore
 	AgentStore     kvstorage.KVStore
 	MergeSlotStore kvstorage.KVStore
-	Router     *routing.Router // nil if no routes.json
-	ConfigStore config.Store
-	ConfigDir   string // path to .beads directory
-	FormulaPath meow.FormulaSearchPath
-	Out         io.Writer
-	Err         io.Writer
-	JSON        bool // output in JSON format
+	Router         *routing.Router // nil if no routes.json
+	ConfigStore    config.Store
+	ConfigDir      string // path to .beads directory
+	FormulaPath    meow.FormulaSearchPath
+	Out            io.Writer
+	Err            io.Writer
+	JSON           bool // output in JSON format
 }
 
 // StorageFor returns the storage for the given issue ID, routing if needed.

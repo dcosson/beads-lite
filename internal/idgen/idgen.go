@@ -54,7 +54,7 @@ func AdaptiveLength(existingCount int) int {
 	for length := MinLength; length <= MaxLength; length++ {
 		namespace := math.Pow(36, float64(length))
 		n := float64(existingCount)
-		probability := 1 - math.Exp(-(n * n) / (2 * namespace))
+		probability := 1 - math.Exp(-(n*n)/(2*namespace))
 		if probability < MaxCollisionProbability {
 			return length
 		}

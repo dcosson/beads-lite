@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/meow"
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/meow"
 
 	"github.com/spf13/cobra"
 )
