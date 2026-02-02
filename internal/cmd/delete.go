@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -79,12 +79,12 @@ Examples:
 
 			// Try exact match first
 			issue, err := store.Get(ctx, idPrefix)
-			if err == storage.ErrNotFound {
+			if err == issuestorage.ErrNotFound {
 				// Try prefix matching
 				issue, err = findByPrefix(store, ctx, idPrefix)
 			}
 			if err != nil {
-				if err == storage.ErrNotFound {
+				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("issue not found: %s", idPrefix)
 				}
 				return fmt.Errorf("finding issue: %w", err)
@@ -102,7 +102,7 @@ Examples:
 				}
 				for _, fid := range fileIDs {
 					resolved, err := store.Get(ctx, fid)
-					if err == storage.ErrNotFound {
+					if err == issuestorage.ErrNotFound {
 						resolved, err = findByPrefix(store, ctx, fid)
 					}
 					if err != nil {
@@ -272,7 +272,7 @@ Examples:
 
 // collectDependentsRecursive collects all issues that depend on the given issue,
 // following the dependent chain recursively.
-func collectDependentsRecursive(ctx context.Context, store storage.Storage, issueID string, visited map[string]bool) ([]string, error) {
+func collectDependentsRecursive(ctx context.Context, store issuestorage.IssueStore, issueID string, visited map[string]bool) ([]string, error) {
 	if visited[issueID] {
 		return nil, nil
 	}
@@ -300,22 +300,22 @@ func collectDependentsRecursive(ctx context.Context, store storage.Storage, issu
 // findByPrefix finds an issue by ID prefix.
 // Returns ErrNotFound if no match, or an error if multiple matches.
 // Tombstoned issues are excluded from prefix matching.
-func findByPrefix(store storage.Storage, ctx context.Context, prefix string) (*storage.Issue, error) {
+func findByPrefix(store issuestorage.IssueStore, ctx context.Context, prefix string) (*issuestorage.Issue, error) {
 	// List all issues (both open and closed, excluding tombstones)
 	openIssues, err := store.List(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	closedStatus := storage.StatusClosed
-	closedIssues, err := store.List(ctx, &storage.ListFilter{Status: &closedStatus})
+	closedStatus := issuestorage.StatusClosed
+	closedIssues, err := store.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
 	if err != nil {
 		return nil, err
 	}
 
 	allIssues := append(openIssues, closedIssues...)
 
-	var matches []*storage.Issue
+	var matches []*issuestorage.Issue
 	for _, issue := range allIssues {
 		if strings.HasPrefix(issue.ID, prefix) {
 			matches = append(matches, issue)
@@ -323,7 +323,7 @@ func findByPrefix(store storage.Storage, ctx context.Context, prefix string) (*s
 	}
 
 	if len(matches) == 0 {
-		return nil, storage.ErrNotFound
+		return nil, issuestorage.ErrNotFound
 	}
 	if len(matches) > 1 {
 		var ids []string
@@ -357,7 +357,7 @@ func readIDsFromFile(path string) ([]string, error) {
 
 // rewriteTextReferences replaces references to deletedID in surviving issues'
 // descriptions with [deleted:ID] format. Returns the number of references updated.
-func rewriteTextReferences(ctx context.Context, store storage.Storage, deletedID string, deleteSet map[string]bool) int {
+func rewriteTextReferences(ctx context.Context, store issuestorage.IssueStore, deletedID string, deleteSet map[string]bool) int {
 	// Get the issue to find its connected issues
 	issue, err := store.Get(ctx, deletedID)
 	if err != nil {

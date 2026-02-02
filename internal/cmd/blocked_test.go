@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestBlockedCommand(t *testing.T) {
@@ -19,31 +19,31 @@ func TestBlockedCommand(t *testing.T) {
 	}
 
 	// Create a dependency issue (open)
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create a blocked issue (depends on open issue)
-	blockedID, err := store.Create(ctx, &storage.Issue{
+	blockedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: blockedID depends on depID
-	if err := store.AddDependency(ctx, blockedID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blockedID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create an unblocked issue
-	unblockedID, err := store.Create(ctx, &storage.Issue{
+	unblockedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -85,24 +85,24 @@ func TestBlockedByRelationship(t *testing.T) {
 	}
 
 	// Create a blocker issue (open)
-	blockerID, err := store.Create(ctx, &storage.Issue{
+	blockerID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocker issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create an issue that is blocked by the blocker
-	blockedID, err := store.Create(ctx, &storage.Issue{
+	blockedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: blockedID depends on blockerID (blockerID blocks blockedID)
-	if err := store.AddDependency(ctx, blockedID, blockerID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blockedID, blockerID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -139,17 +139,17 @@ func TestBlockedNoBlockedIssues(t *testing.T) {
 	}
 
 	// Create only unblocked issues
-	_, err := store.Create(ctx, &storage.Issue{
+	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue 1",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	_, err = store.Create(ctx, &storage.Issue{
+	_, err = store.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue 2",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -185,9 +185,9 @@ func TestBlockedClosedDependency(t *testing.T) {
 	}
 
 	// Create and close a dependency issue
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed dependency",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -197,15 +197,15 @@ func TestBlockedClosedDependency(t *testing.T) {
 	}
 
 	// Create an issue that depends on the closed issue
-	issueID, err := store.Create(ctx, &storage.Issue{
+	issueID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue with closed dependency",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: issueID depends on depID
-	if err := store.AddDependency(ctx, issueID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, issueID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -239,24 +239,24 @@ func TestBlockedJSONOutput(t *testing.T) {
 	}
 
 	// Create a dependency issue (open)
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create a blocked issue
-	blockedID, err := store.Create(ctx, &storage.Issue{
+	blockedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: blockedID depends on depID
-	if err := store.AddDependency(ctx, blockedID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blockedID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -297,18 +297,18 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 	}
 
 	// Create two open dependency issues
-	dep1ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep 1"})
-	dep2ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep 2"})
+	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep 1"})
+	dep2ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep 2"})
 
 	// Create an issue blocked by both
-	blockedID, _ := store.Create(ctx, &storage.Issue{
+	blockedID, _ := store.Create(ctx, &issuestorage.Issue{
 		Title: "Multiply blocked",
 	})
 	// Add dependencies: blockedID depends on both dep1ID and dep2ID
-	if err := store.AddDependency(ctx, blockedID, dep1ID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blockedID, dep1ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency on dep1: %v", err)
 	}
-	if err := store.AddDependency(ctx, blockedID, dep2ID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blockedID, dep2ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency on dep2: %v", err)
 	}
 
@@ -344,36 +344,36 @@ func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 	}
 
 	// Create an open dependency issue
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open dependency",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create dep issue: %v", err)
 	}
 
 	// Create an ephemeral blocked issue — should be excluded
-	ephID, err := store.Create(ctx, &storage.Issue{
+	ephID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Ephemeral blocked issue",
-		Priority:  storage.PriorityMedium,
+		Priority:  issuestorage.PriorityMedium,
 		Ephemeral: true,
 	})
 	if err != nil {
 		t.Fatalf("failed to create ephemeral issue: %v", err)
 	}
-	if err := store.AddDependency(ctx, ephID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, ephID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create a persistent blocked issue — should be included
-	persistID, err := store.Create(ctx, &storage.Issue{
+	persistID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create persistent issue: %v", err)
 	}
-	if err := store.AddDependency(ctx, persistID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, persistID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -407,23 +407,23 @@ func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
 	}
 
 	// Create two open dependency issues
-	dep1ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep A", Priority: storage.PriorityHigh})
-	dep2ID, _ := store.Create(ctx, &storage.Issue{Title: "Dep B", Priority: storage.PriorityHigh})
+	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep A", Priority: issuestorage.PriorityHigh})
+	dep2ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep B", Priority: issuestorage.PriorityHigh})
 
 	// Create two persistent blocked issues
-	blocked1ID, _ := store.Create(ctx, &storage.Issue{
+	blocked1ID, _ := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked 1",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
-	if err := store.AddDependency(ctx, blocked1ID, dep1ID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blocked1ID, dep1ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
-	blocked2ID, _ := store.Create(ctx, &storage.Issue{
+	blocked2ID, _ := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked 2",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
-	if err := store.AddDependency(ctx, blocked2ID, dep2ID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, blocked2ID, dep2ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 

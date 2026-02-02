@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestCompactDryRun(t *testing.T) {
@@ -16,16 +16,16 @@ func TestCompactDryRun(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create and close some issues
-	issue1 := &storage.Issue{Title: "Closed issue 1", Type: storage.TypeTask}
+	issue1 := &issuestorage.Issue{Title: "Closed issue 1", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(context.Background(), issue1)
 	store.Close(context.Background(), id1)
 
-	issue2 := &storage.Issue{Title: "Closed issue 2", Type: storage.TypeTask}
+	issue2 := &issuestorage.Issue{Title: "Closed issue 2", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(context.Background(), issue2)
 	store.Close(context.Background(), id2)
 
 	// Keep one open
-	issue3 := &storage.Issue{Title: "Open issue", Type: storage.TypeTask}
+	issue3 := &issuestorage.Issue{Title: "Open issue", Type: issuestorage.TypeTask}
 	store.Create(context.Background(), issue3)
 
 	cmd := newCompactCmd(NewTestProvider(app))
@@ -60,7 +60,7 @@ func TestCompactWithForce(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create and close an issue
-	issue := &storage.Issue{Title: "Closed issue", Type: storage.TypeTask}
+	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
 	store.Close(context.Background(), id)
 
@@ -72,7 +72,7 @@ func TestCompactWithForce(t *testing.T) {
 
 	// Verify issue is deleted
 	_, err := store.Get(context.Background(), id)
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("expected ErrNotFound after compact, got %v", err)
 	}
 }
@@ -82,7 +82,7 @@ func TestCompactNoClosedIssues(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create only open issues
-	issue := &storage.Issue{Title: "Open issue", Type: storage.TypeTask}
+	issue := &issuestorage.Issue{Title: "Open issue", Type: issuestorage.TypeTask}
 	store.Create(context.Background(), issue)
 
 	cmd := newCompactCmd(NewTestProvider(app))
@@ -101,7 +101,7 @@ func TestCompactOlderThan(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and close an issue, then manually set its ClosedAt to be old
-	issue1 := &storage.Issue{Title: "Old closed issue", Type: storage.TypeTask}
+	issue1 := &issuestorage.Issue{Title: "Old closed issue", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(ctx, issue1)
 	store.Close(ctx, id1)
 
@@ -112,7 +112,7 @@ func TestCompactOlderThan(t *testing.T) {
 	store.Update(ctx, oldIssue)
 
 	// Create a recently closed issue
-	issue2 := &storage.Issue{Title: "Recent closed issue", Type: storage.TypeTask}
+	issue2 := &issuestorage.Issue{Title: "Recent closed issue", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(ctx, issue2)
 	store.Close(ctx, id2)
 
@@ -124,7 +124,7 @@ func TestCompactOlderThan(t *testing.T) {
 
 	// Old issue should be deleted
 	_, err := store.Get(ctx, id1)
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("old issue should be deleted, got %v", err)
 	}
 
@@ -140,7 +140,7 @@ func TestCompactBefore(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and close an issue with old ClosedAt
-	issue1 := &storage.Issue{Title: "Old closed issue", Type: storage.TypeTask}
+	issue1 := &issuestorage.Issue{Title: "Old closed issue", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(ctx, issue1)
 	store.Close(ctx, id1)
 
@@ -150,7 +150,7 @@ func TestCompactBefore(t *testing.T) {
 	store.Update(ctx, oldIssue)
 
 	// Create a recently closed issue
-	issue2 := &storage.Issue{Title: "Recent closed issue", Type: storage.TypeTask}
+	issue2 := &issuestorage.Issue{Title: "Recent closed issue", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(ctx, issue2)
 	store.Close(ctx, id2)
 
@@ -162,7 +162,7 @@ func TestCompactBefore(t *testing.T) {
 
 	// Old issue should be deleted
 	_, err := store.Get(ctx, id1)
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("old issue should be deleted, got %v", err)
 	}
 
@@ -179,7 +179,7 @@ func TestCompactJSONOutput(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create and close an issue
-	issue := &storage.Issue{Title: "Closed issue", Type: storage.TypeTask}
+	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
 	store.Close(context.Background(), id)
 
@@ -210,7 +210,7 @@ func TestCompactDryRunJSONOutput(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create and close an issue
-	issue := &storage.Issue{Title: "Closed issue", Type: storage.TypeTask}
+	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
 	store.Close(context.Background(), id)
 
@@ -327,11 +327,11 @@ func TestCompactPreservesOpenIssues(t *testing.T) {
 	ctx := context.Background()
 
 	// Create open issues
-	openIssue := &storage.Issue{Title: "Open issue", Type: storage.TypeTask}
+	openIssue := &issuestorage.Issue{Title: "Open issue", Type: issuestorage.TypeTask}
 	openID, _ := store.Create(ctx, openIssue)
 
 	// Create closed issue
-	closedIssue := &storage.Issue{Title: "Closed issue", Type: storage.TypeTask}
+	closedIssue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	closedID, _ := store.Create(ctx, closedIssue)
 	store.Close(ctx, closedID)
 
@@ -349,7 +349,7 @@ func TestCompactPreservesOpenIssues(t *testing.T) {
 
 	// Closed issue should be deleted
 	_, err = store.Get(ctx, closedID)
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("closed issue should be deleted, got %v", err)
 	}
 }

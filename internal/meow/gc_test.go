@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func newGCStore(t *testing.T) storage.Storage {
+func newGCStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir)
@@ -21,13 +21,13 @@ func newGCStore(t *testing.T) storage.Storage {
 	return s
 }
 
-func createGCIssue(t *testing.T, ctx context.Context, s storage.Storage, title string, ephemeral bool) *storage.Issue {
+func createGCIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, ephemeral bool) *issuestorage.Issue {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:     title,
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeTask,
 		Ephemeral: ephemeral,
 	}
 	id, err := s.Create(ctx, issue)
@@ -39,7 +39,7 @@ func createGCIssue(t *testing.T, ctx context.Context, s storage.Storage, title s
 }
 
 // ageIssue backdates an issue's CreatedAt to simulate an old issue.
-func ageIssue(t *testing.T, ctx context.Context, s storage.Storage, issue *storage.Issue, age time.Duration) {
+func ageIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, issue *issuestorage.Issue, age time.Duration) {
 	t.Helper()
 	fresh, err := s.Get(ctx, issue.ID)
 	if err != nil {
@@ -71,7 +71,7 @@ func TestGC_DeletesEphemeralOlderThanThreshold(t *testing.T) {
 
 	// Issue should be gone.
 	_, err = s.Get(ctx, old.ID)
-	if !errors.Is(err, storage.ErrNotFound) {
+	if !errors.Is(err, issuestorage.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for deleted issue, got: %v", err)
 	}
 }
@@ -169,7 +169,7 @@ func TestGC_DefaultOlderThan(t *testing.T) {
 
 	// Old issue deleted.
 	_, err = s.Get(ctx, old.ID)
-	if !errors.Is(err, storage.ErrNotFound) {
+	if !errors.Is(err, issuestorage.ErrNotFound) {
 		t.Errorf("old issue should be deleted, got: %v", err)
 	}
 

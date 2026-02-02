@@ -6,12 +6,12 @@ import (
 	"os"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 // newTestStore returns an initialised FilesystemStorage backed by a temp dir.
-func newTestStore(t *testing.T) storage.Storage {
+func newTestStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
 	s := filesystem.New(dir)
@@ -58,8 +58,8 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get root: %v", err)
 	}
-	if root.Type != storage.TypeEpic {
-		t.Errorf("root.Type = %q, want %q", root.Type, storage.TypeEpic)
+	if root.Type != issuestorage.TypeEpic {
+		t.Errorf("root.Type = %q, want %q", root.Type, issuestorage.TypeEpic)
 	}
 	if root.Title != "deploy" {
 		t.Errorf("root.Title = %q, want %q", root.Title, "deploy")
@@ -469,11 +469,11 @@ func TestPourSetsStepFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get child: %v", err)
 	}
-	if child.Type != storage.TypeBug {
-		t.Errorf("Type = %q, want %q", child.Type, storage.TypeBug)
+	if child.Type != issuestorage.TypeBug {
+		t.Errorf("Type = %q, want %q", child.Type, issuestorage.TypeBug)
 	}
-	if child.Priority != storage.PriorityHigh {
-		t.Errorf("Priority = %q, want %q", child.Priority, storage.PriorityHigh)
+	if child.Priority != issuestorage.PriorityHigh {
+		t.Errorf("Priority = %q, want %q", child.Priority, issuestorage.PriorityHigh)
 	}
 	if len(child.Labels) != 2 || child.Labels[0] != "backend" || child.Labels[1] != "urgent" {
 		t.Errorf("Labels = %v, want [backend urgent]", child.Labels)

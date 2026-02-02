@@ -5,8 +5,8 @@ import (
 	"context"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestReadyCommand(t *testing.T) {
@@ -20,33 +20,33 @@ func TestReadyCommand(t *testing.T) {
 
 	// Create some test issues
 	// Issue 1: ready (no dependencies)
-	id1, err := store.Create(ctx, &storage.Issue{
+	id1, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue 1",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Issue 2: ready (no dependencies)
-	id2, err := store.Create(ctx, &storage.Issue{
+	id2, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue 2",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Issue 3: blocked (depends on issue 2)
-	id3, err := store.Create(ctx, &storage.Issue{
+	id3, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: id3 depends on id2 (id2 blocks id3)
-	if err := store.AddDependency(ctx, id3, id2, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, id3, id2, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -102,24 +102,24 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	}
 
 	// Create a dependency issue
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create an issue that depends on it
-	mainID, err := store.Create(ctx, &storage.Issue{
+	mainID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Main issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: mainID depends on depID (depID blocks mainID)
-	if err := store.AddDependency(ctx, mainID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -169,18 +169,18 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 	}
 
 	// Create a normal issue (should appear)
-	normalID, err := store.Create(ctx, &storage.Issue{
+	normalID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Normal issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create an ephemeral issue (should NOT appear)
-	ephID, err := store.Create(ctx, &storage.Issue{
+	ephID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Ephemeral issue",
-		Priority:  storage.PriorityHigh,
+		Priority:  issuestorage.PriorityHigh,
 		Ephemeral: true,
 	})
 	if err != nil {
@@ -216,42 +216,42 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	}
 
 	// Create a molecule root
-	molRootID, err := store.Create(ctx, &storage.Issue{
+	molRootID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule root",
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 	})
 	if err != nil {
 		t.Fatalf("failed to create mol root: %v", err)
 	}
 
 	// Create two molecule steps (children of root)
-	stepID1, err := store.Create(ctx, &storage.Issue{
+	stepID1, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Step 1",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create step 1: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID1, molRootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, stepID1, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
-	stepID2, err := store.Create(ctx, &storage.Issue{
+	stepID2, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Step 2",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create step 2: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID2, molRootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, stepID2, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
 	// Create a non-molecule issue
-	otherID, err := store.Create(ctx, &storage.Issue{
+	otherID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Other top-level issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create other issue: %v", err)
@@ -295,31 +295,31 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	}
 
 	// Create a molecule root
-	molRootID, err := store.Create(ctx, &storage.Issue{
+	molRootID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule root",
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 	})
 	if err != nil {
 		t.Fatalf("failed to create mol root: %v", err)
 	}
 
 	// Create a molecule step (child of root)
-	stepID, err := store.Create(ctx, &storage.Issue{
+	stepID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule step",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create step: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID, molRootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, stepID, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
 	// Create a top-level issue
-	topID, err := store.Create(ctx, &storage.Issue{
+	topID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Top-level issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create top-level issue: %v", err)
@@ -356,9 +356,9 @@ func TestReadyJSON(t *testing.T) {
 	}
 
 	// Create a ready issue
-	_, err := store.Create(ctx, &storage.Issue{
+	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)

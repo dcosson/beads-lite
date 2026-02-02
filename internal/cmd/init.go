@@ -10,7 +10,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage/filesystem"
 
 	"github.com/spf13/cobra"
 )
@@ -97,9 +97,9 @@ func runInit(force bool, projectName string) error {
 
 	dataPath := filepath.Join(beadsPath, projectName)
 
-	// Create the storage
-	storage := filesystem.New(dataPath)
-	if err := storage.Init(context.Background()); err != nil {
+	// Create the issue storage
+	issueStore := filesystem.New(dataPath)
+	if err := issueStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
 	}
 

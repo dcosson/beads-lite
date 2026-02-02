@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // IssueJSON is the JSON output format matching original beads.
@@ -105,8 +105,8 @@ type IssueSimpleJSON struct {
 	UpdatedAt string `json:"updated_at"`
 }
 
-// ToIssueSimpleJSON converts a storage.Issue to IssueSimpleJSON format.
-func ToIssueSimpleJSON(issue *storage.Issue) IssueSimpleJSON {
+// ToIssueSimpleJSON converts a issuestorage.Issue to IssueSimpleJSON format.
+func ToIssueSimpleJSON(issue *issuestorage.Issue) IssueSimpleJSON {
 	return IssueSimpleJSON{
 		CreatedAt: formatTime(issue.CreatedAt),
 		CreatedBy: issue.CreatedBy,
@@ -120,18 +120,18 @@ func ToIssueSimpleJSON(issue *storage.Issue) IssueSimpleJSON {
 	}
 }
 
-// priorityToInt converts storage.Priority to numeric value (0-4).
-func priorityToInt(p storage.Priority) int {
+// priorityToInt converts issuestorage.Priority to numeric value (0-4).
+func priorityToInt(p issuestorage.Priority) int {
 	switch p {
-	case storage.PriorityCritical:
+	case issuestorage.PriorityCritical:
 		return 0
-	case storage.PriorityHigh:
+	case issuestorage.PriorityHigh:
 		return 1
-	case storage.PriorityMedium:
+	case issuestorage.PriorityMedium:
 		return 2
-	case storage.PriorityLow:
+	case issuestorage.PriorityLow:
 		return 3
-	case storage.PriorityBacklog:
+	case issuestorage.PriorityBacklog:
 		return 4
 	default:
 		return 2 // default to medium
@@ -143,10 +143,10 @@ func formatTime(t time.Time) string {
 	return t.Format("2006-01-02T15:04:05.999999999-07:00")
 }
 
-// ToIssueJSON converts a storage.Issue to IssueJSON format.
+// ToIssueJSON converts a issuestorage.Issue to IssueJSON format.
 // If enrichDeps is true, fetches full issue details for dependencies.
 // If useCounts is true, uses dependency_count/dependent_count instead of full arrays.
-func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issue, enrichDeps bool, useCounts bool) IssueJSON {
+func ToIssueJSON(ctx context.Context, store issuestorage.IssueStore, issue *issuestorage.Issue, enrichDeps bool, useCounts bool) IssueJSON {
 	out := IssueJSON{
 		Assignee:    issue.Assignee,
 		CreatedAt:   formatTime(issue.CreatedAt),
@@ -203,8 +203,8 @@ func ToIssueJSON(ctx context.Context, store storage.Storage, issue *storage.Issu
 	return out
 }
 
-// ToIssueListJSON converts a storage.Issue to IssueListJSON format for list command.
-func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
+// ToIssueListJSON converts a issuestorage.Issue to IssueListJSON format for list command.
+func ToIssueListJSON(issue *issuestorage.Issue) IssueListJSON {
 	// Convert dependencies to list format
 	var deps []ListDepJSON
 	if len(issue.Dependencies) > 0 {
@@ -291,8 +291,8 @@ type MolIssueJSON struct {
 	UpdatedAt   string `json:"updated_at"`
 }
 
-// ToMolIssueJSON converts a storage.Issue to MolIssueJSON format.
-func ToMolIssueJSON(issue *storage.Issue) MolIssueJSON {
+// ToMolIssueJSON converts a issuestorage.Issue to MolIssueJSON format.
+func ToMolIssueJSON(issue *issuestorage.Issue) MolIssueJSON {
 	out := MolIssueJSON{
 		Assignee:    issue.Assignee,
 		CreatedAt:   formatTime(issue.CreatedAt),
@@ -354,7 +354,7 @@ type MolProgressJSON struct {
 }
 
 // enrichDependencies fetches full issue details for each dependency.
-func enrichDependencies(ctx context.Context, store storage.Storage, deps []storage.Dependency) []EnrichedDepJSON {
+func enrichDependencies(ctx context.Context, store issuestorage.IssueStore, deps []issuestorage.Dependency) []EnrichedDepJSON {
 	result := make([]EnrichedDepJSON, 0, len(deps))
 
 	for _, dep := range deps {

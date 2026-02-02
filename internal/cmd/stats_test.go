@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestStatsCmd_Empty(t *testing.T) {
@@ -50,12 +50,12 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 	}
 
 	// Create issues with various statuses
-	issues := []storage.Issue{
-		{Title: "Open 1", Status: storage.StatusOpen},
-		{Title: "Open 2", Status: storage.StatusOpen},
-		{Title: "In Progress", Status: storage.StatusInProgress},
-		{Title: "Blocked", Status: storage.StatusBlocked},
-		{Title: "Deferred", Status: storage.StatusDeferred},
+	issues := []issuestorage.Issue{
+		{Title: "Open 1", Status: issuestorage.StatusOpen},
+		{Title: "Open 2", Status: issuestorage.StatusOpen},
+		{Title: "In Progress", Status: issuestorage.StatusInProgress},
+		{Title: "Blocked", Status: issuestorage.StatusBlocked},
+		{Title: "Deferred", Status: issuestorage.StatusDeferred},
 	}
 
 	for _, issue := range issues {
@@ -65,7 +65,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 			t.Fatalf("failed to create issue: %v", err)
 		}
 		// Update status after create (create sets to open by default)
-		if issue.Status != storage.StatusOpen {
+		if issue.Status != issuestorage.StatusOpen {
 			issueCopy.ID = id
 			if err := s.Update(ctx, &issueCopy); err != nil {
 				t.Fatalf("failed to update issue: %v", err)
@@ -74,7 +74,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 	}
 
 	// Create and close an issue
-	closeID, err := s.Create(ctx, &storage.Issue{Title: "To be closed"})
+	closeID, err := s.Create(ctx, &issuestorage.Issue{Title: "To be closed"})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
@@ -123,9 +123,9 @@ func TestStatsCmd_JSON(t *testing.T) {
 	}
 
 	// Create a few issues
-	s.Create(ctx, &storage.Issue{Title: "Issue 1"})
-	s.Create(ctx, &storage.Issue{Title: "Issue 2"})
-	id, _ := s.Create(ctx, &storage.Issue{Title: "Issue 3"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Issue 1"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Issue 2"})
+	id, _ := s.Create(ctx, &issuestorage.Issue{Title: "Issue 3"})
 	s.Close(ctx, id)
 
 	var out bytes.Buffer

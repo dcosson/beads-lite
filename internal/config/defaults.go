@@ -3,7 +3,7 @@ package config
 import (
 	"strconv"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // DefaultValues returns the default config map for the core keys.
@@ -16,7 +16,7 @@ func DefaultValues() map[string]string {
 		"id.length":                  "4",
 		"actor":                      "${USER}",
 		"project.name":               "issues",
-		"hierarchy.max_depth":        strconv.Itoa(storage.DefaultMaxHierarchyDepth),
+		"hierarchy.max_depth":        strconv.Itoa(issuestorage.DefaultMaxHierarchyDepth),
 	}
 }
 

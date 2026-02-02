@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // PourOptions configures a Pour or Wisp operation.
@@ -29,7 +29,7 @@ type PourResult struct {
 // a root epic issue and child issues in the storage backend.
 // When opts.Ephemeral is true the operation is a "wisp" — all created issues
 // are marked ephemeral.
-func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourResult, error) {
+func Pour(ctx context.Context, store issuestorage.IssueStore, opts PourOptions) (*PourResult, error) {
 	// 1. Resolve formula (load + resolve inheritance).
 	formula, err := ResolveFormula(opts.FormulaName, opts.SearchPath)
 	if err != nil {
@@ -53,8 +53,8 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 	actor := ResolveUser()
 
 	// 6. Create root epic issue.
-	rootIssue := &storage.Issue{
-		Type:        storage.TypeEpic,
+	rootIssue := &issuestorage.Issue{
+		Type:        issuestorage.TypeEpic,
 		Title:       formula.Formula,
 		Description: formula.Description,
 		Ephemeral:   opts.Ephemeral,
@@ -75,17 +75,17 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 			return nil, fmt.Errorf("getting next child ID for step %q: %w", step.ID, err)
 		}
 
-		issueType := storage.TypeTask
+		issueType := issuestorage.TypeTask
 		if step.Type != "" {
-			issueType = storage.IssueType(step.Type)
+			issueType = issuestorage.IssueType(step.Type)
 		}
 
-		child := &storage.Issue{
+		child := &issuestorage.Issue{
 			ID:          childID,
 			Type:        issueType,
 			Title:       step.Title,
 			Description: step.Description,
-			Priority:    storage.Priority(step.Priority),
+			Priority:    issuestorage.Priority(step.Priority),
 			Labels:      step.Labels,
 			Assignee:    step.Assignee,
 			Ephemeral:   opts.Ephemeral,
@@ -96,7 +96,7 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 		}
 
 		// Wire parent-child dependency.
-		if err := store.AddDependency(ctx, childID, rootID, storage.DepTypeParentChild); err != nil {
+		if err := store.AddDependency(ctx, childID, rootID, issuestorage.DepTypeParentChild); err != nil {
 			return nil, fmt.Errorf("adding parent-child dep for step %q: %w", step.ID, err)
 		}
 
@@ -115,7 +115,7 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 			if !ok {
 				return nil, fmt.Errorf("step %q depends on unknown step %q", step.ID, depStepID)
 			}
-			if err := store.AddDependency(ctx, childIssueID, depIssueID, storage.DepTypeBlocks); err != nil {
+			if err := store.AddDependency(ctx, childIssueID, depIssueID, issuestorage.DepTypeBlocks); err != nil {
 				return nil, fmt.Errorf("adding blocks dep from step %q to %q: %w", step.ID, depStepID, err)
 			}
 		}

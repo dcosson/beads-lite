@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestChildrenCommand(t *testing.T) {
@@ -21,36 +21,36 @@ func TestChildrenCommand(t *testing.T) {
 	}
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent Issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create parent issue: %v", err)
 	}
 
 	// Create child issues
-	child1ID, err := store.Create(ctx, &storage.Issue{
+	child1ID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child One",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child 1: %v", err)
 	}
 
-	child2ID, err := store.Create(ctx, &storage.Issue{
+	child2ID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child Two",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child 2: %v", err)
 	}
 
 	// Set parent relationships
-	if err := store.AddDependency(ctx, child1ID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, child1ID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 1: %v", err)
 	}
-	if err := store.AddDependency(ctx, child2ID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, child2ID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 2: %v", err)
 	}
 
@@ -97,9 +97,9 @@ func TestChildrenNoChildren(t *testing.T) {
 	}
 
 	// Create issue with no children
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Childless Issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -136,35 +136,35 @@ func TestChildrenTreeFlag(t *testing.T) {
 	}
 
 	// Create hierarchy: parent -> child -> grandchild
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	grandchildID, err := store.Create(ctx, &storage.Issue{
+	grandchildID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Grandchild",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create grandchild: %v", err)
 	}
 
 	// Set parent relationships
-	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.AddDependency(ctx, grandchildID, childID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
@@ -209,23 +209,23 @@ func TestChildrenJSON(t *testing.T) {
 	}
 
 	// Create parent and child
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
@@ -267,34 +267,34 @@ func TestChildrenTreeJSON(t *testing.T) {
 	}
 
 	// Create hierarchy: parent -> child -> grandchild
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	grandchildID, err := store.Create(ctx, &storage.Issue{
+	grandchildID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Grandchild",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create grandchild: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.AddDependency(ctx, grandchildID, childID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
@@ -342,23 +342,23 @@ func TestChildrenPrefixMatch(t *testing.T) {
 	}
 
 	// Create parent and child
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
@@ -426,9 +426,9 @@ func TestChildrenEmptyJSON(t *testing.T) {
 	}
 
 	// Create issue with no children
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Childless",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)

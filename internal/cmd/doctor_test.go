@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestDoctorCmd_NoProblems(t *testing.T) {
@@ -19,7 +19,7 @@ func TestDoctorCmd_NoProblems(t *testing.T) {
 	}
 
 	// Create a valid issue
-	_, err := s.Create(context.Background(), &storage.Issue{
+	_, err := s.Create(context.Background(), &issuestorage.Issue{
 		Title: "Test Issue",
 	})
 	if err != nil {
@@ -50,7 +50,7 @@ func TestDoctorCmd_WithProblems(t *testing.T) {
 	}
 
 	// Create an issue with a broken parent reference
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:  "Test Issue",
 		Parent: "bd-nonexistent",
 	}
@@ -124,7 +124,7 @@ func TestDoctorCmd_Fix(t *testing.T) {
 	}
 
 	// Create an issue with a broken parent reference
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:  "Test Issue",
 		Parent: "bd-nonexistent",
 	}

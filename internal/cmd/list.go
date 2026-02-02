@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -53,20 +53,20 @@ Examples:
 			ctx := cmd.Context()
 
 			// Build filter
-			filter := &storage.ListFilter{}
+			filter := &issuestorage.ListFilter{}
 
 			// Status handling
 			if all {
 				// No status filter - list everything
 				filter.Status = nil
 			} else if closed {
-				s := storage.StatusClosed
+				s := issuestorage.StatusClosed
 				filter.Status = &s
 			} else if status != "" {
 				// Allow tombstone as a valid filter for list (even though
 				// update rejects it — listing tombstones is an admin query)
 				if strings.ToLower(status) == "tombstone" {
-					s := storage.StatusTombstone
+					s := issuestorage.StatusTombstone
 					filter.Status = &s
 				} else {
 					s, err := parseStatus(status)
@@ -77,17 +77,17 @@ Examples:
 				}
 			} else {
 				// Default: list open issues
-				s := storage.StatusOpen
+				s := issuestorage.StatusOpen
 				filter.Status = &s
 			}
 
 			if priority != "" {
-				p := storage.Priority(priority)
+				p := issuestorage.Priority(priority)
 				filter.Priority = &p
 			}
 
 			if issueType != "" {
-				t := storage.IssueType(issueType)
+				t := issuestorage.IssueType(issueType)
 				filter.Type = &t
 			}
 
@@ -117,7 +117,7 @@ Examples:
 			if all && filter.Status == nil {
 				// Get closed issues with same filters
 				closedFilter := *filter
-				closedStatus := storage.StatusClosed
+				closedStatus := issuestorage.StatusClosed
 				closedFilter.Status = &closedStatus
 				closedIssues, err := app.Storage.List(ctx, &closedFilter)
 				if err != nil {

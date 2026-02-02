@@ -9,15 +9,15 @@ import (
 	"beads-lite/internal/config"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 
 	"golang.org/x/term"
 )
 
 // App holds application state shared across commands.
 type App struct {
-	Storage     storage.Storage
+	Storage     issuestorage.IssueStore
 	Router      *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory
@@ -30,7 +30,7 @@ type App struct {
 // StorageFor returns the storage for the given issue ID, routing if needed.
 // If the ID belongs to a remote rig, opens a filesystem store at the
 // resolved remote path. Returns the local store if no routing is needed.
-func (a *App) StorageFor(ctx context.Context, id string) (storage.Storage, error) {
+func (a *App) StorageFor(ctx context.Context, id string) (issuestorage.IssueStore, error) {
 	if a.Router == nil {
 		return a.Storage, nil
 	}

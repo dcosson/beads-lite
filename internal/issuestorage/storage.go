@@ -1,6 +1,6 @@
-// Package storage defines the interface for issue persistence in beads-lite.
+// Package issuestorage defines the interface for issue persistence in beads-lite.
 // All storage engines (filesystem, SQLite, Dolt, etc.) implement this interface.
-package storage
+package issuestorage
 
 import (
 	"context"
@@ -221,9 +221,9 @@ type ListFilter struct {
 	IncludeChildren bool       // if true, include descendants of matching issues
 }
 
-// Storage defines the interface for issue persistence.
+// IssueStore defines the interface for issue persistence.
 // All storage engines must implement this interface.
-type Storage interface {
+type IssueStore interface {
 	// Create creates a new issue and returns its ID.
 	// If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
 	// Otherwise, a random ID is generated.

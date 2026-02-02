@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"math/rand"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // IssueGenerator creates test issues with various relationship patterns.
 type IssueGenerator struct {
-	storage storage.Storage
+	storage issuestorage.IssueStore
 	ids     []string
 }
 
 // NewIssueGenerator creates a new generator with the given storage.
-func NewIssueGenerator(s storage.Storage) *IssueGenerator {
+func NewIssueGenerator(s issuestorage.IssueStore) *IssueGenerator {
 	return &IssueGenerator{
 		storage: s,
 		ids:     make([]string, 0),
@@ -51,11 +51,11 @@ func (g *IssueGenerator) generateTreeRecursive(ctx context.Context, parent strin
 		return nil
 	}
 	for i := 0; i < breadth; i++ {
-		issue := &storage.Issue{
+		issue := &issuestorage.Issue{
 			Title:    fmt.Sprintf("Level %d Issue %d", depth, i),
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		}
 		id, err := g.storage.Create(ctx, issue)
 		if err != nil {
@@ -64,7 +64,7 @@ func (g *IssueGenerator) generateTreeRecursive(ctx context.Context, parent strin
 		g.ids = append(g.ids, id)
 
 		if parent != "" {
-			if err := g.storage.AddDependency(ctx, id, parent, storage.DepTypeParentChild); err != nil {
+			if err := g.storage.AddDependency(ctx, id, parent, issuestorage.DepTypeParentChild); err != nil {
 				return fmt.Errorf("set parent for %s: %w", id, err)
 			}
 		}
@@ -86,11 +86,11 @@ func (g *IssueGenerator) GenerateDependencyChain(ctx context.Context, length int
 
 	ids := make([]string, length)
 	for i := 0; i < length; i++ {
-		issue := &storage.Issue{
+		issue := &issuestorage.Issue{
 			Title:    fmt.Sprintf("Chain %d", i),
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		}
 		id, err := g.storage.Create(ctx, issue)
 		if err != nil {
@@ -101,7 +101,7 @@ func (g *IssueGenerator) GenerateDependencyChain(ctx context.Context, length int
 
 		if i > 0 {
 			// Current issue depends on the previous one
-			if err := g.storage.AddDependency(ctx, id, ids[i-1], storage.DepTypeBlocks); err != nil {
+			if err := g.storage.AddDependency(ctx, id, ids[i-1], issuestorage.DepTypeBlocks); err != nil {
 				return nil, fmt.Errorf("add dependency from %s to %s: %w", id, ids[i-1], err)
 			}
 		}
@@ -120,11 +120,11 @@ func (g *IssueGenerator) GenerateDependencyDAG(ctx context.Context, nodes, edges
 
 	ids := make([]string, nodes)
 	for i := 0; i < nodes; i++ {
-		issue := &storage.Issue{
+		issue := &issuestorage.Issue{
 			Title:    fmt.Sprintf("Node %d", i),
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		}
 		id, err := g.storage.Create(ctx, issue)
 		if err != nil {
@@ -141,7 +141,7 @@ func (g *IssueGenerator) GenerateDependencyDAG(ctx context.Context, nodes, edges
 		b := rand.Intn(nodes)
 		if a != b && a < b {
 			// b depends on a (higher index depends on lower)
-			if err := g.storage.AddDependency(ctx, ids[b], ids[a], storage.DepTypeBlocks); err != nil {
+			if err := g.storage.AddDependency(ctx, ids[b], ids[a], issuestorage.DepTypeBlocks); err != nil {
 				// Ignore duplicate edge errors, just continue
 				continue
 			}

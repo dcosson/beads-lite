@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // SquashOptions configures a Squash operation (digest creation).
@@ -32,11 +32,11 @@ type SquashResult struct {
 //
 // If the molecule has no ephemeral children, Squash is a no-op and returns
 // (nil, nil). The caller can print "No ephemeral children found" in that case.
-func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*SquashResult, error) {
+func Squash(ctx context.Context, store issuestorage.IssueStore, opts SquashOptions) (*SquashResult, error) {
 	// 1. Load root issue.
 	root, err := store.Get(ctx, opts.MoleculeID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if errors.Is(err, issuestorage.ErrNotFound) {
 			return nil, fmt.Errorf("molecule %s not found: %w", opts.MoleculeID, err)
 		}
 		return nil, fmt.Errorf("load molecule %s: %w", opts.MoleculeID, err)
@@ -49,7 +49,7 @@ func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*Sq
 	}
 
 	// 3. Filter to ephemeral children only.
-	var ephemeral []*storage.Issue
+	var ephemeral []*issuestorage.Issue
 	for _, child := range children {
 		if child.Ephemeral {
 			ephemeral = append(ephemeral, child)
@@ -72,13 +72,13 @@ func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*Sq
 		summary = autoSummary(ephemeral)
 	}
 
-	digest := &storage.Issue{
+	digest := &issuestorage.Issue{
 		ID:          digestID,
 		Title:       fmt.Sprintf("Digest: %s", root.Title),
 		Description: summary,
-		Status:      storage.StatusOpen,
-		Priority:    storage.PriorityMedium,
-		Type:        storage.TypeTask,
+		Status:      issuestorage.StatusOpen,
+		Priority:    issuestorage.PriorityMedium,
+		Type:        issuestorage.TypeTask,
 		Ephemeral:   false,
 		CloseReason: fmt.Sprintf("Squashed from %d wisps", len(ephemeral)),
 	}
@@ -88,7 +88,7 @@ func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*Sq
 	}
 
 	// Link digest as child of root.
-	if err := store.AddDependency(ctx, digestID, root.ID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, digestID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 		return nil, fmt.Errorf("add parent-child dep for digest: %w", err)
 	}
 
@@ -146,7 +146,7 @@ func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*Sq
 }
 
 // autoSummary generates a description from ephemeral child titles.
-func autoSummary(children []*storage.Issue) string {
+func autoSummary(children []*issuestorage.Issue) string {
 	lines := make([]string, 0, len(children))
 	for _, child := range children {
 		lines = append(lines, fmt.Sprintf("- %s", child.Title))

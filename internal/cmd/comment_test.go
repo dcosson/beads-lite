@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestCommentListDeprecationWarning(t *testing.T) {
@@ -14,18 +14,18 @@ func TestCommentListDeprecationWarning(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 	errOut := app.Err.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for deprecated comment test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Author: "alice", Text: "Test comment"}
+	comment := &issuestorage.Comment{Author: "alice", Text: "Test comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
@@ -57,11 +57,11 @@ func TestCommentAddDeprecationWarning(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 	errOut := app.Err.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for deprecated comment add test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {

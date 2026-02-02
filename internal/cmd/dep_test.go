@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestDepAddBasic(t *testing.T) {
@@ -15,22 +15,22 @@ func TestDepAddBasic(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create two issues
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, err := store.Create(context.Background(), issueA)
 	if err != nil {
 		t.Fatalf("failed to create issue A: %v", err)
 	}
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, err := store.Create(context.Background(), issueB)
 	if err != nil {
@@ -71,24 +71,24 @@ func TestDepAddCycle(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create two issues
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Add A depends on B
-	if err := store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(context.Background(), idA, idB, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add initial dependency: %v", err)
 	}
 
@@ -109,19 +109,19 @@ func TestDepAddJSON(t *testing.T) {
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
@@ -152,24 +152,24 @@ func TestDepRemoveBasic(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create two issues with a dependency
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Add dependency
-	if err := store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(context.Background(), idA, idB, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -202,33 +202,33 @@ func TestDepListBasic(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create three issues with dependencies
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
-	issueC := &storage.Issue{
+	issueC := &issuestorage.Issue{
 		Title:    "Issue C",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idC, _ := store.Create(context.Background(), issueC)
 
 	// A depends on B, C depends on A
-	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
-	store.AddDependency(context.Background(), idC, idA, storage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idA, idB, issuestorage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idC, idA, issuestorage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA})
@@ -252,23 +252,23 @@ func TestDepListJSON(t *testing.T) {
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
-	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idA, idB, issuestorage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA})
@@ -299,32 +299,32 @@ func TestDepListTree(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create chain: A depends on B, B depends on C
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 
-	issueC := &storage.Issue{
+	issueC := &issuestorage.Issue{
 		Title:    "Issue C",
-		Status:   storage.StatusClosed,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusClosed,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idC, _ := store.Create(context.Background(), issueC)
 
-	store.AddDependency(context.Background(), idA, idB, storage.DepTypeBlocks)
-	store.AddDependency(context.Background(), idB, idC, storage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idA, idB, issuestorage.DepTypeBlocks)
+	store.AddDependency(context.Background(), idB, idC, issuestorage.DepTypeBlocks)
 
 	cmd := newDepListCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{idA, "--tree"})
@@ -348,11 +348,11 @@ func TestDepListTree(t *testing.T) {
 func TestDepNonExistent(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
@@ -368,19 +368,19 @@ func TestDepNonExistent(t *testing.T) {
 func TestDepPrefixMatching(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, _ := store.Create(context.Background(), issueA)
 
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, _ := store.Create(context.Background(), issueB)
 

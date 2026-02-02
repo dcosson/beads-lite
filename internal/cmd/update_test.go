@@ -7,17 +7,17 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
-func createTestIssue(t *testing.T, store storage.Storage) string {
+func createTestIssue(t *testing.T, store issuestorage.IssueStore) string {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:       "Original title",
 		Description: "Original description",
-		Type:        storage.TypeTask,
-		Priority:    storage.PriorityMedium,
-		Status:      storage.StatusOpen,
+		Type:        issuestorage.TypeTask,
+		Priority:    issuestorage.PriorityMedium,
+		Status:      issuestorage.StatusOpen,
 		Assignee:    "original-assignee",
 		Labels:      []string{"backend", "api"},
 	}
@@ -93,19 +93,19 @@ func TestUpdateDescription(t *testing.T) {
 func TestUpdatePriority(t *testing.T) {
 	tests := []struct {
 		priority string
-		expected storage.Priority
+		expected issuestorage.Priority
 	}{
-		{"0", storage.PriorityCritical},
-		{"p0", storage.PriorityCritical},
-		{"P0", storage.PriorityCritical}, // test case insensitivity
-		{"1", storage.PriorityHigh},
-		{"p1", storage.PriorityHigh},
-		{"2", storage.PriorityMedium},
-		{"p2", storage.PriorityMedium},
-		{"3", storage.PriorityLow},
-		{"p3", storage.PriorityLow},
-		{"4", storage.PriorityBacklog},
-		{"p4", storage.PriorityBacklog},
+		{"0", issuestorage.PriorityCritical},
+		{"p0", issuestorage.PriorityCritical},
+		{"P0", issuestorage.PriorityCritical}, // test case insensitivity
+		{"1", issuestorage.PriorityHigh},
+		{"p1", issuestorage.PriorityHigh},
+		{"2", issuestorage.PriorityMedium},
+		{"p2", issuestorage.PriorityMedium},
+		{"3", issuestorage.PriorityLow},
+		{"p3", issuestorage.PriorityLow},
+		{"4", issuestorage.PriorityBacklog},
+		{"p4", issuestorage.PriorityBacklog},
 	}
 
 	for _, tt := range tests {
@@ -130,14 +130,14 @@ func TestUpdatePriority(t *testing.T) {
 func TestUpdateType(t *testing.T) {
 	tests := []struct {
 		typeFlag string
-		expected storage.IssueType
+		expected issuestorage.IssueType
 	}{
-		{"task", storage.TypeTask},
-		{"bug", storage.TypeBug},
-		{"feature", storage.TypeFeature},
-		{"epic", storage.TypeEpic},
-		{"chore", storage.TypeChore},
-		{"FEATURE", storage.TypeFeature}, // test case insensitivity
+		{"task", issuestorage.TypeTask},
+		{"bug", issuestorage.TypeBug},
+		{"feature", issuestorage.TypeFeature},
+		{"epic", issuestorage.TypeEpic},
+		{"chore", issuestorage.TypeChore},
+		{"FEATURE", issuestorage.TypeFeature}, // test case insensitivity
 	}
 
 	for _, tt := range tests {
@@ -162,15 +162,15 @@ func TestUpdateType(t *testing.T) {
 func TestUpdateStatus(t *testing.T) {
 	tests := []struct {
 		status   string
-		expected storage.Status
+		expected issuestorage.Status
 	}{
-		{"open", storage.StatusOpen},
-		{"in-progress", storage.StatusInProgress},
-		{"in_progress", storage.StatusInProgress}, // alternative format
-		{"blocked", storage.StatusBlocked},
-		{"deferred", storage.StatusDeferred},
-		{"closed", storage.StatusClosed},
-		{"BLOCKED", storage.StatusBlocked}, // test case insensitivity
+		{"open", issuestorage.StatusOpen},
+		{"in-progress", issuestorage.StatusInProgress},
+		{"in_progress", issuestorage.StatusInProgress}, // alternative format
+		{"blocked", issuestorage.StatusBlocked},
+		{"deferred", issuestorage.StatusDeferred},
+		{"closed", issuestorage.StatusClosed},
+		{"BLOCKED", issuestorage.StatusBlocked}, // test case insensitivity
 	}
 
 	for _, tt := range tests {
@@ -352,10 +352,10 @@ func TestUpdateMultipleFields(t *testing.T) {
 	if issue.Title != "New title" {
 		t.Errorf("title mismatch")
 	}
-	if issue.Priority != storage.PriorityHigh {
+	if issue.Priority != issuestorage.PriorityHigh {
 		t.Errorf("priority mismatch")
 	}
-	if issue.Status != storage.StatusInProgress {
+	if issue.Status != issuestorage.StatusInProgress {
 		t.Errorf("status mismatch")
 	}
 	if issue.Assignee != "bob" {
@@ -507,9 +507,9 @@ func TestUpdateIssueWithNoLabels(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create an issue without labels
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title: "No labels",
-		Type:  storage.TypeTask,
+		Type:  issuestorage.TypeTask,
 	}
 	id, _ := store.Create(context.Background(), issue)
 
@@ -529,8 +529,8 @@ func TestUpdateSetParent(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	parent := &storage.Issue{Title: "Parent", Type: storage.TypeEpic}
-	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	parent := &issuestorage.Issue{Title: "Parent", Type: issuestorage.TypeEpic}
+	child := &issuestorage.Issue{Title: "Child", Type: issuestorage.TypeTask}
 
 	parentID, _ := store.Create(context.Background(), parent)
 	childID, _ := store.Create(context.Background(), child)
@@ -568,16 +568,16 @@ func TestUpdateSetParent(t *testing.T) {
 func TestUpdateReparent(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	parent1 := &storage.Issue{Title: "Parent 1", Type: storage.TypeEpic}
-	parent2 := &storage.Issue{Title: "Parent 2", Type: storage.TypeEpic}
-	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	parent1 := &issuestorage.Issue{Title: "Parent 1", Type: issuestorage.TypeEpic}
+	parent2 := &issuestorage.Issue{Title: "Parent 2", Type: issuestorage.TypeEpic}
+	child := &issuestorage.Issue{Title: "Child", Type: issuestorage.TypeTask}
 
 	parent1ID, _ := store.Create(context.Background(), parent1)
 	parent2ID, _ := store.Create(context.Background(), parent2)
 	childID, _ := store.Create(context.Background(), child)
 
 	// Set initial parent
-	if err := store.AddDependency(context.Background(), childID, parent1ID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(context.Background(), childID, parent1ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set initial parent: %v", err)
 	}
 
@@ -618,13 +618,13 @@ func TestUpdateReparent(t *testing.T) {
 func TestUpdateRemoveParent(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	parent := &storage.Issue{Title: "Parent", Type: storage.TypeEpic}
-	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	parent := &issuestorage.Issue{Title: "Parent", Type: issuestorage.TypeEpic}
+	child := &issuestorage.Issue{Title: "Child", Type: issuestorage.TypeTask}
 
 	parentID, _ := store.Create(context.Background(), parent)
 	childID, _ := store.Create(context.Background(), child)
 
-	if err := store.AddDependency(context.Background(), childID, parentID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(context.Background(), childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
@@ -651,7 +651,7 @@ func TestUpdateRemoveParent(t *testing.T) {
 func TestUpdateParentNotFound(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	child := &issuestorage.Issue{Title: "Child", Type: issuestorage.TypeTask}
 	childID, _ := store.Create(context.Background(), child)
 
 	cmd := newUpdateCmd(NewTestProvider(app))
@@ -668,14 +668,14 @@ func TestUpdateParentNotFound(t *testing.T) {
 func TestUpdateParentCycle(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issueA := &storage.Issue{Title: "A", Type: storage.TypeTask}
-	issueB := &storage.Issue{Title: "B", Type: storage.TypeTask}
+	issueA := &issuestorage.Issue{Title: "A", Type: issuestorage.TypeTask}
+	issueB := &issuestorage.Issue{Title: "B", Type: issuestorage.TypeTask}
 
 	idA, _ := store.Create(context.Background(), issueA)
 	idB, _ := store.Create(context.Background(), issueB)
 
 	// Make A parent of B
-	if err := store.AddDependency(context.Background(), idB, idA, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(context.Background(), idB, idA, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set initial parent: %v", err)
 	}
 
@@ -695,10 +695,10 @@ func TestUpdateClaimUnassigned(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:  "Unassigned task",
-		Type:   storage.TypeTask,
-		Status: storage.StatusOpen,
+		Type:   issuestorage.TypeTask,
+		Status: issuestorage.StatusOpen,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -715,8 +715,8 @@ func TestUpdateClaimUnassigned(t *testing.T) {
 	if got.Assignee != "test-agent" {
 		t.Errorf("expected assignee %q, got %q", "test-agent", got.Assignee)
 	}
-	if got.Status != storage.StatusInProgress {
-		t.Errorf("expected status %q, got %q", storage.StatusInProgress, got.Status)
+	if got.Status != issuestorage.StatusInProgress {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusInProgress, got.Status)
 	}
 }
 
@@ -724,10 +724,10 @@ func TestUpdateClaimAlreadyAssigned(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Assigned task",
-		Type:     storage.TypeTask,
-		Status:   storage.StatusOpen,
+		Type:     issuestorage.TypeTask,
+		Status:   issuestorage.StatusOpen,
 		Assignee: "someone-else",
 	}
 	id, err := store.Create(context.Background(), issue)
@@ -750,10 +750,10 @@ func TestUpdateClaimResolvesBDActorEnv(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "env-actor"}}
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:  "Unassigned task",
-		Type:   storage.TypeTask,
-		Status: storage.StatusOpen,
+		Type:   issuestorage.TypeTask,
+		Status: issuestorage.StatusOpen,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -783,10 +783,10 @@ func TestUpdateClaimResolvesGitConfig(t *testing.T) {
 	app, store := setupTestApp(t)
 	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "${USER}"}}
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:  "Unassigned task",
-		Type:   storage.TypeTask,
-		Status: storage.StatusOpen,
+		Type:   issuestorage.TypeTask,
+		Status: issuestorage.StatusOpen,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {

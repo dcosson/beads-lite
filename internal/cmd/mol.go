@@ -8,7 +8,7 @@ import (
 
 	"beads-lite/internal/graph"
 	"beads-lite/internal/meow"
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -191,9 +191,9 @@ Examples:
 }
 
 // molShowToJSON builds the MolShowJSON output from root and children.
-func molShowToJSON(root *storage.Issue, children []*storage.Issue) MolShowJSON {
+func molShowToJSON(root *issuestorage.Issue, children []*issuestorage.Issue) MolShowJSON {
 	// Gather all dependencies across all issues in the molecule.
-	allIssues := make([]*storage.Issue, 0, len(children)+1)
+	allIssues := make([]*issuestorage.Issue, 0, len(children)+1)
 	allIssues = append(allIssues, root)
 	allIssues = append(allIssues, children...)
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -43,16 +43,16 @@ Examples:
 
 			// Try exact match first
 			issue, err := store.Get(ctx, query)
-			if err == nil && issue.Status == storage.StatusTombstone {
+			if err == nil && issue.Status == issuestorage.StatusTombstone {
 				// Tombstoned issues are not visible to show
-				err = storage.ErrNotFound
+				err = issuestorage.ErrNotFound
 			}
-			if err == storage.ErrNotFound {
+			if err == issuestorage.ErrNotFound {
 				// Exact match failed (or tombstoned), try prefix matching
 				issue, err = findByPrefix(store, ctx, query)
 			}
 			if err != nil {
-				if err == storage.ErrNotFound {
+				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("no issue found matching %q", query)
 				}
 				return err
@@ -66,13 +66,13 @@ Examples:
 }
 
 // outputIssue formats and outputs the issue details.
-func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
+func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error {
 	if app.JSON {
 		return outputIssueJSON(app, ctx, issue)
 	}
 
 	// Header: ID and Title with status
-	if issue.Status == storage.StatusTombstone {
+	if issue.Status == issuestorage.StatusTombstone {
 		fmt.Fprintf(app.Out, "%s: %s [TOMBSTONE]\n", issue.ID, issue.Title)
 	} else {
 		fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
@@ -160,7 +160,7 @@ func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 
 // outputIssueJSON outputs the issue in JSON format matching original beads.
 // Returns an array with the single issue, with enriched dependencies.
-func outputIssueJSON(app *App, ctx context.Context, issue *storage.Issue) error {
+func outputIssueJSON(app *App, ctx context.Context, issue *issuestorage.Issue) error {
 	out := ToIssueJSON(ctx, app.Storage, issue, true, false)
 	// Original beads returns an array for show
 	return json.NewEncoder(app.Out).Encode([]IssueJSON{out})

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -79,7 +79,7 @@ Examples:
 					return fmt.Errorf("cannot claim %s: already assigned to %q", issueID, issue.Assignee)
 				}
 				issue.Assignee = actor
-				issue.Status = storage.StatusInProgress
+				issue.Status = issuestorage.StatusInProgress
 				changed = true
 			}
 
@@ -156,13 +156,13 @@ Examples:
 				} else {
 					// Set parent - verify it exists
 					if _, err := store.Get(ctx, parent); err != nil {
-						if err == storage.ErrNotFound {
+						if err == issuestorage.ErrNotFound {
 							return fmt.Errorf("parent issue not found: %s", parent)
 						}
 						return fmt.Errorf("getting parent issue: %w", err)
 					}
-					if err := store.AddDependency(ctx, issueID, parent, storage.DepTypeParentChild); err != nil {
-						if err == storage.ErrCycle {
+					if err := store.AddDependency(ctx, issueID, parent, issuestorage.DepTypeParentChild); err != nil {
+						if err == issuestorage.ErrCycle {
 							return fmt.Errorf("cannot set parent: would create a cycle")
 						}
 						return fmt.Errorf("setting parent: %w", err)
@@ -242,52 +242,52 @@ Examples:
 	return cmd
 }
 
-func parsePriority(s string) (storage.Priority, error) {
+func parsePriority(s string) (issuestorage.Priority, error) {
 	switch strings.ToLower(s) {
 	case "0", "p0":
-		return storage.PriorityCritical, nil
+		return issuestorage.PriorityCritical, nil
 	case "1", "p1":
-		return storage.PriorityHigh, nil
+		return issuestorage.PriorityHigh, nil
 	case "2", "p2":
-		return storage.PriorityMedium, nil
+		return issuestorage.PriorityMedium, nil
 	case "3", "p3":
-		return storage.PriorityLow, nil
+		return issuestorage.PriorityLow, nil
 	case "4", "p4":
-		return storage.PriorityBacklog, nil
+		return issuestorage.PriorityBacklog, nil
 	default:
 		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
 	}
 }
 
-func parseType(s string) (storage.IssueType, error) {
+func parseType(s string) (issuestorage.IssueType, error) {
 	switch strings.ToLower(s) {
 	case "task":
-		return storage.TypeTask, nil
+		return issuestorage.TypeTask, nil
 	case "bug":
-		return storage.TypeBug, nil
+		return issuestorage.TypeBug, nil
 	case "feature":
-		return storage.TypeFeature, nil
+		return issuestorage.TypeFeature, nil
 	case "epic":
-		return storage.TypeEpic, nil
+		return issuestorage.TypeEpic, nil
 	case "chore":
-		return storage.TypeChore, nil
+		return issuestorage.TypeChore, nil
 	default:
 		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore", s)
 	}
 }
 
-func parseStatus(s string) (storage.Status, error) {
+func parseStatus(s string) (issuestorage.Status, error) {
 	switch strings.ToLower(s) {
 	case "open":
-		return storage.StatusOpen, nil
+		return issuestorage.StatusOpen, nil
 	case "in-progress", "in_progress", "inprogress":
-		return storage.StatusInProgress, nil
+		return issuestorage.StatusInProgress, nil
 	case "blocked":
-		return storage.StatusBlocked, nil
+		return issuestorage.StatusBlocked, nil
 	case "deferred":
-		return storage.StatusDeferred, nil
+		return issuestorage.StatusDeferred, nil
 	case "closed":
-		return storage.StatusClosed, nil
+		return issuestorage.StatusClosed, nil
 	case "tombstone":
 		return "", fmt.Errorf("cannot set status to tombstone directly; use 'bd delete' instead")
 	default:

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestDeleteSoftDeleteDefault(t *testing.T) {
@@ -32,7 +32,7 @@ func TestDeleteSoftDeleteDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after soft-delete should succeed: %v", err)
 	}
-	if issue.Status != storage.StatusTombstone {
+	if issue.Status != issuestorage.StatusTombstone {
 		t.Errorf("expected status tombstone, got %q", issue.Status)
 	}
 	if issue.DeletedAt == nil {
@@ -60,7 +60,7 @@ func TestDeleteHardFlag(t *testing.T) {
 
 	// Verify issue is permanently gone
 	_, err := store.Get(context.Background(), issueID)
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("expected ErrNotFound after hard delete, got %v", err)
 	}
 }
@@ -118,9 +118,9 @@ func TestDeleteNoArgs(t *testing.T) {
 func TestDeleteByPrefix(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title: "Test issue for prefix",
-		Type:  storage.TypeTask,
+		Type:  issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestDeleteByPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after soft delete should succeed: %v", err)
 	}
-	if got.Status != storage.StatusTombstone {
+	if got.Status != issuestorage.StatusTombstone {
 		t.Errorf("expected tombstone status, got %q", got.Status)
 	}
 }
@@ -148,8 +148,8 @@ func TestDeleteByPrefix(t *testing.T) {
 func TestDeleteAmbiguousPrefix(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue1 := &storage.Issue{Title: "Issue 1", Type: storage.TypeTask}
-	issue2 := &storage.Issue{Title: "Issue 2", Type: storage.TypeTask}
+	issue1 := &issuestorage.Issue{Title: "Issue 1", Type: issuestorage.TypeTask}
+	issue2 := &issuestorage.Issue{Title: "Issue 2", Type: issuestorage.TypeTask}
 
 	_, err := store.Create(context.Background(), issue1)
 	if err != nil {
@@ -174,9 +174,9 @@ func TestDeleteAmbiguousPrefix(t *testing.T) {
 func TestDeleteClosedIssue(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title: "Closed issue",
-		Type:  storage.TypeTask,
+		Type:  issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -197,7 +197,7 @@ func TestDeleteClosedIssue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after soft delete should succeed: %v", err)
 	}
-	if got.Status != storage.StatusTombstone {
+	if got.Status != issuestorage.StatusTombstone {
 		t.Errorf("expected tombstone status, got %q", got.Status)
 	}
 }
@@ -205,9 +205,9 @@ func TestDeleteClosedIssue(t *testing.T) {
 func TestDeleteByPrefixClosedIssue(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title: "Closed issue for prefix test",
-		Type:  storage.TypeTask,
+		Type:  issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -230,7 +230,7 @@ func TestDeleteByPrefixClosedIssue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after soft delete should succeed: %v", err)
 	}
-	if got.Status != storage.StatusTombstone {
+	if got.Status != issuestorage.StatusTombstone {
 		t.Errorf("expected tombstone status, got %q", got.Status)
 	}
 }
@@ -250,7 +250,7 @@ func TestDeleteShortFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after soft delete should succeed: %v", err)
 	}
-	if got.Status != storage.StatusTombstone {
+	if got.Status != issuestorage.StatusTombstone {
 		t.Errorf("expected tombstone status, got %q", got.Status)
 	}
 }
@@ -275,7 +275,7 @@ func TestDeleteDryRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after dry-run should succeed: %v", err)
 	}
-	if got.Status == storage.StatusTombstone {
+	if got.Status == issuestorage.StatusTombstone {
 		t.Error("Issue should not be tombstoned after dry-run")
 	}
 }
@@ -327,7 +327,7 @@ func TestDeleteFromFile(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Get %s after delete should succeed: %v", id, err)
 		}
-		if got.Status != storage.StatusTombstone {
+		if got.Status != issuestorage.StatusTombstone {
 			t.Errorf("expected tombstone for %s, got %q", id, got.Status)
 		}
 	}
@@ -338,8 +338,8 @@ func TestDeleteTextReferenceRewriting(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two issues
-	refIssue := &storage.Issue{Title: "Referencing issue", Type: storage.TypeTask}
-	delIssue := &storage.Issue{Title: "Issue to delete", Type: storage.TypeTask}
+	refIssue := &issuestorage.Issue{Title: "Referencing issue", Type: issuestorage.TypeTask}
+	delIssue := &issuestorage.Issue{Title: "Issue to delete", Type: issuestorage.TypeTask}
 
 	refID, err := store.Create(ctx, refIssue)
 	if err != nil {
@@ -355,7 +355,7 @@ func TestDeleteTextReferenceRewriting(t *testing.T) {
 	refIssue.Description = "See " + delID + " for details"
 	store.Update(ctx, refIssue)
 
-	store.AddDependency(ctx, refID, delID, storage.DepTypeBlocks)
+	store.AddDependency(ctx, refID, delID, issuestorage.DepTypeBlocks)
 
 	cmd := newDeleteCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{delID, "--force"})
@@ -378,14 +378,14 @@ func TestDeleteCascadeSoftDelete(t *testing.T) {
 	app, store := setupTestApp(t)
 	ctx := context.Background()
 
-	parent := &storage.Issue{Title: "Parent", Type: storage.TypeTask}
-	child := &storage.Issue{Title: "Child", Type: storage.TypeTask}
+	parent := &issuestorage.Issue{Title: "Parent", Type: issuestorage.TypeTask}
+	child := &issuestorage.Issue{Title: "Child", Type: issuestorage.TypeTask}
 
 	parentID, _ := store.Create(ctx, parent)
 	childID, _ := store.Create(ctx, child)
 
 	// child depends on parent (so child is a dependent of parent)
-	store.AddDependency(ctx, childID, parentID, storage.DepTypeBlocks)
+	store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeBlocks)
 
 	cmd := newDeleteCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{parentID, "--cascade", "--force"})
@@ -398,7 +398,7 @@ func TestDeleteCascadeSoftDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get parent should succeed: %v", err)
 	}
-	if gotParent.Status != storage.StatusTombstone {
+	if gotParent.Status != issuestorage.StatusTombstone {
 		t.Errorf("parent should be tombstoned, got %q", gotParent.Status)
 	}
 
@@ -406,7 +406,7 @@ func TestDeleteCascadeSoftDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get child should succeed: %v", err)
 	}
-	if gotChild.Status != storage.StatusTombstone {
+	if gotChild.Status != issuestorage.StatusTombstone {
 		t.Errorf("child should be tombstoned, got %q", gotChild.Status)
 	}
 }

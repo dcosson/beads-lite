@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -60,26 +60,26 @@ Examples:
 			}
 
 			// Parse and validate type
-			issueType := storage.TypeTask
+			issueType := issuestorage.TypeTask
 			if typeFlag != "" {
 				switch strings.ToLower(typeFlag) {
 				case "task":
-					issueType = storage.TypeTask
+					issueType = issuestorage.TypeTask
 				case "bug":
-					issueType = storage.TypeBug
+					issueType = issuestorage.TypeBug
 				case "feature":
-					issueType = storage.TypeFeature
+					issueType = issuestorage.TypeFeature
 				case "epic":
-					issueType = storage.TypeEpic
+					issueType = issuestorage.TypeEpic
 				case "chore":
-					issueType = storage.TypeChore
+					issueType = issuestorage.TypeChore
 				default:
 					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore", typeFlag)
 				}
 			}
 
 			// Parse and validate priority
-			issuePriority := storage.PriorityMedium
+			issuePriority := issuestorage.PriorityMedium
 			if priority != "" {
 				p, err := parsePriorityInput(priority)
 				if err != nil {
@@ -112,7 +112,7 @@ Examples:
 			owner := resolveOwner()
 
 			// Create the issue
-			issue := &storage.Issue{
+			issue := &issuestorage.Issue{
 				Title:       title,
 				Description: desc,
 				Type:        issueType,
@@ -139,7 +139,7 @@ Examples:
 
 			// Set parent relationship if specified
 			if parent != "" {
-				if err := app.Storage.AddDependency(ctx, id, parent, storage.DepTypeParentChild); err != nil {
+				if err := app.Storage.AddDependency(ctx, id, parent, issuestorage.DepTypeParentChild); err != nil {
 					// Clean up the created issue on failure
 					app.Storage.Delete(context.Background(), id)
 					return fmt.Errorf("setting parent %s: %w", parent, err)
@@ -181,7 +181,7 @@ Examples:
 			fmt.Fprintf(app.Out, "%s Created issue: %s\n", app.SuccessColor("✓"), id)
 			fmt.Fprintf(app.Out, "  Title: %s\n", title)
 			fmt.Fprintf(app.Out, "  Priority: %s\n", issuePriority.Display())
-			fmt.Fprintf(app.Out, "  Status: %s\n", storage.StatusOpen)
+			fmt.Fprintf(app.Out, "  Status: %s\n", issuestorage.StatusOpen)
 			return nil
 		},
 	}
@@ -198,30 +198,30 @@ Examples:
 	return cmd
 }
 
-func parsePriorityInput(s string) (storage.Priority, error) {
+func parsePriorityInput(s string) (issuestorage.Priority, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
 	case "0", "p0":
-		return storage.PriorityCritical, nil
+		return issuestorage.PriorityCritical, nil
 	case "1", "p1":
-		return storage.PriorityHigh, nil
+		return issuestorage.PriorityHigh, nil
 	case "2", "p2":
-		return storage.PriorityMedium, nil
+		return issuestorage.PriorityMedium, nil
 	case "3", "p3":
-		return storage.PriorityLow, nil
+		return issuestorage.PriorityLow, nil
 	case "4", "p4":
-		return storage.PriorityBacklog, nil
+		return issuestorage.PriorityBacklog, nil
 	default:
 		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
 	}
 }
 
-func parseCreateDependency(input string) (storage.DependencyType, string, error) {
+func parseCreateDependency(input string) (issuestorage.DependencyType, string, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
 		return "", "", fmt.Errorf("dependency cannot be empty")
 	}
 
-	depType := storage.DepTypeBlocks
+	depType := issuestorage.DepTypeBlocks
 	depID := trimmed
 
 	if strings.Count(trimmed, ":") > 1 {
@@ -234,11 +234,11 @@ func parseCreateDependency(input string) (storage.DependencyType, string, error)
 		if typePart == "" || idPart == "" {
 			return "", "", fmt.Errorf("invalid dependency %q (expected 'type:id' or 'id')", input)
 		}
-		depType = storage.DependencyType(typePart)
+		depType = issuestorage.DependencyType(typePart)
 		depID = idPart
 	}
 
-	if !storage.ValidDependencyTypes[depType] {
+	if !issuestorage.ValidDependencyTypes[depType] {
 		return "", "", fmt.Errorf("invalid dependency type %q; valid types: %s", depType, validDependencyTypeList())
 	}
 
@@ -246,8 +246,8 @@ func parseCreateDependency(input string) (storage.DependencyType, string, error)
 }
 
 func validDependencyTypeList() string {
-	types := make([]string, 0, len(storage.ValidDependencyTypes))
-	for depType := range storage.ValidDependencyTypes {
+	types := make([]string, 0, len(issuestorage.ValidDependencyTypes))
+	for depType := range issuestorage.ValidDependencyTypes {
 		types = append(types, string(depType))
 	}
 	sort.Strings(types)

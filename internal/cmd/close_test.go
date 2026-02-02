@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestCloseBasic(t *testing.T) {
@@ -15,11 +15,11 @@ func TestCloseBasic(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create an issue to close
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue to close",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -42,8 +42,8 @@ func TestCloseBasic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get issue: %v", err)
 	}
-	if got.Status != storage.StatusClosed {
-		t.Errorf("expected status %q, got %q", storage.StatusClosed, got.Status)
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusClosed, got.Status)
 	}
 	if got.ClosedAt == nil {
 		t.Error("expected ClosedAt to be set")
@@ -57,11 +57,11 @@ func TestCloseMultiple(t *testing.T) {
 	// Create multiple issues
 	ids := make([]string, 3)
 	for i := 0; i < 3; i++ {
-		issue := &storage.Issue{
+		issue := &issuestorage.Issue{
 			Title:    "Issue " + string(rune('A'+i)),
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		}
 		id, err := store.Create(context.Background(), issue)
 		if err != nil {
@@ -89,8 +89,8 @@ func TestCloseMultiple(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to get issue %s: %v", id, err)
 		}
-		if got.Status != storage.StatusClosed {
-			t.Errorf("issue %s: expected status %q, got %q", id, storage.StatusClosed, got.Status)
+		if got.Status != issuestorage.StatusClosed {
+			t.Errorf("issue %s: expected status %q, got %q", id, issuestorage.StatusClosed, got.Status)
 		}
 	}
 }
@@ -112,11 +112,11 @@ func TestClosePartialFailure(t *testing.T) {
 	errOut := app.Err.(*bytes.Buffer)
 
 	// Create one valid issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Valid issue",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	validID, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -149,8 +149,8 @@ func TestClosePartialFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get issue: %v", err)
 	}
-	if got.Status != storage.StatusClosed {
-		t.Errorf("expected status %q, got %q", storage.StatusClosed, got.Status)
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusClosed, got.Status)
 	}
 }
 
@@ -160,11 +160,11 @@ func TestCloseWithJSONOutput(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create an issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for JSON test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -199,11 +199,11 @@ func TestCloseJSONWithErrors(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create one valid issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Valid issue",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	validID, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -243,11 +243,11 @@ func TestCloseAlreadyClosed(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create and close an issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Already closed",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -269,48 +269,48 @@ func TestCloseAlreadyClosed(t *testing.T) {
 // setupMolecule creates a root epic with 3 child steps (A→B→C chain).
 // Each step is a child of root via parent-child, and B blocks-depends on A, C blocks-depends on B.
 // Returns root ID, step A ID, step B ID, step C ID.
-func setupMolecule(t *testing.T, store storage.Storage) (string, string, string, string) {
+func setupMolecule(t *testing.T, store issuestorage.IssueStore) (string, string, string, string) {
 	t.Helper()
 	ctx := context.Background()
 
-	root := &storage.Issue{
+	root := &issuestorage.Issue{
 		Title:    "Root Epic",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 	}
 	rootID, err := store.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("failed to create root: %v", err)
 	}
 
-	stepA := &storage.Issue{
+	stepA := &issuestorage.Issue{
 		Title:    "Step A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idA, err := store.Create(ctx, stepA)
 	if err != nil {
 		t.Fatalf("failed to create step A: %v", err)
 	}
 
-	stepB := &storage.Issue{
+	stepB := &issuestorage.Issue{
 		Title:    "Step B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idB, err := store.Create(ctx, stepB)
 	if err != nil {
 		t.Fatalf("failed to create step B: %v", err)
 	}
 
-	stepC := &storage.Issue{
+	stepC := &issuestorage.Issue{
 		Title:    "Step C",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	idC, err := store.Create(ctx, stepC)
 	if err != nil {
@@ -318,21 +318,21 @@ func setupMolecule(t *testing.T, store storage.Storage) (string, string, string,
 	}
 
 	// Set parent-child relationships
-	if err := store.AddDependency(ctx, idA, rootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, idA, rootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child A->root: %v", err)
 	}
-	if err := store.AddDependency(ctx, idB, rootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, idB, rootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child B->root: %v", err)
 	}
-	if err := store.AddDependency(ctx, idC, rootID, storage.DepTypeParentChild); err != nil {
+	if err := store.AddDependency(ctx, idC, rootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child C->root: %v", err)
 	}
 
 	// Set blocks dependencies: B depends on A, C depends on B
-	if err := store.AddDependency(ctx, idB, idA, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, idB, idA, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add blocks B->A: %v", err)
 	}
-	if err := store.AddDependency(ctx, idC, idB, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, idC, idB, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add blocks C->B: %v", err)
 	}
 
@@ -363,8 +363,8 @@ func TestCloseContinueAdvancesNextStep(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get step B: %v", err)
 	}
-	if got.Status != storage.StatusInProgress {
-		t.Errorf("expected step B status %q, got %q", storage.StatusInProgress, got.Status)
+	if got.Status != issuestorage.StatusInProgress {
+		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
 	}
 }
 
@@ -389,8 +389,8 @@ func TestCloseContinueNoAuto(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get step B: %v", err)
 	}
-	if got.Status != storage.StatusOpen {
-		t.Errorf("expected step B status %q, got %q", storage.StatusOpen, got.Status)
+	if got.Status != issuestorage.StatusOpen {
+		t.Errorf("expected step B status %q, got %q", issuestorage.StatusOpen, got.Status)
 	}
 }
 
@@ -416,11 +416,11 @@ func TestCloseContinueNonMolecule(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create a standalone issue (no parent)
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Standalone issue",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {

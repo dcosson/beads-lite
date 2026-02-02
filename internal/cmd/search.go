@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 	"github.com/spf13/cobra"
 )
 
@@ -34,15 +34,15 @@ Use --title-only to search only in titles.`,
 			ctx := cmd.Context()
 			query := strings.ToLower(args[0])
 
-			var matches []*storage.Issue
-			var issues []*storage.Issue
+			var matches []*issuestorage.Issue
+			var issues []*issuestorage.Issue
 
 			if status != "" {
 				s, err := parseStatus(status)
 				if err != nil {
 					return err
 				}
-				filter := &storage.ListFilter{Status: &s}
+				filter := &issuestorage.ListFilter{Status: &s}
 				issues, err = app.Storage.List(ctx, filter)
 				if err != nil {
 					return fmt.Errorf("listing issues: %w", err)
@@ -54,8 +54,8 @@ Use --title-only to search only in titles.`,
 				}
 				issues = append(issues, openIssues...)
 
-				closedStatus := storage.StatusClosed
-				closedIssues, err := app.Storage.List(ctx, &storage.ListFilter{Status: &closedStatus})
+				closedStatus := issuestorage.StatusClosed
+				closedIssues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
 				if err != nil {
 					return fmt.Errorf("listing closed issues: %w", err)
 				}
@@ -84,7 +84,7 @@ Use --title-only to search only in titles.`,
 			fmt.Fprintf(app.Out, "Found %d matches:\n", len(matches))
 			for _, issue := range matches {
 				statusStr := ""
-				if issue.Status != storage.StatusOpen {
+				if issue.Status != issuestorage.StatusOpen {
 					statusStr = fmt.Sprintf(" [%s]", issue.Status)
 				}
 				fmt.Fprintf(app.Out, "  %s  %s%s\n", issue.ID, issue.Title, statusStr)
@@ -100,7 +100,7 @@ Use --title-only to search only in titles.`,
 	return cmd
 }
 
-func matchesQuery(issue *storage.Issue, query string, titleOnly bool) bool {
+func matchesQuery(issue *issuestorage.Issue, query string, titleOnly bool) bool {
 	if strings.Contains(strings.ToLower(issue.Title), query) {
 		return true
 	}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // BurnResult contains statistics from a Burn operation.
@@ -28,11 +28,11 @@ type BurnResult struct {
 //     to remotes via bd sync
 //
 // Deletion proceeds from leaves up to avoid dangling parent references.
-func Burn(ctx context.Context, store storage.Storage, molID string) (*BurnResult, error) {
+func Burn(ctx context.Context, store issuestorage.IssueStore, molID string) (*BurnResult, error) {
 	// 1. Load root issue.
 	root, err := store.Get(ctx, molID)
 	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
+		if errors.Is(err, issuestorage.ErrNotFound) {
 			return nil, fmt.Errorf("molecule %s not found: %w", molID, err)
 		}
 		return nil, fmt.Errorf("load molecule %s: %w", molID, err)
@@ -46,7 +46,7 @@ func Burn(ctx context.Context, store storage.Storage, molID string) (*BurnResult
 
 	// 3. Build deletion order: leaves first, root last.
 	// CollectMoleculeChildren returns BFS order; reverse for leaves-first.
-	all := make([]*storage.Issue, 0, len(children)+1)
+	all := make([]*issuestorage.Issue, 0, len(children)+1)
 	for i := len(children) - 1; i >= 0; i-- {
 		all = append(all, children[i])
 	}
@@ -77,7 +77,7 @@ func Burn(ctx context.Context, store storage.Storage, molID string) (*BurnResult
 	eventsRemoved := 0
 	for _, issue := range all {
 		eventsRemoved++ // create event
-		if issue.Status != storage.StatusOpen {
+		if issue.Status != issuestorage.StatusOpen {
 			eventsRemoved++ // status change event
 		}
 		eventsRemoved += len(issue.Comments)
@@ -108,12 +108,12 @@ func Burn(ctx context.Context, store storage.Storage, molID string) (*BurnResult
 
 // burnIssue removes a single issue. Ephemeral issues are hard-deleted with no
 // trace. Persistent issues are closed, leaving a tombstone in the closed store.
-func burnIssue(ctx context.Context, store storage.Storage, issue *storage.Issue) error {
+func burnIssue(ctx context.Context, store issuestorage.IssueStore, issue *issuestorage.Issue) error {
 	if issue.Ephemeral {
 		return store.Delete(ctx, issue.ID)
 	}
 	// Persistent: close to create tombstone in closed/ directory.
-	if issue.Status != storage.StatusClosed {
+	if issue.Status != issuestorage.StatusClosed {
 		return store.Close(ctx, issue.ID)
 	}
 	return nil
@@ -121,17 +121,17 @@ func burnIssue(ctx context.Context, store storage.Storage, issue *storage.Issue)
 
 // cleanExternalDeps removes dependency links between issue and any issues
 // outside the burn set, preventing dangling references in surviving issues.
-func cleanExternalDeps(ctx context.Context, store storage.Storage, issue *storage.Issue, burnSet map[string]bool) error {
+func cleanExternalDeps(ctx context.Context, store issuestorage.IssueStore, issue *issuestorage.Issue, burnSet map[string]bool) error {
 	for _, dep := range issue.Dependencies {
 		if !burnSet[dep.ID] {
-			if err := store.RemoveDependency(ctx, issue.ID, dep.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
+			if err := store.RemoveDependency(ctx, issue.ID, dep.ID); err != nil && !errors.Is(err, issuestorage.ErrNotFound) {
 				return err
 			}
 		}
 	}
 	for _, dep := range issue.Dependents {
 		if !burnSet[dep.ID] {
-			if err := store.RemoveDependency(ctx, dep.ID, issue.ID); err != nil && !errors.Is(err, storage.ErrNotFound) {
+			if err := store.RemoveDependency(ctx, dep.ID, issue.ID); err != nil && !errors.Is(err, issuestorage.ErrNotFound) {
 				return err
 			}
 		}

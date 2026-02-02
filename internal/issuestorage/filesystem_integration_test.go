@@ -1,16 +1,16 @@
-package storage_test
+package issuestorage_test
 
 import (
 	"context"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 // TestFilesystemContract runs the storage contract tests against FilesystemStorage.
 func TestFilesystemContract(t *testing.T) {
-	factory := func() storage.Storage {
+	factory := func() issuestorage.IssueStore {
 		dir := t.TempDir()
 		fs := filesystem.New(dir)
 		if err := fs.Init(context.Background()); err != nil {
@@ -18,13 +18,13 @@ func TestFilesystemContract(t *testing.T) {
 		}
 		return fs
 	}
-	storage.RunContractTests(t, factory)
+	issuestorage.RunContractTests(t, factory)
 }
 
 // TestFilesystemConcurrent runs the concurrent access tests against FilesystemStorage.
 func TestFilesystemConcurrent(t *testing.T) {
-	suite := &storage.ConcurrentTestSuite{
-		NewStorage: func(t *testing.T) storage.Storage {
+	suite := &issuestorage.ConcurrentTestSuite{
+		NewStorage: func(t *testing.T) issuestorage.IssueStore {
 			dir := t.TempDir()
 			fs := filesystem.New(dir)
 			if err := fs.Init(context.Background()); err != nil {

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -54,12 +54,12 @@ Examples:
 
 			// Try exact match first
 			issue, err := store.Get(ctx, query)
-			if err == storage.ErrNotFound {
+			if err == issuestorage.ErrNotFound {
 				// Try prefix matching
 				issue, err = findByPrefix(store, ctx, query)
 			}
 			if err != nil {
-				if err == storage.ErrNotFound {
+				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("no issue found matching %q", query)
 				}
 				return err
@@ -86,8 +86,8 @@ Examples:
 }
 
 // outputChildrenList outputs direct children as a simple list.
-func outputChildrenList(ctx context.Context, app *App, issue *storage.Issue) error {
-	var children []*storage.Issue
+func outputChildrenList(ctx context.Context, app *App, issue *issuestorage.Issue) error {
+	var children []*issuestorage.Issue
 	for _, childID := range issue.Children() {
 		child, err := app.Storage.Get(ctx, childID)
 		if err != nil {
@@ -114,7 +114,7 @@ func outputChildrenList(ctx context.Context, app *App, issue *storage.Issue) err
 }
 
 // outputChildrenTree outputs the full subtree recursively.
-func outputChildrenTree(ctx context.Context, app *App, issue *storage.Issue) error {
+func outputChildrenTree(ctx context.Context, app *App, issue *issuestorage.Issue) error {
 	tree := buildTree(ctx, app, issue)
 
 	if app.JSON {
@@ -128,7 +128,7 @@ func outputChildrenTree(ctx context.Context, app *App, issue *storage.Issue) err
 }
 
 // buildTree builds a tree of ChildInfo for an issue.
-func buildTree(ctx context.Context, app *App, issue *storage.Issue) []*ChildInfo {
+func buildTree(ctx context.Context, app *App, issue *issuestorage.Issue) []*ChildInfo {
 	var children []*ChildInfo
 
 	for _, childID := range issue.Children() {

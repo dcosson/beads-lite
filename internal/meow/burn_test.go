@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func newBurnStore(t *testing.T) storage.Storage {
+func newBurnStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir)
@@ -20,13 +20,13 @@ func newBurnStore(t *testing.T) storage.Storage {
 	return s
 }
 
-func createBurnIssue(t *testing.T, ctx context.Context, s storage.Storage, title string, ephemeral bool) *storage.Issue {
+func createBurnIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, ephemeral bool) *issuestorage.Issue {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:     title,
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeTask,
 		Ephemeral: ephemeral,
 	}
 	id, err := s.Create(ctx, issue)
@@ -43,15 +43,15 @@ func TestBurn_PersistentMolecule(t *testing.T) {
 
 	// Create root epic + persistent children.
 	root := createBurnIssue(t, ctx, s, "Root", false)
-	root.Type = storage.TypeEpic
+	root.Type = issuestorage.TypeEpic
 	if err := s.Update(ctx, root); err != nil {
 		t.Fatal(err)
 	}
 
 	childA := createBurnIssue(t, ctx, s, "A", false)
 	childB := createBurnIssue(t, ctx, s, "B", false)
-	for _, child := range []*storage.Issue{childA, childB} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{childA, childB} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}
@@ -67,7 +67,7 @@ func TestBurn_PersistentMolecule(t *testing.T) {
 			t.Errorf("tombstone %s not found: %v", id, err)
 			continue
 		}
-		if issue.Status != storage.StatusClosed {
+		if issue.Status != issuestorage.StatusClosed {
 			t.Errorf("tombstone %s: got status %s, want closed", id, issue.Status)
 		}
 	}
@@ -80,8 +80,8 @@ func TestBurn_EphemeralWisp(t *testing.T) {
 	root := createBurnIssue(t, ctx, s, "Wisp Root", true)
 	childA := createBurnIssue(t, ctx, s, "Wisp A", true)
 	childB := createBurnIssue(t, ctx, s, "Wisp B", true)
-	for _, child := range []*storage.Issue{childA, childB} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{childA, childB} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}
@@ -93,7 +93,7 @@ func TestBurn_EphemeralWisp(t *testing.T) {
 	// Ephemeral issues should be completely gone — no tombstones.
 	for _, id := range []string{root.ID, childA.ID, childB.ID} {
 		_, err := s.Get(ctx, id)
-		if !errors.Is(err, storage.ErrNotFound) {
+		if !errors.Is(err, issuestorage.ErrNotFound) {
 			t.Errorf("ephemeral %s should be deleted, got err: %v", id, err)
 		}
 	}
@@ -106,19 +106,19 @@ func TestBurn_WithExternalDeps(t *testing.T) {
 	// Create molecule.
 	root := createBurnIssue(t, ctx, s, "Root", false)
 	child := createBurnIssue(t, ctx, s, "Child", false)
-	if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatal(err)
 	}
 
 	// External issue that blocks the child (child depends on external).
 	blocker := createBurnIssue(t, ctx, s, "External Blocker", false)
-	if err := s.AddDependency(ctx, child.ID, blocker.ID, storage.DepTypeBlocks); err != nil {
+	if err := s.AddDependency(ctx, child.ID, blocker.ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatal(err)
 	}
 
 	// External issue that the child blocks (downstream depends on child).
 	downstream := createBurnIssue(t, ctx, s, "External Downstream", false)
-	if err := s.AddDependency(ctx, downstream.ID, child.ID, storage.DepTypeBlocks); err != nil {
+	if err := s.AddDependency(ctx, downstream.ID, child.ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatal(err)
 	}
 
@@ -154,8 +154,8 @@ func TestBurn_MixedEphemeralPersistent(t *testing.T) {
 	ephChild := createBurnIssue(t, ctx, s, "Ephemeral Child", true)
 	persChild := createBurnIssue(t, ctx, s, "Persistent Child", false)
 
-	for _, child := range []*storage.Issue{ephChild, persChild} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{ephChild, persChild} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}
@@ -166,7 +166,7 @@ func TestBurn_MixedEphemeralPersistent(t *testing.T) {
 
 	// Ephemeral child: gone entirely.
 	_, err := s.Get(ctx, ephChild.ID)
-	if !errors.Is(err, storage.ErrNotFound) {
+	if !errors.Is(err, issuestorage.ErrNotFound) {
 		t.Errorf("ephemeral child should be deleted, got err: %v", err)
 	}
 
@@ -175,7 +175,7 @@ func TestBurn_MixedEphemeralPersistent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("persistent child tombstone not found: %v", err)
 	}
-	if issue.Status != storage.StatusClosed {
+	if issue.Status != issuestorage.StatusClosed {
 		t.Errorf("persistent child: got status %s, want closed", issue.Status)
 	}
 
@@ -184,7 +184,7 @@ func TestBurn_MixedEphemeralPersistent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("root tombstone not found: %v", err)
 	}
-	if issue.Status != storage.StatusClosed {
+	if issue.Status != issuestorage.StatusClosed {
 		t.Errorf("root: got status %s, want closed", issue.Status)
 	}
 }
@@ -197,7 +197,7 @@ func TestBurn_NonExistent(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-existent molecule")
 	}
-	if !errors.Is(err, storage.ErrNotFound) {
+	if !errors.Is(err, issuestorage.ErrNotFound) {
 		t.Errorf("expected ErrNotFound in chain, got: %v", err)
 	}
 }

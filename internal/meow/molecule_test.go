@@ -7,11 +7,11 @@ import (
 	"testing"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func newMolStore(t *testing.T) storage.Storage {
+func newMolStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir)
@@ -21,12 +21,12 @@ func newMolStore(t *testing.T) storage.Storage {
 	return s
 }
 
-func createMolIssue(t *testing.T, ctx context.Context, s storage.Storage, title string, typ storage.IssueType) *storage.Issue {
+func createMolIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, typ issuestorage.IssueType) *issuestorage.Issue {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    title,
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
 		Type:     typ,
 	}
 	id, err := s.Create(ctx, issue)
@@ -38,29 +38,29 @@ func createMolIssue(t *testing.T, ctx context.Context, s storage.Storage, title 
 }
 
 // buildTestMolecule creates: root (epic) -> [A, B, C] where B blocks->A, C blocks->B.
-func buildTestMolecule(t *testing.T, ctx context.Context, s storage.Storage) (root *storage.Issue, children map[string]*storage.Issue) {
+func buildTestMolecule(t *testing.T, ctx context.Context, s issuestorage.IssueStore) (root *issuestorage.Issue, children map[string]*issuestorage.Issue) {
 	t.Helper()
-	root = createMolIssue(t, ctx, s, "Test Molecule", storage.TypeEpic)
-	a := createMolIssue(t, ctx, s, "Step A", storage.TypeTask)
-	b := createMolIssue(t, ctx, s, "Step B", storage.TypeTask)
-	c := createMolIssue(t, ctx, s, "Step C", storage.TypeTask)
+	root = createMolIssue(t, ctx, s, "Test Molecule", issuestorage.TypeEpic)
+	a := createMolIssue(t, ctx, s, "Step A", issuestorage.TypeTask)
+	b := createMolIssue(t, ctx, s, "Step B", issuestorage.TypeTask)
+	c := createMolIssue(t, ctx, s, "Step C", issuestorage.TypeTask)
 
 	// Parent-child relationships.
-	for _, child := range []*storage.Issue{a, b, c} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{a, b, c} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency parent-child: %v", err)
 		}
 	}
 
 	// B blocked by A, C blocked by B.
-	if err := s.AddDependency(ctx, b.ID, a.ID, storage.DepTypeBlocks); err != nil {
+	if err := s.AddDependency(ctx, b.ID, a.ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency B->A: %v", err)
 	}
-	if err := s.AddDependency(ctx, c.ID, b.ID, storage.DepTypeBlocks); err != nil {
+	if err := s.AddDependency(ctx, c.ID, b.ID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency C->B: %v", err)
 	}
 
-	children = map[string]*storage.Issue{
+	children = map[string]*issuestorage.Issue{
 		"A": a,
 		"B": b,
 		"C": c,
@@ -126,7 +126,7 @@ func TestCurrent_InProgressMarkedAsCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get A: %v", err)
 	}
-	a.Status = storage.StatusInProgress
+	a.Status = issuestorage.StatusInProgress
 	if err := s.Update(ctx, a); err != nil {
 		t.Fatalf("Update A: %v", err)
 	}
@@ -244,7 +244,7 @@ func TestFindStaleSteps_NoStaleWhenInProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get A: %v", err)
 	}
-	a.Status = storage.StatusInProgress
+	a.Status = issuestorage.StatusInProgress
 	if err := s.Update(ctx, a); err != nil {
 		t.Fatalf("Update A: %v", err)
 	}
@@ -263,11 +263,11 @@ func TestInferMolecule_FindsEpicForActor(t *testing.T) {
 	s := newMolStore(t)
 
 	// Create an in_progress root epic assigned to "alice".
-	epic := &storage.Issue{
+	epic := &issuestorage.Issue{
 		Title:    "Alice's Molecule",
-		Status:   storage.StatusInProgress,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Status:   issuestorage.StatusInProgress,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 		Assignee: "alice",
 	}
 	epicID, err := s.Create(ctx, epic)
@@ -302,11 +302,11 @@ func TestInferMolecule_IgnoresChildEpics(t *testing.T) {
 	s := newMolStore(t)
 
 	// Root epic assigned to alice (in_progress).
-	root := &storage.Issue{
+	root := &issuestorage.Issue{
 		Title:    "Root",
-		Status:   storage.StatusInProgress,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Status:   issuestorage.StatusInProgress,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 		Assignee: "alice",
 	}
 	rootID, err := s.Create(ctx, root)
@@ -315,18 +315,18 @@ func TestInferMolecule_IgnoresChildEpics(t *testing.T) {
 	}
 
 	// Child epic (has parent) — should not be returned.
-	child := &storage.Issue{
+	child := &issuestorage.Issue{
 		Title:    "Child Epic",
-		Status:   storage.StatusInProgress,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeEpic,
+		Status:   issuestorage.StatusInProgress,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
 		Assignee: "alice",
 	}
 	childID, err := s.Create(ctx, child)
 	if err != nil {
 		t.Fatalf("Create child: %v", err)
 	}
-	if err := s.AddDependency(ctx, childID, rootID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, childID, rootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("AddDependency: %v", err)
 	}
 

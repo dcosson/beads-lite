@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // DefaultGCOlderThan is the default age threshold for GC.
@@ -17,7 +17,7 @@ const DefaultGCOlderThan = time.Hour
 // It queries all issues, filters to those with Ephemeral==true and
 // CreatedAt older than opts.OlderThan, then hard-deletes each
 // (no tombstones for ephemeral issues).
-func GC(ctx context.Context, store storage.Storage, opts GCOptions) (*GCResult, error) {
+func GC(ctx context.Context, store issuestorage.IssueStore, opts GCOptions) (*GCResult, error) {
 	olderThan := opts.OlderThan
 	if olderThan == 0 {
 		olderThan = DefaultGCOlderThan
@@ -26,7 +26,7 @@ func GC(ctx context.Context, store storage.Storage, opts GCOptions) (*GCResult, 
 	cutoff := time.Now().Add(-olderThan)
 
 	// List all issues (nil fields = any).
-	issues, err := store.List(ctx, &storage.ListFilter{})
+	issues, err := store.List(ctx, &issuestorage.ListFilter{})
 	if err != nil {
 		return nil, fmt.Errorf("list issues: %w", err)
 	}

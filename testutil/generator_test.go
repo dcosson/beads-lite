@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func setupTestStorage(t *testing.T) storage.Storage {
+func setupTestStorage(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir)

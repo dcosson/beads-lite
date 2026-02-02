@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func newSquashStore(t *testing.T) storage.Storage {
+func newSquashStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir)
@@ -21,13 +21,13 @@ func newSquashStore(t *testing.T) storage.Storage {
 	return s
 }
 
-func createSquashIssue(t *testing.T, ctx context.Context, s storage.Storage, title string, ephemeral bool) *storage.Issue {
+func createSquashIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, ephemeral bool) *issuestorage.Issue {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:     title,
-		Status:    storage.StatusOpen,
-		Priority:  storage.PriorityMedium,
-		Type:      storage.TypeTask,
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeTask,
 		Ephemeral: ephemeral,
 	}
 	id, err := s.Create(ctx, issue)
@@ -46,8 +46,8 @@ func TestSquash_WispDigestCreatedChildrenDeleted(t *testing.T) {
 	root := createSquashIssue(t, ctx, s, "Wisp Root", true)
 	childA := createSquashIssue(t, ctx, s, "Step A", true)
 	childB := createSquashIssue(t, ctx, s, "Step B", true)
-	for _, child := range []*storage.Issue{childA, childB} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{childA, childB} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}
@@ -65,20 +65,20 @@ func TestSquash_WispDigestCreatedChildrenDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get digest: %v", err)
 	}
-	if digest.Status != storage.StatusClosed {
+	if digest.Status != issuestorage.StatusClosed {
 		t.Errorf("digest status: got %s, want closed", digest.Status)
 	}
 	if digest.Ephemeral {
 		t.Error("digest should be persistent (Ephemeral=false)")
 	}
-	if digest.Type != storage.TypeTask {
+	if digest.Type != issuestorage.TypeTask {
 		t.Errorf("digest type: got %s, want task", digest.Type)
 	}
 
 	// Ephemeral children should be deleted.
 	for _, id := range []string{childA.ID, childB.ID} {
 		_, err := s.Get(ctx, id)
-		if !errors.Is(err, storage.ErrNotFound) {
+		if !errors.Is(err, issuestorage.ErrNotFound) {
 			t.Errorf("ephemeral child %s should be deleted, got err: %v", id, err)
 		}
 	}
@@ -96,8 +96,8 @@ func TestSquash_KeepChildren(t *testing.T) {
 	root := createSquashIssue(t, ctx, s, "Root", true)
 	childA := createSquashIssue(t, ctx, s, "Step A", true)
 	childB := createSquashIssue(t, ctx, s, "Step B", true)
-	for _, child := range []*storage.Issue{childA, childB} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{childA, childB} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}
@@ -132,7 +132,7 @@ func TestSquash_KeepChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get digest: %v", err)
 	}
-	if digest.Status != storage.StatusClosed {
+	if digest.Status != issuestorage.StatusClosed {
 		t.Errorf("digest status: got %s, want closed", digest.Status)
 	}
 }
@@ -144,7 +144,7 @@ func TestSquash_NoEphemeralChildren_NoOp(t *testing.T) {
 	// Persistent root with only persistent children — no ephemeral children.
 	root := createSquashIssue(t, ctx, s, "Persistent Root", false)
 	child := createSquashIssue(t, ctx, s, "Persistent Child", false)
-	if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("AddDependency: %v", err)
 	}
 
@@ -163,7 +163,7 @@ func TestSquash_DigestFormat(t *testing.T) {
 
 	root := createSquashIssue(t, ctx, s, "My Molecule", true)
 	child := createSquashIssue(t, ctx, s, "Wisp Step", true)
-	if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("AddDependency: %v", err)
 	}
 
@@ -186,7 +186,7 @@ func TestSquash_DigestFormat(t *testing.T) {
 	}
 
 	// Status: closed.
-	if digest.Status != storage.StatusClosed {
+	if digest.Status != issuestorage.StatusClosed {
 		t.Errorf("status: got %s, want closed", digest.Status)
 	}
 
@@ -214,8 +214,8 @@ func TestSquash_AutoSummaryFromChildTitles(t *testing.T) {
 	root := createSquashIssue(t, ctx, s, "Root", true)
 	childA := createSquashIssue(t, ctx, s, "Alpha Step", true)
 	childB := createSquashIssue(t, ctx, s, "Beta Step", true)
-	for _, child := range []*storage.Issue{childA, childB} {
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	for _, child := range []*issuestorage.Issue{childA, childB} {
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency: %v", err)
 		}
 	}

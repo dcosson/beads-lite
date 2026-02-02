@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestShowCommand(t *testing.T) {
@@ -21,11 +21,11 @@ func TestShowCommand(t *testing.T) {
 	}
 
 	// Create a test issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test Issue",
 		Description: "This is a test description",
-		Priority:    storage.PriorityHigh,
-		Type:        storage.TypeBug,
+		Priority:    issuestorage.PriorityHigh,
+		Type:        issuestorage.TypeBug,
 		Labels:      []string{"urgent", "backend"},
 		Assignee:    "alice",
 	})
@@ -82,9 +82,9 @@ func TestShowPrefixMatch(t *testing.T) {
 	}
 
 	// Create a test issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Prefix Test Issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -125,17 +125,17 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 	}
 
 	// Create two issues (both will start with "bd-")
-	id1, err := store.Create(ctx, &storage.Issue{
+	id1, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue One",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue 1: %v", err)
 	}
 
-	id2, err := store.Create(ctx, &storage.Issue{
+	id2, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue Two",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue 2: %v", err)
@@ -207,11 +207,11 @@ func TestShowJSON(t *testing.T) {
 	}
 
 	// Create a test issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "JSON Test Issue",
 		Description: "Test description",
-		Priority:    storage.PriorityLow,
-		Type:        storage.TypeTask,
+		Priority:    issuestorage.PriorityLow,
+		Type:        issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -260,9 +260,9 @@ func TestShowClosedIssue(t *testing.T) {
 	}
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed Issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -306,24 +306,24 @@ func TestShowWithDependencies(t *testing.T) {
 	}
 
 	// Create issues with dependencies
-	depID, err := store.Create(ctx, &storage.Issue{
+	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency Issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create dependency issue: %v", err)
 	}
 
-	mainID, err := store.Create(ctx, &storage.Issue{
+	mainID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Main Issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create main issue: %v", err)
 	}
 
 	// Add dependency relationship
-	if err := store.AddDependency(ctx, mainID, depID, storage.DepTypeBlocks); err != nil {
+	if err := store.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
@@ -361,16 +361,16 @@ func TestShowWithComments(t *testing.T) {
 	}
 
 	// Create an issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue with Comments",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Add a comment
-	if err := store.AddComment(ctx, id, &storage.Comment{
+	if err := store.AddComment(ctx, id, &issuestorage.Comment{
 		Author: "bob",
 		Text:   "This is a test comment",
 	}); err != nil {

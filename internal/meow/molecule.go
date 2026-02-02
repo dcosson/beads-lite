@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // MoleculeView holds the full classified view of a molecule's steps.
@@ -25,7 +25,7 @@ type StepView struct {
 	Title    string           `json:"title"`
 	Status   graph.StepStatus `json:"status"`
 	Assignee string           `json:"assignee,omitempty"`
-	Issue    *storage.Issue   `json:"-"` // full issue data for JSON conversion in cmd layer
+	Issue    *issuestorage.Issue   `json:"-"` // full issue data for JSON conversion in cmd layer
 }
 
 // ProgressStats holds completion statistics for a molecule.
@@ -41,7 +41,7 @@ type ProgressStats struct {
 
 // Current returns the classified steps of a molecule.
 // If opts.MoleculeID is empty, InferMolecule is used to find the active molecule.
-func Current(ctx context.Context, store storage.Storage, opts CurrentOptions) (*MoleculeView, error) {
+func Current(ctx context.Context, store issuestorage.IssueStore, opts CurrentOptions) (*MoleculeView, error) {
 	molID := opts.MoleculeID
 	if molID == "" {
 		actor := opts.Actor
@@ -127,7 +127,7 @@ func Current(ctx context.Context, store storage.Storage, opts CurrentOptions) (*
 
 // Progress computes completion statistics for a molecule without loading
 // the full step view.
-func Progress(ctx context.Context, store storage.Storage, molID string) (*ProgressStats, error) {
+func Progress(ctx context.Context, store issuestorage.IssueStore, molID string) (*ProgressStats, error) {
 	children, err := graph.CollectMoleculeChildren(ctx, store, molID)
 	if err != nil {
 		return nil, fmt.Errorf("collect children of %s: %w", molID, err)
@@ -167,7 +167,7 @@ func Progress(ctx context.Context, store storage.Storage, molID string) (*Progre
 
 // FindStaleSteps returns ready steps that appear idle — their dependencies
 // are met but they haven't been started (status is open, not in_progress).
-func FindStaleSteps(ctx context.Context, store storage.Storage, molID string) ([]*StaleStep, error) {
+func FindStaleSteps(ctx context.Context, store issuestorage.IssueStore, molID string) ([]*StaleStep, error) {
 	children, err := graph.CollectMoleculeChildren(ctx, store, molID)
 	if err != nil {
 		return nil, fmt.Errorf("collect children of %s: %w", molID, err)
@@ -182,7 +182,7 @@ func FindStaleSteps(ctx context.Context, store storage.Storage, molID string) ([
 
 	var stale []*StaleStep
 	for _, step := range ready {
-		if step.Status == storage.StatusOpen {
+		if step.Status == issuestorage.StatusOpen {
 			stale = append(stale, &StaleStep{
 				ID:     step.ID,
 				Title:  step.Title,
@@ -197,10 +197,10 @@ func FindStaleSteps(ctx context.Context, store storage.Storage, molID string) ([
 
 // InferMolecule finds the active molecule for the given actor by looking for
 // an in_progress epic with no parent that is assigned to the actor.
-func InferMolecule(ctx context.Context, store storage.Storage, actor string) (string, error) {
-	status := storage.StatusInProgress
-	epicType := storage.TypeEpic
-	issues, err := store.List(ctx, &storage.ListFilter{
+func InferMolecule(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
+	status := issuestorage.StatusInProgress
+	epicType := issuestorage.TypeEpic
+	issues, err := store.List(ctx, &issuestorage.ListFilter{
 		Status:   &status,
 		Type:     &epicType,
 		Assignee: &actor,
@@ -210,7 +210,7 @@ func InferMolecule(ctx context.Context, store storage.Storage, actor string) (st
 	}
 
 	// Filter to root epics (no parent).
-	var roots []*storage.Issue
+	var roots []*issuestorage.Issue
 	for _, issue := range issues {
 		if issue.Parent == "" {
 			roots = append(roots, issue)

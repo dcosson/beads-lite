@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -40,14 +40,14 @@ are shown, along with parallel group info.`,
 			ctx := cmd.Context()
 
 			// List all open issues
-			openStatus := storage.StatusOpen
-			filter := &storage.ListFilter{
+			openStatus := issuestorage.StatusOpen
+			filter := &issuestorage.ListFilter{
 				Status: &openStatus,
 			}
 
 			// Apply priority filter if specified
 			if priority != "" {
-				p := storage.Priority(priority)
+				p := issuestorage.Priority(priority)
 				filter.Priority = &p
 			}
 
@@ -67,8 +67,8 @@ are shown, along with parallel group info.`,
 			}
 
 			// Get closed issues to check dependency resolution
-			closedStatus := storage.StatusClosed
-			closedFilter := &storage.ListFilter{
+			closedStatus := issuestorage.StatusClosed
+			closedFilter := &issuestorage.ListFilter{
 				Status: &closedStatus,
 			}
 			closedIssues, err := app.Storage.List(ctx, closedFilter)
@@ -82,7 +82,7 @@ are shown, along with parallel group info.`,
 
 			// Filter to only ready issues, excluding ephemeral and
 			// (when not in --mol mode) molecule steps.
-			var ready []*storage.Issue
+			var ready []*issuestorage.Issue
 			for _, issue := range issues {
 				// Ephemeral issues are never ready (hardcoded exclusion).
 				if issue.Ephemeral {
@@ -148,9 +148,9 @@ are shown, along with parallel group info.`,
 // isReady returns true if an issue is ready to work on.
 // An issue is ready if all its "blocks" type dependencies are closed.
 // Other dependency types (tracks, related, etc.) do not block readiness.
-func isReady(issue *storage.Issue, closedSet map[string]bool) bool {
+func isReady(issue *issuestorage.Issue, closedSet map[string]bool) bool {
 	for _, dep := range issue.Dependencies {
-		if dep.Type == storage.DepTypeBlocks && !closedSet[dep.ID] {
+		if dep.Type == issuestorage.DepTypeBlocks && !closedSet[dep.ID] {
 			return false // Blocking dependency not closed
 		}
 	}

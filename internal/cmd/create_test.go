@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
@@ -69,25 +69,25 @@ func TestCreateBasic(t *testing.T) {
 	if issue.Title != "Fix login bug" {
 		t.Errorf("expected title %q, got %q", "Fix login bug", issue.Title)
 	}
-	if issue.Type != storage.TypeTask {
-		t.Errorf("expected type %q, got %q", storage.TypeTask, issue.Type)
+	if issue.Type != issuestorage.TypeTask {
+		t.Errorf("expected type %q, got %q", issuestorage.TypeTask, issue.Type)
 	}
-	if issue.Priority != storage.PriorityMedium {
-		t.Errorf("expected priority %q, got %q", storage.PriorityMedium, issue.Priority)
+	if issue.Priority != issuestorage.PriorityMedium {
+		t.Errorf("expected priority %q, got %q", issuestorage.PriorityMedium, issue.Priority)
 	}
 }
 
 func TestCreateWithType(t *testing.T) {
 	tests := []struct {
 		typeFlag string
-		expected storage.IssueType
+		expected issuestorage.IssueType
 	}{
-		{"task", storage.TypeTask},
-		{"bug", storage.TypeBug},
-		{"feature", storage.TypeFeature},
-		{"epic", storage.TypeEpic},
-		{"chore", storage.TypeChore},
-		{"FEATURE", storage.TypeFeature}, // test case insensitivity
+		{"task", issuestorage.TypeTask},
+		{"bug", issuestorage.TypeBug},
+		{"feature", issuestorage.TypeFeature},
+		{"epic", issuestorage.TypeEpic},
+		{"chore", issuestorage.TypeChore},
+		{"FEATURE", issuestorage.TypeFeature}, // test case insensitivity
 	}
 
 	for _, tt := range tests {
@@ -113,19 +113,19 @@ func TestCreateWithType(t *testing.T) {
 func TestCreateWithPriority(t *testing.T) {
 	tests := []struct {
 		priority string
-		expected storage.Priority
+		expected issuestorage.Priority
 	}{
-		{"0", storage.PriorityCritical},
-		{"p0", storage.PriorityCritical},
-		{"P0", storage.PriorityCritical}, // test case insensitivity
-		{"1", storage.PriorityHigh},
-		{"p1", storage.PriorityHigh},
-		{"2", storage.PriorityMedium},
-		{"p2", storage.PriorityMedium},
-		{"3", storage.PriorityLow},
-		{"p3", storage.PriorityLow},
-		{"4", storage.PriorityBacklog},
-		{"p4", storage.PriorityBacklog},
+		{"0", issuestorage.PriorityCritical},
+		{"p0", issuestorage.PriorityCritical},
+		{"P0", issuestorage.PriorityCritical}, // test case insensitivity
+		{"1", issuestorage.PriorityHigh},
+		{"p1", issuestorage.PriorityHigh},
+		{"2", issuestorage.PriorityMedium},
+		{"p2", issuestorage.PriorityMedium},
+		{"3", issuestorage.PriorityLow},
+		{"p3", issuestorage.PriorityLow},
+		{"4", issuestorage.PriorityBacklog},
+		{"p4", issuestorage.PriorityBacklog},
 	}
 
 	for _, tt := range tests {
@@ -206,7 +206,7 @@ func TestCreateWithParent(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create parent issue first
-	parentIssue := &storage.Issue{Title: "Parent epic"}
+	parentIssue := &issuestorage.Issue{Title: "Parent epic"}
 	parentID, err := store.Create(context.Background(), parentIssue)
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
@@ -264,7 +264,7 @@ func TestCreateWithParentSubChildren(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create parent
-	parentIssue := &storage.Issue{Title: "Parent epic"}
+	parentIssue := &issuestorage.Issue{Title: "Parent epic"}
 	parentID, err := store.Create(context.Background(), parentIssue)
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
@@ -344,7 +344,7 @@ func TestCreateWithParentDepthLimit(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create root
-	rootIssue := &storage.Issue{Title: "Root"}
+	rootIssue := &issuestorage.Issue{Title: "Root"}
 	rootID, err := store.Create(context.Background(), rootIssue)
 	if err != nil {
 		t.Fatalf("failed to create root: %v", err)
@@ -378,7 +378,7 @@ func TestCreateWithDeps(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create dependency issue first
-	depIssue := &storage.Issue{Title: "Dependency"}
+	depIssue := &issuestorage.Issue{Title: "Dependency"}
 	depID, err := store.Create(context.Background(), depIssue)
 	if err != nil {
 		t.Fatalf("failed to create dependency: %v", err)
@@ -398,8 +398,8 @@ func TestCreateWithDeps(t *testing.T) {
 	for _, dep := range dependent.Dependencies {
 		if dep.ID == depID {
 			found = true
-			if dep.Type != storage.DepTypeBlocks {
-				t.Errorf("expected dependency type %q, got %q", storage.DepTypeBlocks, dep.Type)
+			if dep.Type != issuestorage.DepTypeBlocks {
+				t.Errorf("expected dependency type %q, got %q", issuestorage.DepTypeBlocks, dep.Type)
 			}
 		}
 	}
@@ -417,7 +417,7 @@ func TestCreateWithDeps(t *testing.T) {
 func TestCreateWithTypedDep(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	depID, err := store.Create(context.Background(), &issuestorage.Issue{Title: "Dependency"})
 	if err != nil {
 		t.Fatalf("failed to create dependency: %v", err)
 	}
@@ -436,8 +436,8 @@ func TestCreateWithTypedDep(t *testing.T) {
 	for _, dep := range dependent.Dependencies {
 		if dep.ID == depID {
 			found = true
-			if dep.Type != storage.DepTypeTracks {
-				t.Errorf("expected dependency type %q, got %q", storage.DepTypeTracks, dep.Type)
+			if dep.Type != issuestorage.DepTypeTracks {
+				t.Errorf("expected dependency type %q, got %q", issuestorage.DepTypeTracks, dep.Type)
 			}
 		}
 	}
@@ -449,7 +449,7 @@ func TestCreateWithTypedDep(t *testing.T) {
 func TestCreateWithDepsInvalidType(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	depID, err := store.Create(context.Background(), &issuestorage.Issue{Title: "Dependency"})
 	if err != nil {
 		t.Fatalf("failed to create dependency: %v", err)
 	}
@@ -468,7 +468,7 @@ func TestCreateWithDepsInvalidType(t *testing.T) {
 func TestCreateWithDepsTooManyColons(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	depID, err := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	depID, err := store.Create(context.Background(), &issuestorage.Issue{Title: "Dependency"})
 	if err != nil {
 		t.Fatalf("failed to create dependency: %v", err)
 	}
@@ -488,8 +488,8 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create two dependency issues
-	dep1, _ := store.Create(context.Background(), &storage.Issue{Title: "Dep 1"})
-	dep2, _ := store.Create(context.Background(), &storage.Issue{Title: "Dep 2"})
+	dep1, _ := store.Create(context.Background(), &issuestorage.Issue{Title: "Dep 1"})
+	dep2, _ := store.Create(context.Background(), &issuestorage.Issue{Title: "Dep 2"})
 
 	out := app.Out.(*bytes.Buffer)
 	cmd := newCreateCmd(NewTestProvider(app))
@@ -507,12 +507,12 @@ func TestCreateWithMultipleDependencies(t *testing.T) {
 	for _, dep := range dependent.Dependencies {
 		switch dep.ID {
 		case dep1:
-			if dep.Type != storage.DepTypeBlocks {
-				t.Errorf("expected dependency %s type %q, got %q", dep1, storage.DepTypeBlocks, dep.Type)
+			if dep.Type != issuestorage.DepTypeBlocks {
+				t.Errorf("expected dependency %s type %q, got %q", dep1, issuestorage.DepTypeBlocks, dep.Type)
 			}
 		case dep2:
-			if dep.Type != storage.DepTypeTracks {
-				t.Errorf("expected dependency %s type %q, got %q", dep2, storage.DepTypeTracks, dep.Type)
+			if dep.Type != issuestorage.DepTypeTracks {
+				t.Errorf("expected dependency %s type %q, got %q", dep2, issuestorage.DepTypeTracks, dep.Type)
 			}
 		}
 	}
@@ -663,7 +663,7 @@ func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	out := app.Out.(*bytes.Buffer)
 
 	// Create a root issue
-	parentIssue := &storage.Issue{Title: "Parent"}
+	parentIssue := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := store.Create(context.Background(), parentIssue)
 	if err != nil {
 		t.Fatalf("failed to create parent: %v", err)
@@ -688,7 +688,7 @@ func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error creating grandchild with max_depth=1")
 	}
-	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
 		t.Errorf("expected ErrMaxDepthExceeded, got: %v", err)
 	}
 }
@@ -697,8 +697,8 @@ func TestCreateAllFlags(t *testing.T) {
 	app, store := setupTestApp(t)
 
 	// Create parent and dependency first
-	parentID, _ := store.Create(context.Background(), &storage.Issue{Title: "Parent"})
-	depID, _ := store.Create(context.Background(), &storage.Issue{Title: "Dependency"})
+	parentID, _ := store.Create(context.Background(), &issuestorage.Issue{Title: "Parent"})
+	depID, _ := store.Create(context.Background(), &issuestorage.Issue{Title: "Dependency"})
 
 	out := app.Out.(*bytes.Buffer)
 	cmd := newCreateCmd(NewTestProvider(app))
@@ -730,10 +730,10 @@ func TestCreateAllFlags(t *testing.T) {
 	if issue.Title != "Full featured issue" {
 		t.Errorf("title mismatch")
 	}
-	if issue.Type != storage.TypeFeature {
+	if issue.Type != issuestorage.TypeFeature {
 		t.Errorf("type mismatch: got %q", issue.Type)
 	}
-	if issue.Priority != storage.PriorityHigh {
+	if issue.Priority != issuestorage.PriorityHigh {
 		t.Errorf("priority mismatch: got %q", issue.Priority)
 	}
 	if issue.Parent != parentID {

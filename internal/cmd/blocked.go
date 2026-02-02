@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -42,8 +42,8 @@ An issue is blocked if:
 			ctx := cmd.Context()
 
 			// List all open issues
-			openStatus := storage.StatusOpen
-			filter := &storage.ListFilter{
+			openStatus := issuestorage.StatusOpen
+			filter := &issuestorage.ListFilter{
 				Status: &openStatus,
 			}
 
@@ -53,8 +53,8 @@ An issue is blocked if:
 			}
 
 			// Get closed issues to check dependency status
-			closedStatus := storage.StatusClosed
-			closedFilter := &storage.ListFilter{
+			closedStatus := issuestorage.StatusClosed
+			closedFilter := &issuestorage.ListFilter{
 				Status: &closedStatus,
 			}
 			closedIssues, err := app.Storage.List(ctx, closedFilter)
@@ -114,12 +114,12 @@ An issue is blocked if:
 
 // getWaitingOn returns a list of issue IDs that this issue is waiting on.
 // Only "blocks" type dependencies prevent readiness.
-func getWaitingOn(issue *storage.Issue, closedSet map[string]bool) []string {
+func getWaitingOn(issue *issuestorage.Issue, closedSet map[string]bool) []string {
 	var waitingOn []string
 	seen := make(map[string]bool)
 
 	for _, dep := range issue.Dependencies {
-		if dep.Type == storage.DepTypeBlocks && !closedSet[dep.ID] && !seen[dep.ID] {
+		if dep.Type == issuestorage.DepTypeBlocks && !closedSet[dep.ID] && !seen[dep.ID] {
 			waitingOn = append(waitingOn, dep.ID)
 			seen[dep.ID] = true
 		}

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func newStore(t *testing.T) storage.Storage {
+func newStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir)
@@ -21,12 +21,12 @@ func newStore(t *testing.T) storage.Storage {
 }
 
 // createIssue is a test helper that creates an issue and fails the test on error.
-func createIssue(t *testing.T, ctx context.Context, s storage.Storage, title string, typ storage.IssueType) *storage.Issue {
+func createIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, typ issuestorage.IssueType) *issuestorage.Issue {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    title,
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
 		Type:     typ,
 	}
 	id, err := s.Create(ctx, issue)
@@ -40,15 +40,15 @@ func createIssue(t *testing.T, ctx context.Context, s storage.Storage, title str
 // buildMolecule creates a root epic with children and optional DepBlocks edges.
 // Returns (root, children). The children are created with parent-child deps to root.
 // blockEdges maps childTitle → []blockerTitle for DepBlocks dependencies.
-func buildMolecule(t *testing.T, ctx context.Context, s storage.Storage, rootTitle string, childTitles []string, blockEdges map[string][]string) (*storage.Issue, []*storage.Issue) {
+func buildMolecule(t *testing.T, ctx context.Context, s issuestorage.IssueStore, rootTitle string, childTitles []string, blockEdges map[string][]string) (*issuestorage.Issue, []*issuestorage.Issue) {
 	t.Helper()
-	root := createIssue(t, ctx, s, rootTitle, storage.TypeEpic)
+	root := createIssue(t, ctx, s, rootTitle, issuestorage.TypeEpic)
 
-	byTitle := make(map[string]*storage.Issue)
-	var children []*storage.Issue
+	byTitle := make(map[string]*issuestorage.Issue)
+	var children []*issuestorage.Issue
 	for _, title := range childTitles {
-		child := createIssue(t, ctx, s, title, storage.TypeTask)
-		if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+		child := createIssue(t, ctx, s, title, issuestorage.TypeTask)
+		if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 			t.Fatalf("AddDependency parent-child %s->%s: %v", child.ID, root.ID, err)
 		}
 		byTitle[title] = child
@@ -59,7 +59,7 @@ func buildMolecule(t *testing.T, ctx context.Context, s storage.Storage, rootTit
 		child := byTitle[childTitle]
 		for _, blockerTitle := range blockerTitles {
 			blocker := byTitle[blockerTitle]
-			if err := s.AddDependency(ctx, child.ID, blocker.ID, storage.DepTypeBlocks); err != nil {
+			if err := s.AddDependency(ctx, child.ID, blocker.ID, issuestorage.DepTypeBlocks); err != nil {
 				t.Fatalf("AddDependency blocks %s->%s: %v", child.ID, blocker.ID, err)
 			}
 		}
@@ -86,14 +86,14 @@ func TestFindMoleculeRoot(t *testing.T) {
 	s := newStore(t)
 
 	// Build: root -> child -> grandchild
-	root := createIssue(t, ctx, s, "Root Epic", storage.TypeEpic)
-	child := createIssue(t, ctx, s, "Child", storage.TypeTask)
-	grandchild := createIssue(t, ctx, s, "Grandchild", storage.TypeTask)
+	root := createIssue(t, ctx, s, "Root Epic", issuestorage.TypeEpic)
+	child := createIssue(t, ctx, s, "Child", issuestorage.TypeTask)
+	grandchild := createIssue(t, ctx, s, "Grandchild", issuestorage.TypeTask)
 
-	if err := s.AddDependency(ctx, child.ID, root.ID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.AddDependency(ctx, grandchild.ID, child.ID, storage.DepTypeParentChild); err != nil {
+	if err := s.AddDependency(ctx, grandchild.ID, child.ID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatal(err)
 	}
 
@@ -129,17 +129,17 @@ func TestCollectMoleculeChildren(t *testing.T) {
 	s := newStore(t)
 
 	// root -> [A, B], A -> [C]
-	root := createIssue(t, ctx, s, "Root", storage.TypeEpic)
-	a := createIssue(t, ctx, s, "A", storage.TypeTask)
-	b := createIssue(t, ctx, s, "B", storage.TypeTask)
-	c := createIssue(t, ctx, s, "C", storage.TypeTask)
+	root := createIssue(t, ctx, s, "Root", issuestorage.TypeEpic)
+	a := createIssue(t, ctx, s, "A", issuestorage.TypeTask)
+	b := createIssue(t, ctx, s, "B", issuestorage.TypeTask)
+	c := createIssue(t, ctx, s, "C", issuestorage.TypeTask)
 
 	for _, pair := range [][2]string{
 		{a.ID, root.ID},
 		{b.ID, root.ID},
 		{c.ID, a.ID},
 	} {
-		if err := s.AddDependency(ctx, pair[0], pair[1], storage.DepTypeParentChild); err != nil {
+		if err := s.AddDependency(ctx, pair[0], pair[1], issuestorage.DepTypeParentChild); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -231,27 +231,27 @@ func TestTopologicalOrder_Empty(t *testing.T) {
 
 func TestTopologicalOrder_Cycle(t *testing.T) {
 	// Manually construct issues with circular DepBlocks to test cycle detection.
-	// We can't use storage.AddDependency because it rejects cycles, so we build
+	// We can't use issuestorage.AddDependency because it rejects cycles, so we build
 	// the issue structs directly.
-	depType := storage.DepTypeBlocks
-	a := &storage.Issue{
+	depType := issuestorage.DepTypeBlocks
+	a := &issuestorage.Issue{
 		ID:     "a",
 		Title:  "A",
-		Status: storage.StatusOpen,
-		Dependencies: []storage.Dependency{
+		Status: issuestorage.StatusOpen,
+		Dependencies: []issuestorage.Dependency{
 			{ID: "b", Type: depType},
 		},
 	}
-	b := &storage.Issue{
+	b := &issuestorage.Issue{
 		ID:     "b",
 		Title:  "B",
-		Status: storage.StatusOpen,
-		Dependencies: []storage.Dependency{
+		Status: issuestorage.StatusOpen,
+		Dependencies: []issuestorage.Dependency{
 			{ID: "a", Type: depType},
 		},
 	}
 
-	_, err := TopologicalOrder([]*storage.Issue{a, b})
+	_, err := TopologicalOrder([]*issuestorage.Issue{a, b})
 	if err == nil {
 		t.Fatal("expected cycle error")
 	}
@@ -268,7 +268,7 @@ func TestFindReadySteps(t *testing.T) {
 			"C": {"A"},
 		})
 
-	byTitle := make(map[string]*storage.Issue)
+	byTitle := make(map[string]*issuestorage.Issue)
 	for _, c := range children {
 		byTitle[c.Title] = c
 	}
@@ -283,7 +283,7 @@ func TestFindReadySteps(t *testing.T) {
 	// Close A: B and C become ready
 	closedSet := map[string]bool{byTitle["A"].ID: true}
 	// Mark A as closed on the issue struct too
-	byTitle["A"].Status = storage.StatusClosed
+	byTitle["A"].Status = issuestorage.StatusClosed
 	ready = FindReadySteps(children, closedSet)
 	titles := titlesOf(ready)
 	if len(ready) != 2 {
@@ -299,7 +299,7 @@ func TestFindReadySteps_AllClosed(t *testing.T) {
 
 	closedSet := make(map[string]bool)
 	for _, c := range children {
-		c.Status = storage.StatusClosed
+		c.Status = issuestorage.StatusClosed
 		closedSet[c.ID] = true
 	}
 
@@ -325,14 +325,14 @@ func TestFindNextStep(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	byTitle := make(map[string]*storage.Issue)
+	byTitle := make(map[string]*issuestorage.Issue)
 	for _, c := range children {
 		byTitle[c.Title] = c
 	}
 
 	// Current is A, A is in closedSet → next ready should be B
 	closedSet := map[string]bool{byTitle["A"].ID: true}
-	byTitle["A"].Status = storage.StatusClosed
+	byTitle["A"].Status = issuestorage.StatusClosed
 
 	// Re-read ordered to pick up status changes; actually the ordered slice
 	// has the same pointers as children via buildMolecule re-reads, but we
@@ -343,7 +343,7 @@ func TestFindNextStep(t *testing.T) {
 	// The ordered slice's status field may be stale. Let's update it.
 	for _, o := range ordered {
 		if o.ID == byTitle["A"].ID {
-			o.Status = storage.StatusClosed
+			o.Status = issuestorage.StatusClosed
 		}
 	}
 
@@ -359,7 +359,7 @@ func TestFindNextStep(t *testing.T) {
 	closedSet[byTitle["B"].ID] = true
 	for _, o := range ordered {
 		if o.ID == byTitle["B"].ID {
-			o.Status = storage.StatusClosed
+			o.Status = issuestorage.StatusClosed
 		}
 	}
 	next = FindNextStep(ordered, byTitle["B"].ID, closedSet)
@@ -389,7 +389,7 @@ func TestClassifySteps(t *testing.T) {
 			"C": {"B"},
 		})
 
-	byTitle := make(map[string]*storage.Issue)
+	byTitle := make(map[string]*issuestorage.Issue)
 	for _, c := range children {
 		byTitle[c.Title] = c
 	}
@@ -401,13 +401,13 @@ func TestClassifySteps(t *testing.T) {
 	assertStatus(t, classes, byTitle["C"].ID, StepBlocked)
 
 	// Set A to in_progress: A=current, B=blocked, C=blocked
-	byTitle["A"].Status = storage.StatusInProgress
+	byTitle["A"].Status = issuestorage.StatusInProgress
 	classes = ClassifySteps(children, map[string]bool{})
 	assertStatus(t, classes, byTitle["A"].ID, StepCurrent)
 	assertStatus(t, classes, byTitle["B"].ID, StepBlocked)
 
 	// Close A: A=done, B=ready, C=blocked
-	byTitle["A"].Status = storage.StatusClosed
+	byTitle["A"].Status = issuestorage.StatusClosed
 	closedSet := map[string]bool{byTitle["A"].ID: true}
 	classes = ClassifySteps(children, closedSet)
 	assertStatus(t, classes, byTitle["A"].ID, StepDone)
@@ -419,8 +419,8 @@ func TestBuildClosedSet(t *testing.T) {
 	ctx := context.Background()
 	s := newStore(t)
 
-	a := createIssue(t, ctx, s, "Open Issue", storage.TypeTask)
-	b := createIssue(t, ctx, s, "Closed Issue", storage.TypeTask)
+	a := createIssue(t, ctx, s, "Open Issue", issuestorage.TypeTask)
+	b := createIssue(t, ctx, s, "Closed Issue", issuestorage.TypeTask)
 
 	if err := s.Close(ctx, b.ID); err != nil {
 		t.Fatalf("Close: %v", err)
@@ -454,7 +454,7 @@ func TestBuildClosedSet_Empty(t *testing.T) {
 
 // helpers
 
-func titlesOf(issues []*storage.Issue) []string {
+func titlesOf(issues []*issuestorage.Issue) []string {
 	var out []string
 	for _, i := range issues {
 		out = append(out, i.Title)

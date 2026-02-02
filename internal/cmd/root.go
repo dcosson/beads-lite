@@ -12,7 +12,7 @@ import (
 	"beads-lite/internal/config/yamlstore"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage/filesystem"
 
 	"github.com/spf13/cobra"
 )

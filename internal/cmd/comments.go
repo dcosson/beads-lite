@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -46,7 +46,7 @@ Examples:
 
 			issue, err := store.Get(ctx, issueID)
 			if err != nil {
-				if err == storage.ErrNotFound {
+				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("issue %s not found", issueID)
 				}
 				return fmt.Errorf("getting issue: %w", err)
@@ -151,7 +151,7 @@ Examples:
 				}
 			}
 
-			comment := &storage.Comment{
+			comment := &issuestorage.Comment{
 				Author:    author,
 				Text:      message,
 				CreatedAt: time.Now(),
@@ -163,7 +163,7 @@ Examples:
 			}
 
 			if err := commentStore.AddComment(ctx, issueID, comment); err != nil {
-				if err == storage.ErrNotFound {
+				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("issue %s not found", issueID)
 				}
 				return fmt.Errorf("adding comment: %w", err)

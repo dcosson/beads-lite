@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestReopenCommand(t *testing.T) {
@@ -20,9 +20,9 @@ func TestReopenCommand(t *testing.T) {
 	}
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue to reopen",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -37,7 +37,7 @@ func TestReopenCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get closed issue: %v", err)
 	}
-	if issue.Status != storage.StatusClosed {
+	if issue.Status != issuestorage.StatusClosed {
 		t.Fatalf("expected status closed, got: %s", issue.Status)
 	}
 	if issue.ClosedAt == nil {
@@ -73,7 +73,7 @@ func TestReopenCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get reopened issue: %v", err)
 	}
-	if issue.Status != storage.StatusOpen {
+	if issue.Status != issuestorage.StatusOpen {
 		t.Errorf("expected status open, got: %s", issue.Status)
 	}
 	if issue.ClosedAt != nil {
@@ -117,9 +117,9 @@ func TestReopenJSON(t *testing.T) {
 	}
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &storage.Issue{
+	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue to reopen",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)

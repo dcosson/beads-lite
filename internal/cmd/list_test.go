@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
@@ -20,17 +20,17 @@ func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 	}
 
 	// Create open and closed issues
-	openID, err := store.Create(ctx, &storage.Issue{
+	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &storage.Issue{
+	closedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -69,17 +69,17 @@ func TestListCommand_AllFlag(t *testing.T) {
 	}
 
 	// Create open and closed issues
-	openID, err := store.Create(ctx, &storage.Issue{
+	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &storage.Issue{
+	closedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -119,17 +119,17 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 	}
 
 	// Create open and closed issues
-	openID, err := store.Create(ctx, &storage.Issue{
+	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &storage.Issue{
+	closedID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -169,26 +169,26 @@ func TestListCommand_StatusFilter(t *testing.T) {
 	}
 
 	// Create issues with different statuses
-	openID, err := store.Create(ctx, &storage.Issue{
+	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
-		Priority: storage.PriorityHigh,
-		Status:   storage.StatusOpen,
+		Priority: issuestorage.PriorityHigh,
+		Status:   issuestorage.StatusOpen,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	inProgressID, err := store.Create(ctx, &storage.Issue{
+	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "In-progress issue",
-		Priority: storage.PriorityHigh,
-		Status:   storage.StatusInProgress,
+		Priority: issuestorage.PriorityHigh,
+		Status:   issuestorage.StatusInProgress,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Update status to in-progress
 	issue, _ := store.Get(ctx, inProgressID)
-	issue.Status = storage.StatusInProgress
+	issue.Status = issuestorage.StatusInProgress
 	store.Update(ctx, issue)
 
 	var out bytes.Buffer
@@ -221,17 +221,17 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	highID, err := store.Create(ctx, &storage.Issue{
+	highID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "High priority",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	lowID, err := store.Create(ctx, &storage.Issue{
+	lowID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Low priority",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -267,19 +267,19 @@ func TestListCommand_TypeFilter(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	bugID, err := store.Create(ctx, &storage.Issue{
+	bugID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Bug issue",
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeBug,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeBug,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	taskID, err := store.Create(ctx, &storage.Issue{
+	taskID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Task issue",
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeTask,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -315,18 +315,18 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	labeledID, err := store.Create(ctx, &storage.Issue{
+	labeledID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Labeled issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 		Labels:   []string{"urgent", "v2"},
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	unlabeledID, err := store.Create(ctx, &storage.Issue{
+	unlabeledID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Unlabeled issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -362,18 +362,18 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	aliceID, err := store.Create(ctx, &storage.Issue{
+	aliceID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Alice's issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 		Assignee: "alice",
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	bobID, err := store.Create(ctx, &storage.Issue{
+	bobID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Bob's issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 		Assignee: "bob",
 	})
 	if err != nil {
@@ -411,19 +411,19 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	}
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent issue",
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeEpic,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeEpic,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create child issue
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 		Parent:   parentID,
 	})
 	if err != nil {
@@ -431,9 +431,9 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	}
 
 	// Create another root issue
-	rootID, err := store.Create(ctx, &storage.Issue{
+	rootID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Another root",
-		Priority: storage.PriorityLow,
+		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -470,19 +470,19 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	}
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &storage.Issue{
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent issue",
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeEpic,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeEpic,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
 	// Create child issue
-	childID, err := store.Create(ctx, &storage.Issue{
+	childID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Child issue",
-		Priority: storage.PriorityMedium,
+		Priority: issuestorage.PriorityMedium,
 		Parent:   parentID,
 	})
 	if err != nil {
@@ -520,9 +520,9 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	_, err := store.Create(ctx, &storage.Issue{
+	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
-		Priority: storage.PriorityHigh,
+		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -560,10 +560,10 @@ func TestListCommand_JSON(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	_, err := store.Create(ctx, &storage.Issue{
+	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeTask,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)

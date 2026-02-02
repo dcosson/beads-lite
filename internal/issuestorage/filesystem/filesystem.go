@@ -1,4 +1,4 @@
-// Package filesystem implements the Storage interface using the local filesystem.
+// Package filesystem implements the IssueStore interface using the local filesystem.
 // Each issue is stored as a JSON file in .beads/<project>/open/ or .beads/<project>/closed/.
 package filesystem
 
@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
-// FilesystemStorage implements storage.Storage using filesystem-based JSON files.
+// FilesystemStorage implements issuestorage.IssueStore using filesystem-based JSON files.
 type FilesystemStorage struct {
 	root              string // path to .beads directory
 	maxHierarchyDepth int
@@ -39,7 +39,7 @@ func WithMaxHierarchyDepth(n int) Option {
 func New(root string, opts ...Option) *FilesystemStorage {
 	fs := &FilesystemStorage{
 		root:              root,
-		maxHierarchyDepth: storage.DefaultMaxHierarchyDepth,
+		maxHierarchyDepth: issuestorage.DefaultMaxHierarchyDepth,
 	}
 	for _, opt := range opts {
 		opt(fs)
@@ -49,13 +49,13 @@ func New(root string, opts ...Option) *FilesystemStorage {
 
 // Init initializes the storage by creating the required directories.
 func (fs *FilesystemStorage) Init(ctx context.Context) error {
-	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirOpen), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirOpen), 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirClosed), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirClosed), 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(fs.root, storage.DirDeleted), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirDeleted), 0755); err != nil {
 		return err
 	}
 	// Clean up any stale lock files from previous crashed processes
@@ -66,7 +66,7 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 // CleanupStaleLocks removes lock files that don't have an active flock.
 // This handles the case where a process was killed before it could clean up.
 func (fs *FilesystemStorage) CleanupStaleLocks() {
-	openDir := filepath.Join(fs.root, storage.DirOpen)
+	openDir := filepath.Join(fs.root, issuestorage.DirOpen)
 	entries, err := os.ReadDir(openDir)
 	if err != nil {
 		return // Best effort cleanup
@@ -98,9 +98,9 @@ func (fs *FilesystemStorage) CleanupStaleLocks() {
 }
 
 func (fs *FilesystemStorage) issuePath(id string, closed bool) string {
-	dir := storage.DirOpen
+	dir := issuestorage.DirOpen
 	if closed {
-		dir = storage.DirClosed
+		dir = issuestorage.DirClosed
 	}
 	return filepath.Join(fs.root, dir, id+".json")
 }
@@ -110,7 +110,7 @@ func (fs *FilesystemStorage) issuePathInDir(id string, dir string) string {
 }
 
 func (fs *FilesystemStorage) lockPath(id string) string {
-	return filepath.Join(fs.root, storage.DirOpen, id+".lock")
+	return filepath.Join(fs.root, issuestorage.DirOpen, id+".lock")
 }
 
 // issueLock holds a file lock and its path for cleanup.
@@ -217,13 +217,13 @@ func atomicWriteJSON(path string, data interface{}) error {
 // Create creates a new issue and returns its ID.
 // If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
 // Otherwise, a random ID is generated.
-func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (string, error) {
+func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Issue) (string, error) {
 	if issue.ID != "" {
 		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
 
 		// Enforce hierarchy depth limit for explicit hierarchical IDs.
-		if parentID, _, ok := storage.ParseHierarchicalID(issue.ID); ok {
-			if err := storage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
+		if parentID, _, ok := issuestorage.ParseHierarchicalID(issue.ID); ok {
+			if err := issuestorage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 				return "", err
 			}
 		}
@@ -241,7 +241,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 
 		// Update child counter when creating with an explicit hierarchical ID
 		// so future GetNextChildID calls won't generate colliding IDs.
-		if parentID, childNum, ok := storage.ParseHierarchicalID(issue.ID); ok {
+		if parentID, childNum, ok := issuestorage.ParseHierarchicalID(issue.ID); ok {
 			if err := fs.ensureChildCounterUpdated(parentID, childNum); err != nil {
 				os.Remove(path)
 				return "", fmt.Errorf("updating child counter for %s: %w", parentID, err)
@@ -251,7 +251,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 		issue.CreatedAt = time.Now()
 		issue.UpdatedAt = issue.CreatedAt
 		if issue.Status == "" {
-			issue.Status = storage.StatusOpen
+			issue.Status = issuestorage.StatusOpen
 		}
 
 		if err := atomicWriteJSON(path, issue); err != nil {
@@ -284,7 +284,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 		issue.CreatedAt = time.Now()
 		issue.UpdatedAt = issue.CreatedAt
 		if issue.Status == "" {
-			issue.Status = storage.StatusOpen
+			issue.Status = issuestorage.StatusOpen
 		}
 
 		if err := atomicWriteJSON(path, issue); err != nil {
@@ -298,7 +298,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *storage.Issue) (
 }
 
 // Get retrieves an issue by ID.
-func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*storage.Issue, error) {
+func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.Issue, error) {
 	// Check open first (more common case)
 	path := fs.issuePath(id, false)
 	data, err := os.ReadFile(path)
@@ -309,17 +309,17 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*storage.Issue
 	}
 	if os.IsNotExist(err) {
 		// Check deleted (tombstones)
-		path = fs.issuePathInDir(id, storage.DirDeleted)
+		path = fs.issuePathInDir(id, issuestorage.DirDeleted)
 		data, err = os.ReadFile(path)
 	}
 	if os.IsNotExist(err) {
-		return nil, storage.ErrNotFound
+		return nil, issuestorage.ErrNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	var issue storage.Issue
+	var issue issuestorage.Issue
 	if err := json.Unmarshal(data, &issue); err != nil {
 		return nil, err
 	}
@@ -328,7 +328,7 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*storage.Issue
 }
 
 // Update replaces an issue's data.
-func (fs *FilesystemStorage) Update(ctx context.Context, issue *storage.Issue) error {
+func (fs *FilesystemStorage) Update(ctx context.Context, issue *issuestorage.Issue) error {
 	lock, err := fs.acquireLock(issue.ID)
 	if err != nil {
 		return err
@@ -340,9 +340,9 @@ func (fs *FilesystemStorage) Update(ctx context.Context, issue *storage.Issue) e
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		path = fs.issuePath(issue.ID, true)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			path = fs.issuePathInDir(issue.ID, storage.DirDeleted)
+			path = fs.issuePathInDir(issue.ID, issuestorage.DirDeleted)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
-				return storage.ErrNotFound
+				return issuestorage.ErrNotFound
 			}
 		}
 	}
@@ -366,11 +366,11 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 		err = os.Remove(path)
 	}
 	if os.IsNotExist(err) {
-		path = fs.issuePathInDir(id, storage.DirDeleted)
+		path = fs.issuePathInDir(id, issuestorage.DirDeleted)
 		err = os.Remove(path)
 	}
 	if os.IsNotExist(err) {
-		return storage.ErrNotFound
+		return issuestorage.ErrNotFound
 	}
 	if err == nil {
 		// Clean up lock file for deleted issues.
@@ -381,8 +381,8 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 
 // List returns all issues matching the filter.
 // Results are sorted by CreatedAt (oldest first).
-func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilter) ([]*storage.Issue, error) {
-	var issues []*storage.Issue
+func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.ListFilter) ([]*issuestorage.Issue, error) {
+	var issues []*issuestorage.Issue
 
 	// Determine which directories to scan
 	scanOpen := true
@@ -391,17 +391,17 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 
 	if filter != nil && filter.Status != nil {
 		switch *filter.Status {
-		case storage.StatusClosed:
+		case issuestorage.StatusClosed:
 			scanOpen = false
 			scanClosed = true
-		case storage.StatusTombstone:
+		case issuestorage.StatusTombstone:
 			scanOpen = false
 			scanDeleted = true
 		}
 	}
 
 	if scanOpen {
-		openIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirOpen), filter)
+		openIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirOpen), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -409,7 +409,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	}
 
 	if scanClosed {
-		closedIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirClosed), filter)
+		closedIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirClosed), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -417,7 +417,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	}
 
 	if scanDeleted {
-		deletedIssues, err := fs.listDir(filepath.Join(fs.root, storage.DirDeleted), filter)
+		deletedIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirDeleted), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -432,7 +432,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *storage.ListFilte
 	return issues, nil
 }
 
-func (fs *FilesystemStorage) listDir(dir string, filter *storage.ListFilter) ([]*storage.Issue, error) {
+func (fs *FilesystemStorage) listDir(dir string, filter *issuestorage.ListFilter) ([]*issuestorage.Issue, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -441,7 +441,7 @@ func (fs *FilesystemStorage) listDir(dir string, filter *storage.ListFilter) ([]
 		return nil, err
 	}
 
-	var issues []*storage.Issue
+	var issues []*issuestorage.Issue
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
 			continue
@@ -453,7 +453,7 @@ func (fs *FilesystemStorage) listDir(dir string, filter *storage.ListFilter) ([]
 			continue
 		}
 
-		var issue storage.Issue
+		var issue issuestorage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
 			continue
 		}
@@ -466,7 +466,7 @@ func (fs *FilesystemStorage) listDir(dir string, filter *storage.ListFilter) ([]
 	return issues, nil
 }
 
-func (fs *FilesystemStorage) matchesFilter(issue *storage.Issue, filter *storage.ListFilter) bool {
+func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *issuestorage.ListFilter) bool {
 	if filter == nil {
 		return true
 	}
@@ -521,7 +521,7 @@ func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
 		return err
 	}
 
-	issue.Status = storage.StatusClosed
+	issue.Status = issuestorage.StatusClosed
 	now := time.Now()
 	issue.ClosedAt = &now
 	issue.CloseReason = "Closed"
@@ -560,15 +560,15 @@ func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, act
 		return err
 	}
 
-	if issue.Status == storage.StatusTombstone {
-		return storage.ErrAlreadyTombstoned
+	if issue.Status == issuestorage.StatusTombstone {
+		return issuestorage.ErrAlreadyTombstoned
 	}
 
 	// Record original type before overwriting
 	issue.OriginalType = issue.Type
 
 	// Set tombstone metadata
-	issue.Status = storage.StatusTombstone
+	issue.Status = issuestorage.StatusTombstone
 	now := time.Now()
 	issue.DeletedAt = &now
 	issue.DeletedBy = actor
@@ -577,7 +577,7 @@ func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, act
 	issue.UpdatedAt = now
 
 	// Write to deleted/ first
-	deletedPath := fs.issuePathInDir(id, storage.DirDeleted)
+	deletedPath := fs.issuePathInDir(id, issuestorage.DirDeleted)
 	if err := atomicWriteJSON(deletedPath, issue); err != nil {
 		return err
 	}
@@ -621,7 +621,7 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 		return err
 	}
 
-	issue.Status = storage.StatusOpen
+	issue.Status = issuestorage.StatusOpen
 	issue.ClosedAt = nil
 	issue.CloseReason = ""
 	issue.UpdatedAt = time.Now()
@@ -645,8 +645,8 @@ func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
 
 // AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
 // When depType is parent-child, also sets issueID.Parent and handles reparenting.
-func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, dependsOnID string, depType storage.DependencyType) error {
-	if depType == storage.DepTypeParentChild {
+func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, dependsOnID string, depType issuestorage.DependencyType) error {
+	if depType == issuestorage.DepTypeParentChild {
 		return fs.addParentChildDep(ctx, issueID, dependsOnID)
 	}
 
@@ -656,7 +656,7 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, depends
 		return err
 	}
 	if hasCycle {
-		return storage.ErrCycle
+		return issuestorage.ErrCycle
 	}
 
 	locks, err := fs.acquireLocksOrdered([]string{issueID, dependsOnID})
@@ -680,25 +680,25 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, depends
 		return err
 	}
 	if hasCycle {
-		return storage.ErrCycle
+		return issuestorage.ErrCycle
 	}
 
 	// Add to issue's dependencies
 	if !issue.HasDependency(dependsOnID) {
-		issue.Dependencies = append(issue.Dependencies, storage.Dependency{ID: dependsOnID, Type: depType})
+		issue.Dependencies = append(issue.Dependencies, issuestorage.Dependency{ID: dependsOnID, Type: depType})
 	}
 	// Add to dependsOn's dependents
 	if !dependsOn.HasDependent(issueID) {
-		dependsOn.Dependents = append(dependsOn.Dependents, storage.Dependency{ID: issueID, Type: depType})
+		dependsOn.Dependents = append(dependsOn.Dependents, issuestorage.Dependency{ID: issueID, Type: depType})
 	}
 
 	issue.UpdatedAt = time.Now()
 	dependsOn.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == storage.StatusClosed), issue); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == issuestorage.StatusClosed), issue); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == storage.StatusClosed), dependsOn)
+	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == issuestorage.StatusClosed), dependsOn)
 }
 
 // addParentChildDep handles AddDependency with parent-child type.
@@ -710,7 +710,7 @@ func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, par
 		return err
 	}
 	if hasCycle {
-		return storage.ErrCycle
+		return issuestorage.ErrCycle
 	}
 
 	// Get the current child to check for old parent
@@ -746,7 +746,7 @@ func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, par
 		return err
 	}
 	if hasCycle {
-		return storage.ErrCycle
+		return issuestorage.ErrCycle
 	}
 
 	// Remove from old parent if exists
@@ -755,7 +755,7 @@ func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, par
 		if err == nil {
 			oldParent.Dependents = removeDep(oldParent.Dependents, childID)
 			oldParent.UpdatedAt = time.Now()
-			atomicWriteJSON(fs.issuePath(child.Parent, oldParent.Status == storage.StatusClosed), oldParent)
+			atomicWriteJSON(fs.issuePath(child.Parent, oldParent.Status == issuestorage.StatusClosed), oldParent)
 		}
 		child.Dependencies = removeDep(child.Dependencies, child.Parent)
 	}
@@ -764,19 +764,19 @@ func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, par
 
 	// Add parent-child typed dependency
 	if !child.HasDependency(parentID) {
-		child.Dependencies = append(child.Dependencies, storage.Dependency{ID: parentID, Type: storage.DepTypeParentChild})
+		child.Dependencies = append(child.Dependencies, issuestorage.Dependency{ID: parentID, Type: issuestorage.DepTypeParentChild})
 	}
 	if !parent.HasDependent(childID) {
-		parent.Dependents = append(parent.Dependents, storage.Dependency{ID: childID, Type: storage.DepTypeParentChild})
+		parent.Dependents = append(parent.Dependents, issuestorage.Dependency{ID: childID, Type: issuestorage.DepTypeParentChild})
 	}
 
 	child.UpdatedAt = time.Now()
 	parent.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(childID, child.Status == storage.StatusClosed), child); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(childID, child.Status == issuestorage.StatusClosed), child); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(parentID, parent.Status == storage.StatusClosed), parent)
+	return atomicWriteJSON(fs.issuePath(parentID, parent.Status == issuestorage.StatusClosed), parent)
 }
 
 // RemoveDependency removes a dependency relationship by ID from both sides.
@@ -799,7 +799,7 @@ func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, issueID, depe
 
 	// Check if this is a parent-child dep — clear Parent field
 	for _, dep := range issue.Dependencies {
-		if dep.ID == dependsOnID && dep.Type == storage.DepTypeParentChild {
+		if dep.ID == dependsOnID && dep.Type == issuestorage.DepTypeParentChild {
 			issue.Parent = ""
 			break
 		}
@@ -811,14 +811,14 @@ func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, issueID, depe
 	issue.UpdatedAt = time.Now()
 	dependsOn.UpdatedAt = time.Now()
 
-	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == storage.StatusClosed), issue); err != nil {
+	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == issuestorage.StatusClosed), issue); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == storage.StatusClosed), dependsOn)
+	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == issuestorage.StatusClosed), dependsOn)
 }
 
 // AddComment adds a comment to an issue.
-func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, comment *storage.Comment) error {
+func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, comment *issuestorage.Comment) error {
 	lock, err := fs.acquireLock(issueID)
 	if err != nil {
 		return err
@@ -846,7 +846,7 @@ func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, com
 	issue.Comments = append(issue.Comments, *comment)
 	issue.UpdatedAt = time.Now()
 
-	isClosed := issue.Status == storage.StatusClosed
+	isClosed := issue.Status == issuestorage.StatusClosed
 	return atomicWriteJSON(fs.issuePath(issueID, isClosed), issue)
 }
 
@@ -855,12 +855,12 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	var problems []string
 
 	// Load all issues from both directories
-	openIssues := make(map[string]*storage.Issue)
-	closedIssues := make(map[string]*storage.Issue)
-	allIssues := make(map[string]*storage.Issue)
+	openIssues := make(map[string]*issuestorage.Issue)
+	closedIssues := make(map[string]*issuestorage.Issue)
+	allIssues := make(map[string]*issuestorage.Issue)
 
 	// Scan open/ directory
-	openEntries, err := os.ReadDir(filepath.Join(fs.root, storage.DirOpen))
+	openEntries, err := os.ReadDir(filepath.Join(fs.root, issuestorage.DirOpen))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -871,9 +871,9 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 
 		// Check for orphaned temp files
 		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", storage.DirOpen, name))
+			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", issuestorage.DirOpen, name))
 			if fix {
-				os.Remove(filepath.Join(fs.root, storage.DirOpen, name))
+				os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, name))
 			}
 			continue
 		}
@@ -881,11 +881,11 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		// Check for orphaned lock files
 		if ext == ".lock" {
 			id := name[:len(name)-5]
-			jsonPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
+			jsonPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
 			if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
-				problems = append(problems, fmt.Sprintf("orphaned lock file: %s/%s", storage.DirOpen, name))
+				problems = append(problems, fmt.Sprintf("orphaned lock file: %s/%s", issuestorage.DirOpen, name))
 				if fix {
-					os.Remove(filepath.Join(fs.root, storage.DirOpen, name))
+					os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, name))
 				}
 			}
 			continue
@@ -896,16 +896,16 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		}
 
 		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, storage.DirOpen, name)
+		path := filepath.Join(fs.root, issuestorage.DirOpen, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", storage.DirOpen, name, err))
+			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", issuestorage.DirOpen, name, err))
 			continue
 		}
 
-		var issue storage.Issue
+		var issue issuestorage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", storage.DirOpen, name, err))
+			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", issuestorage.DirOpen, name, err))
 			continue
 		}
 
@@ -914,7 +914,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	}
 
 	// Scan closed/ directory
-	closedEntries, err := os.ReadDir(filepath.Join(fs.root, storage.DirClosed))
+	closedEntries, err := os.ReadDir(filepath.Join(fs.root, issuestorage.DirClosed))
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
@@ -925,9 +925,9 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 
 		// Check for orphaned temp files
 		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", storage.DirClosed, name))
+			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", issuestorage.DirClosed, name))
 			if fix {
-				os.Remove(filepath.Join(fs.root, storage.DirClosed, name))
+				os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, name))
 			}
 			continue
 		}
@@ -937,16 +937,16 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		}
 
 		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, storage.DirClosed, name)
+		path := filepath.Join(fs.root, issuestorage.DirClosed, name)
 		data, err := os.ReadFile(path)
 		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", storage.DirClosed, name, err))
+			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", issuestorage.DirClosed, name, err))
 			continue
 		}
 
-		var issue storage.Issue
+		var issue issuestorage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", storage.DirClosed, name, err))
+			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", issuestorage.DirClosed, name, err))
 			continue
 		}
 
@@ -961,20 +961,20 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	for id := range openIssues {
 		if closedIssue, exists := closedIssues[id]; exists {
 			openIssue := openIssues[id]
-			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, storage.DirOpen, storage.DirClosed))
+			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, issuestorage.DirOpen, issuestorage.DirClosed))
 			if fix {
 				// Prefer the version with Status=closed if in closed/, otherwise keep the newer one
-				if closedIssue.Status == storage.StatusClosed {
+				if closedIssue.Status == issuestorage.StatusClosed {
 					// Remove from open/
-					os.Remove(filepath.Join(fs.root, storage.DirOpen, id+".json"))
+					os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, id+".json"))
 					allIssues[id] = closedIssue
-				} else if openIssue.Status == storage.StatusClosed {
+				} else if openIssue.Status == issuestorage.StatusClosed {
 					// Remove from closed/
-					os.Remove(filepath.Join(fs.root, storage.DirClosed, id+".json"))
+					os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, id+".json"))
 					allIssues[id] = openIssue
 				} else {
 					// Both have non-closed status, keep the one in open/ and remove from closed/
-					os.Remove(filepath.Join(fs.root, storage.DirClosed, id+".json"))
+					os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, id+".json"))
 					allIssues[id] = openIssue
 				}
 			}
@@ -986,12 +986,12 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		if _, isDuplicate := closedIssues[id]; isDuplicate {
 			continue // Already handled above
 		}
-		if issue.Status == storage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in %s/", id, storage.DirOpen))
+		if issue.Status == issuestorage.StatusClosed {
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in %s/", id, issuestorage.DirOpen))
 			if fix {
 				// Move to closed/
-				openPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
-				closedPath := filepath.Join(fs.root, storage.DirClosed, id+".json")
+				openPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
+				closedPath := filepath.Join(fs.root, issuestorage.DirClosed, id+".json")
 				if err := atomicWriteJSON(closedPath, issue); err == nil {
 					os.Remove(openPath)
 				}
@@ -1003,12 +1003,12 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 		if _, isDuplicate := openIssues[id]; isDuplicate {
 			continue // Already handled above
 		}
-		if issue.Status != storage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, issue.Status, storage.DirClosed))
+		if issue.Status != issuestorage.StatusClosed {
+			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, issue.Status, issuestorage.DirClosed))
 			if fix {
 				// Move to open/
-				closedPath := filepath.Join(fs.root, storage.DirClosed, id+".json")
-				openPath := filepath.Join(fs.root, storage.DirOpen, id+".json")
+				closedPath := filepath.Join(fs.root, issuestorage.DirClosed, id+".json")
+				openPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
 				if err := atomicWriteJSON(openPath, issue); err == nil {
 					os.Remove(closedPath)
 				}
@@ -1035,7 +1035,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 				if !parent.HasDependent(id) {
 					problems = append(problems, fmt.Sprintf("asymmetric parent/child: %s has parent %s but parent doesn't list it as dependent", id, issue.Parent))
 					if fix {
-						parent.Dependents = append(parent.Dependents, storage.Dependency{ID: id, Type: storage.DepTypeParentChild})
+						parent.Dependents = append(parent.Dependents, issuestorage.Dependency{ID: id, Type: issuestorage.DepTypeParentChild})
 						issuesNeedingUpdate[issue.Parent] = true
 					}
 				}
@@ -1056,7 +1056,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 				if !target.HasDependent(id) {
 					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s depends on %s but %s doesn't list it as dependent", id, dep.ID, dep.ID))
 					if fix {
-						target.Dependents = append(target.Dependents, storage.Dependency{ID: id, Type: dep.Type})
+						target.Dependents = append(target.Dependents, issuestorage.Dependency{ID: id, Type: dep.Type})
 						issuesNeedingUpdate[dep.ID] = true
 					}
 				}
@@ -1077,7 +1077,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 				if !dependent.HasDependency(id) {
 					problems = append(problems, fmt.Sprintf("asymmetric dependency: %s lists %s as dependent but %s doesn't depend on it", id, dep.ID, dep.ID))
 					if fix {
-						dependent.Dependencies = append(dependent.Dependencies, storage.Dependency{ID: id, Type: dep.Type})
+						dependent.Dependencies = append(dependent.Dependencies, issuestorage.Dependency{ID: id, Type: dep.Type})
 						issuesNeedingUpdate[dep.ID] = true
 					}
 				}
@@ -1089,7 +1089,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	if fix {
 		for id := range issuesNeedingUpdate {
 			issue := allIssues[id]
-			isClosed := issue.Status == storage.StatusClosed
+			isClosed := issue.Status == issuestorage.StatusClosed
 			path := fs.issuePath(id, isClosed)
 			atomicWriteJSON(path, issue)
 		}
@@ -1118,8 +1118,8 @@ func remove(slice []string, item string) []string {
 }
 
 // removeDep removes a dependency entry by ID from a Dependency slice.
-func removeDep(deps []storage.Dependency, id string) []storage.Dependency {
-	result := make([]storage.Dependency, 0, len(deps))
+func removeDep(deps []issuestorage.Dependency, id string) []issuestorage.Dependency {
+	result := make([]issuestorage.Dependency, 0, len(deps))
 	for _, d := range deps {
 		if d.ID != id {
 			result = append(result, d)
@@ -1181,14 +1181,14 @@ func (fs *FilesystemStorage) ensureChildCounterUpdated(parentID string, childNum
 func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string) (string, error) {
 	// 1. Validate the parent exists
 	if _, err := fs.Get(ctx, parentID); err != nil {
-		if err == storage.ErrNotFound {
-			return "", fmt.Errorf("parent %s: %w", parentID, storage.ErrNotFound)
+		if err == issuestorage.ErrNotFound {
+			return "", fmt.Errorf("parent %s: %w", parentID, issuestorage.ErrNotFound)
 		}
 		return "", fmt.Errorf("checking parent %s: %w", parentID, err)
 	}
 
 	// 2. Check hierarchy depth limit
-	if err := storage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
+	if err := issuestorage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 		return "", err
 	}
 
@@ -1224,7 +1224,7 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 	}
 
 	// 4. Return the full child ID
-	return storage.ChildID(parentID, next), nil
+	return issuestorage.ChildID(parentID, next), nil
 }
 
 // hasDependencyCycle checks if adding a dependency from issueID to dependsOnID would create a cycle.
@@ -1250,7 +1250,7 @@ func (fs *FilesystemStorage) hasDependencyCycle(ctx context.Context, issueID, de
 
 		issue, err := fs.Get(ctx, current)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if err == issuestorage.ErrNotFound {
 				continue
 			}
 			return false, err
@@ -1289,7 +1289,7 @@ func (fs *FilesystemStorage) hasHierarchyCycle(ctx context.Context, child, paren
 
 		issue, err := fs.Get(ctx, current)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if err == issuestorage.ErrNotFound {
 				break
 			}
 			return false, err

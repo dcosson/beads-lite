@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // TestGenerateID verifies the ID format is bd-XXXX (4 hex chars).
@@ -54,11 +54,11 @@ func TestCreate_IDCollisionRetry(t *testing.T) {
 	// Create many issues to verify IDs are unique
 	ids := make(map[string]bool)
 	for i := 0; i < 50; i++ {
-		issue := &storage.Issue{
+		issue := &issuestorage.Issue{
 			Title:    "Test Issue",
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		}
 		id, err := s.Create(ctx, issue)
 		if err != nil {
@@ -94,11 +94,11 @@ func TestCreate_ConcurrentIDGeneration(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < issuesPerWorker; i++ {
-				issue := &storage.Issue{
+				issue := &issuestorage.Issue{
 					Title:    "Concurrent Test",
-					Status:   storage.StatusOpen,
-					Priority: storage.PriorityMedium,
-					Type:     storage.TypeTask,
+					Status:   issuestorage.StatusOpen,
+					Priority: issuestorage.PriorityMedium,
+					Type:     issuestorage.TypeTask,
 				}
 				id, err := s.Create(ctx, issue)
 				mu.Lock()
@@ -268,11 +268,11 @@ func TestFilesystemStorage_ConcurrentWrites(t *testing.T) {
 	}
 
 	// Create an issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Concurrent Test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -345,11 +345,11 @@ func TestListSorting(t *testing.T) {
 
 	var createdIDs []string
 	for _, spec := range issues {
-		id, err := s.Create(ctx, &storage.Issue{
+		id, err := s.Create(ctx, &issuestorage.Issue{
 			Title:    spec.title,
-			Status:   storage.StatusOpen,
-			Priority: storage.PriorityMedium,
-			Type:     storage.TypeTask,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+			Type:     issuestorage.TypeTask,
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -391,41 +391,41 @@ func TestListFilteringSorting(t *testing.T) {
 	ctx := context.Background()
 
 	// Create issues with different priorities
-	_, err := s.Create(ctx, &storage.Issue{
+	_, err := s.Create(ctx, &issuestorage.Issue{
 		Title:    "High Priority 1",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
 
-	_, err = s.Create(ctx, &storage.Issue{
+	_, err = s.Create(ctx, &issuestorage.Issue{
 		Title:    "Low Priority",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityLow,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityLow,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(10 * time.Millisecond)
 
-	_, err = s.Create(ctx, &storage.Issue{
+	_, err = s.Create(ctx, &issuestorage.Issue{
 		Title:    "High Priority 2",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityHigh,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Filter by high priority
-	highPriority := storage.PriorityHigh
-	result, err := s.List(ctx, &storage.ListFilter{Priority: &highPriority})
+	highPriority := issuestorage.PriorityHigh
+	result, err := s.List(ctx, &issuestorage.ListFilter{Priority: &highPriority})
 	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}
@@ -449,11 +449,11 @@ func TestListFilteringSorting(t *testing.T) {
 }
 
 func TestFilesystemContract(t *testing.T) {
-	factory := func() storage.Storage {
+	factory := func() issuestorage.IssueStore {
 		dir := t.TempDir()
 		return New(dir)
 	}
-	storage.RunContractTests(t, factory)
+	issuestorage.RunContractTests(t, factory)
 }
 
 // TestClose verifies that Close updates status and moves the file.
@@ -463,16 +463,16 @@ func TestClose(t *testing.T) {
 
 	// Close non-existent issue should return ErrNotFound
 	err := s.Close(ctx, "nonexistent-id")
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("Close non-existent: got %v, want ErrNotFound", err)
 	}
 
 	// Create an issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "To Close",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityLow,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityLow,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -489,8 +489,8 @@ func TestClose(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after Close failed: %v", err)
 	}
-	if got.Status != storage.StatusClosed {
-		t.Errorf("Status after Close: got %q, want %q", got.Status, storage.StatusClosed)
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("Status after Close: got %q, want %q", got.Status, issuestorage.StatusClosed)
 	}
 	if got.ClosedAt == nil {
 		t.Error("ClosedAt should be set after Close")
@@ -503,11 +503,11 @@ func TestReopen(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and close an issue
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "To Reopen",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityLow,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityLow,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -527,8 +527,8 @@ func TestReopen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get after Reopen failed: %v", err)
 	}
-	if got.Status != storage.StatusOpen {
-		t.Errorf("Status after Reopen: got %q, want %q", got.Status, storage.StatusOpen)
+	if got.Status != issuestorage.StatusOpen {
+		t.Errorf("Status after Reopen: got %q, want %q", got.Status, issuestorage.StatusOpen)
 	}
 	if got.ClosedAt != nil {
 		t.Error("ClosedAt should be nil after Reopen")
@@ -540,11 +540,11 @@ func TestCloseMovesFile(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Test Close Move",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 
 	id, err := s.Create(ctx, issue)
@@ -581,11 +581,11 @@ func TestDeleteRemovesLockFile(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Delete Lock Cleanup",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 
 	id, err := s.Create(ctx, issue)
@@ -608,11 +608,11 @@ func TestReopenMovesFile(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Test Reopen Move",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 
 	id, err := s.Create(ctx, issue)
@@ -646,7 +646,7 @@ func TestReopenNonExistent(t *testing.T) {
 	ctx := context.Background()
 
 	err := s.Reopen(ctx, "nonexistent-id")
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		t.Errorf("Reopen non-existent: got %v, want ErrNotFound", err)
 	}
 }
@@ -656,12 +656,12 @@ func TestCloseAndGetPreservesData(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:       "Full Issue",
 		Description: "A complete issue with all fields",
-		Status:      storage.StatusInProgress,
-		Priority:    storage.PriorityHigh,
-		Type:        storage.TypeBug,
+		Status:      issuestorage.StatusInProgress,
+		Priority:    issuestorage.PriorityHigh,
+		Type:        issuestorage.TypeBug,
 		Labels:      []string{"urgent", "backend"},
 		Assignee:    "alice",
 	}
@@ -706,21 +706,21 @@ func TestListExcludesClosedByDefault(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two issues
-	id1, err := s.Create(ctx, &storage.Issue{
+	id1, err := s.Create(ctx, &issuestorage.Issue{
 		Title:    "Open Issue",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("Create 1 failed: %v", err)
 	}
 
-	id2, err := s.Create(ctx, &storage.Issue{
+	id2, err := s.Create(ctx, &issuestorage.Issue{
 		Title:    "To Close",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("Create 2 failed: %v", err)
@@ -751,11 +751,11 @@ func TestListClosedFilter(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and close an issue
-	id, err := s.Create(ctx, &storage.Issue{
+	id, err := s.Create(ctx, &issuestorage.Issue{
 		Title:    "To Close",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -766,8 +766,8 @@ func TestListClosedFilter(t *testing.T) {
 	}
 
 	// List with closed filter
-	status := storage.StatusClosed
-	issues, err := s.List(ctx, &storage.ListFilter{Status: &status})
+	status := issuestorage.StatusClosed
+	issues, err := s.List(ctx, &issuestorage.ListFilter{Status: &status})
 	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}
@@ -791,7 +791,7 @@ func TestGetNextChildID_Sequential(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a parent issue
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -815,7 +815,7 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a parent issue
-	parent := &storage.Issue{Title: "Concurrent Parent"}
+	parent := &issuestorage.Issue{Title: "Concurrent Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -875,7 +875,7 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 	if err := s1.Init(ctx); err != nil {
 		t.Fatalf("Init 1 failed: %v", err)
 	}
-	parent := &storage.Issue{Title: "Persist Parent"}
+	parent := &issuestorage.Issue{Title: "Persist Parent"}
 	parentID, err := s1.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -910,7 +910,7 @@ func TestGetNextChildID_ParentNotFound(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := s.GetNextChildID(ctx, "nonexistent-parent")
-	if !errors.Is(err, storage.ErrNotFound) {
+	if !errors.Is(err, issuestorage.ErrNotFound) {
 		t.Errorf("GetNextChildID on non-existent parent: got %v, want ErrNotFound", err)
 	}
 }
@@ -918,10 +918,10 @@ func TestGetNextChildID_ParentNotFound(t *testing.T) {
 // createIssueWithID is a test helper that creates an issue file with a specific ID.
 func createIssueWithID(t *testing.T, s *FilesystemStorage, id, title string) {
 	t.Helper()
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		ID:        id,
 		Title:     title,
-		Status:    storage.StatusOpen,
+		Status:    issuestorage.StatusOpen,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -937,7 +937,7 @@ func TestGetNextChildID_MaxDepth(t *testing.T) {
 	ctx := context.Background()
 
 	// Create root issue
-	root := &storage.Issue{Title: "Root"}
+	root := &issuestorage.Issue{Title: "Root"}
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -967,7 +967,7 @@ func TestGetNextChildID_MaxDepth(t *testing.T) {
 
 	// Depth 4 should fail (rootID.1.1.1.1 exceeds max depth of 3)
 	_, err = s.GetNextChildID(ctx, child3ID)
-	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
 		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
@@ -980,23 +980,23 @@ func TestCreateExplicitHierarchicalID_UpdatesCounter(t *testing.T) {
 	ctx := context.Background()
 
 	// Create parent issue
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
 	}
 
 	// Directly create a child with explicit ID (e.g., parentID.3)
-	explicitChild := &storage.Issue{
-		ID:    storage.ChildID(parentID, 3),
+	explicitChild := &issuestorage.Issue{
+		ID:    issuestorage.ChildID(parentID, 3),
 		Title: "Explicit child 3",
 	}
 	childID, err := s.Create(ctx, explicitChild)
 	if err != nil {
 		t.Fatalf("Create explicit child failed: %v", err)
 	}
-	if childID != storage.ChildID(parentID, 3) {
-		t.Fatalf("got %q, want %q", childID, storage.ChildID(parentID, 3))
+	if childID != issuestorage.ChildID(parentID, 3) {
+		t.Fatalf("got %q, want %q", childID, issuestorage.ChildID(parentID, 3))
 	}
 
 	// Now GetNextChildID should return parentID.4, not parentID.1
@@ -1004,7 +1004,7 @@ func TestCreateExplicitHierarchicalID_UpdatesCounter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := storage.ChildID(parentID, 4)
+	want := issuestorage.ChildID(parentID, 4)
 	if nextID != want {
 		t.Errorf("GetNextChildID after explicit .3: got %q, want %q", nextID, want)
 	}
@@ -1016,7 +1016,7 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -1033,15 +1033,15 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 
 	// Use a separate parent to cleanly test that a lower explicit child
 	// number doesn't lower an already-higher counter.
-	parent2 := &storage.Issue{Title: "Parent 2"}
+	parent2 := &issuestorage.Issue{Title: "Parent 2"}
 	parent2ID, err := s.Create(ctx, parent2)
 	if err != nil {
 		t.Fatalf("Create parent2 failed: %v", err)
 	}
 
 	// Explicitly create child .5
-	child5 := &storage.Issue{
-		ID:    storage.ChildID(parent2ID, 5),
+	child5 := &issuestorage.Issue{
+		ID:    issuestorage.ChildID(parent2ID, 5),
 		Title: "Explicit child 5",
 	}
 	if _, err := s.Create(ctx, child5); err != nil {
@@ -1049,8 +1049,8 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 	}
 
 	// Explicitly create child .2 (lower than 5)
-	child2 := &storage.Issue{
-		ID:    storage.ChildID(parent2ID, 2),
+	child2 := &issuestorage.Issue{
+		ID:    issuestorage.ChildID(parent2ID, 2),
 		Title: "Explicit child 2",
 	}
 	if _, err := s.Create(ctx, child2); err != nil {
@@ -1062,7 +1062,7 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := storage.ChildID(parent2ID, 6)
+	want := issuestorage.ChildID(parent2ID, 6)
 	if nextID != want {
 		t.Errorf("GetNextChildID after .5 then .2: got %q, want %q", nextID, want)
 	}
@@ -1075,14 +1075,14 @@ func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a parent
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
 	}
 
 	// Create an issue with a non-hierarchical explicit ID
-	plain := &storage.Issue{
+	plain := &issuestorage.Issue{
 		ID:    "my-custom-id",
 		Title: "Plain issue",
 	}
@@ -1095,7 +1095,7 @@ func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := storage.ChildID(parentID, 1)
+	want := issuestorage.ChildID(parentID, 1)
 	if nextID != want {
 		t.Errorf("got %q, want %q", nextID, want)
 	}
@@ -1108,7 +1108,7 @@ func TestCreateExplicitHierarchicalID_MaxDepth(t *testing.T) {
 	ctx := context.Background()
 
 	// Create root and build a chain to depth 3
-	root := &storage.Issue{Title: "Root"}
+	root := &issuestorage.Issue{Title: "Root"}
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -1118,17 +1118,17 @@ func TestCreateExplicitHierarchicalID_MaxDepth(t *testing.T) {
 	createIssueWithID(t, s, rootID+".1.1.1", "Depth 3")
 
 	// Trying to create at depth 4 via explicit ID should fail
-	tooDeep := &storage.Issue{
+	tooDeep := &issuestorage.Issue{
 		ID:    rootID + ".1.1.1.1",
 		Title: "Too deep",
 	}
 	_, err = s.Create(ctx, tooDeep)
-	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
 		t.Errorf("Create at depth 4 with explicit ID: got %v, want ErrMaxDepthExceeded", err)
 	}
 
 	// Creating at depth 3 via explicit ID should succeed
-	okDepth := &storage.Issue{
+	okDepth := &issuestorage.Issue{
 		ID:    rootID + ".1.1.2",
 		Title: "OK depth 3",
 	}
@@ -1149,7 +1149,7 @@ func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a parent issue
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -1160,7 +1160,7 @@ func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
 	}
-	wantChild1 := storage.ChildID(parentID, 1)
+	wantChild1 := issuestorage.ChildID(parentID, 1)
 	if child1ID != wantChild1 {
 		t.Fatalf("First child: got %q, want %q", child1ID, wantChild1)
 	}
@@ -1177,7 +1177,7 @@ func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID after delete failed: %v", err)
 	}
-	wantChild2 := storage.ChildID(parentID, 2)
+	wantChild2 := issuestorage.ChildID(parentID, 2)
 	if child2ID != wantChild2 {
 		t.Errorf("After deleting child .1: got %q, want %q", child2ID, wantChild2)
 	}
@@ -1190,7 +1190,7 @@ func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a parent issue
-	parent := &storage.Issue{Title: "Parent"}
+	parent := &issuestorage.Issue{Title: "Parent"}
 	parentID, err := s.Create(ctx, parent)
 	if err != nil {
 		t.Fatalf("Create parent failed: %v", err)
@@ -1213,7 +1213,7 @@ func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID after close failed: %v", err)
 	}
-	wantChild2 := storage.ChildID(parentID, 2)
+	wantChild2 := issuestorage.ChildID(parentID, 2)
 	if child2ID != wantChild2 {
 		t.Errorf("After closing child .1: got %q, want %q", child2ID, wantChild2)
 	}
@@ -1226,7 +1226,7 @@ func TestGetNextChildID_SubChildren(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a root parent
-	root := &storage.Issue{Title: "Root"}
+	root := &issuestorage.Issue{Title: "Root"}
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -1237,8 +1237,8 @@ func TestGetNextChildID_SubChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
 	}
-	if child1ID != storage.ChildID(rootID, 1) {
-		t.Fatalf("First child: got %q, want %q", child1ID, storage.ChildID(rootID, 1))
+	if child1ID != issuestorage.ChildID(rootID, 1) {
+		t.Fatalf("First child: got %q, want %q", child1ID, issuestorage.ChildID(rootID, 1))
 	}
 	createIssueWithID(t, s, child1ID, "Child 1")
 
@@ -1260,8 +1260,8 @@ func TestGetNextChildID_SubChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 2 failed: %v", err)
 	}
-	if child2ID != storage.ChildID(rootID, 2) {
-		t.Errorf("Second child of root: got %q, want %q", child2ID, storage.ChildID(rootID, 2))
+	if child2ID != issuestorage.ChildID(rootID, 2) {
+		t.Errorf("Second child of root: got %q, want %q", child2ID, issuestorage.ChildID(rootID, 2))
 	}
 }
 
@@ -1273,7 +1273,7 @@ func TestGetNextChildID_CounterIsolation(t *testing.T) {
 	ctx := context.Background()
 
 	// Create root
-	root := &storage.Issue{Title: "Root"}
+	root := &issuestorage.Issue{Title: "Root"}
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -1320,7 +1320,7 @@ func TestGetNextChildID_CounterIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID child3 failed: %v", err)
 	}
-	wantChild3 := storage.ChildID(rootID, 3)
+	wantChild3 := issuestorage.ChildID(rootID, 3)
 	if child3ID != wantChild3 {
 		t.Errorf("Third child of root: got %q, want %q", child3ID, wantChild3)
 	}
@@ -1333,13 +1333,13 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two roots
-	rootA := &storage.Issue{Title: "Root A"}
+	rootA := &issuestorage.Issue{Title: "Root A"}
 	rootAID, err := s.Create(ctx, rootA)
 	if err != nil {
 		t.Fatalf("Create root A failed: %v", err)
 	}
 
-	rootB := &storage.Issue{Title: "Root B"}
+	rootB := &issuestorage.Issue{Title: "Root B"}
 	rootBID, err := s.Create(ctx, rootB)
 	if err != nil {
 		t.Fatalf("Create root B failed: %v", err)
@@ -1362,7 +1362,7 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetNextChildID step %d failed: %v", i, err)
 		}
-		want := storage.ChildID(exp.parentID, exp.wantNum)
+		want := issuestorage.ChildID(exp.parentID, exp.wantNum)
 		if childID != want {
 			t.Errorf("Step %d: got %q, want %q", i, childID, want)
 		}
@@ -1380,7 +1380,7 @@ func TestWithMaxHierarchyDepth(t *testing.T) {
 	}
 
 	// Create root
-	root := &storage.Issue{Title: "Root"}
+	root := &issuestorage.Issue{Title: "Root"}
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -1402,17 +1402,17 @@ func TestWithMaxHierarchyDepth(t *testing.T) {
 
 	// Depth 3 via GetNextChildID — should fail (exceeds max=2)
 	_, err = s.GetNextChildID(ctx, child2ID)
-	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
 		t.Errorf("GetNextChildID at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
 	}
 
 	// Depth 3 via explicit Create — should also fail
-	tooDeep := &storage.Issue{
+	tooDeep := &issuestorage.Issue{
 		ID:    child2ID + ".1",
 		Title: "Too deep explicit",
 	}
 	_, err = s.Create(ctx, tooDeep)
-	if !errors.Is(err, storage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
 		t.Errorf("Create explicit at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
@@ -1428,7 +1428,7 @@ func TestStaleLockCleanup(t *testing.T) {
 	}
 
 	// Create an issue
-	issue := &storage.Issue{Title: "Test issue"}
+	issue := &issuestorage.Issue{Title: "Test issue"}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -1507,7 +1507,7 @@ func TestLockFileCleanupAfterUpdate(t *testing.T) {
 	}
 
 	// Create an issue
-	issue := &storage.Issue{Title: "Test issue"}
+	issue := &issuestorage.Issue{Title: "Test issue"}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -1538,20 +1538,20 @@ func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 	}
 
 	// Create two issues
-	issue1 := &storage.Issue{Title: "Issue 1"}
+	issue1 := &issuestorage.Issue{Title: "Issue 1"}
 	id1, err := s.Create(ctx, issue1)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	issue2 := &storage.Issue{Title: "Issue 2"}
+	issue2 := &issuestorage.Issue{Title: "Issue 2"}
 	id2, err := s.Create(ctx, issue2)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
 	// Add dependency
-	if err := s.AddDependency(ctx, id1, id2, storage.DepTypeBlocks); err != nil {
+	if err := s.AddDependency(ctx, id1, id2, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("AddDependency failed: %v", err)
 	}
 

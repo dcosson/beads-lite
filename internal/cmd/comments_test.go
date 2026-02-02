@@ -9,18 +9,18 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestCommentsAddBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for comments",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -53,11 +53,11 @@ func TestCommentsAddBasic(t *testing.T) {
 func TestCommentsAddWithAuthor(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for author test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -85,11 +85,11 @@ func TestCommentsAddWithAuthor(t *testing.T) {
 func TestCommentsAddFromFile(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for file test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -138,11 +138,11 @@ func TestCommentsAddNonExistent(t *testing.T) {
 func TestCommentsAddEmptyMessage(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for empty message test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -165,11 +165,11 @@ func TestCommentsAddJSON(t *testing.T) {
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for JSON test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -202,19 +202,19 @@ func TestCommentsListBasic(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue with comments",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment1 := &storage.Comment{Author: "alice", Text: "First comment"}
-	comment2 := &storage.Comment{Author: "bob", Text: "Second comment"}
+	comment1 := &issuestorage.Comment{Author: "alice", Text: "First comment"}
+	comment2 := &issuestorage.Comment{Author: "bob", Text: "Second comment"}
 	if err := store.AddComment(context.Background(), id, comment1); err != nil {
 		t.Fatalf("failed to add comment 1: %v", err)
 	}
@@ -247,11 +247,11 @@ func TestCommentsListEmpty(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue without comments",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
@@ -289,18 +289,18 @@ func TestCommentsListJSON(t *testing.T) {
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for JSON list",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Author: "alice", Text: "Test comment"}
+	comment := &issuestorage.Comment{Author: "alice", Text: "Test comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
@@ -331,18 +331,18 @@ func TestCommentsListNoAuthor(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for no-author test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	comment := &storage.Comment{Text: "Anonymous comment"}
+	comment := &issuestorage.Comment{Text: "Anonymous comment"}
 	if err := store.AddComment(context.Background(), id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
@@ -383,11 +383,11 @@ func TestCommentsNoArgs(t *testing.T) {
 func TestCommentsAddNoMessageArg(t *testing.T) {
 	app, store := setupTestApp(t)
 
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Issue for no-message test",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := store.Create(context.Background(), issue)
 	if err != nil {

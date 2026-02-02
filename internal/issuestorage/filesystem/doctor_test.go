@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestDoctorOrphanedLockFiles(t *testing.T) {
@@ -109,11 +109,11 @@ func TestDoctorDuplicateIssue(t *testing.T) {
 	}
 
 	// Create an issue normally
-	issue := &storage.Issue{
+	issue := &issuestorage.Issue{
 		Title:    "Test Issue",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	id, err := fs.Create(ctx, issue)
 	if err != nil {
@@ -128,9 +128,9 @@ func TestDoctorDuplicateIssue(t *testing.T) {
 	}
 
 	// Modify the issue to have closed status and write to closed/
-	var closedIssue storage.Issue
+	var closedIssue issuestorage.Issue
 	json.Unmarshal(data, &closedIssue)
-	closedIssue.Status = storage.StatusClosed
+	closedIssue.Status = issuestorage.StatusClosed
 
 	closedData, _ := json.Marshal(closedIssue)
 	closedPath := filepath.Join(dir, "closed", id+".json")
@@ -174,12 +174,12 @@ func TestDoctorStatusLocationMismatch(t *testing.T) {
 	}
 
 	// Create an issue with status=closed in open/ directory
-	issue := storage.Issue{
+	issue := issuestorage.Issue{
 		ID:       "bd-test",
 		Title:    "Misplaced Closed",
-		Status:   storage.StatusClosed,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusClosed,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 	data, _ := json.Marshal(issue)
 	openPath := filepath.Join(dir, "open", "bd-test.json")
@@ -224,13 +224,13 @@ func TestDoctorBrokenDependencyReference(t *testing.T) {
 	}
 
 	// Create an issue with a dependency on a non-existent issue
-	issue := storage.Issue{
+	issue := issuestorage.Issue{
 		ID:           "bd-test",
 		Title:        "Has Broken Dep",
-		Status:       storage.StatusOpen,
-		Priority:     storage.PriorityMedium,
-		Type:         storage.TypeTask,
-		Dependencies: []storage.Dependency{{ID: "bd-nonexistent", Type: storage.DepTypeBlocks}},
+		Status:       issuestorage.StatusOpen,
+		Priority:     issuestorage.PriorityMedium,
+		Type:         issuestorage.TypeTask,
+		Dependencies: []issuestorage.Dependency{{ID: "bd-nonexistent", Type: issuestorage.DepTypeBlocks}},
 	}
 	data, _ := json.Marshal(issue)
 	issuePath := filepath.Join(dir, "open", "bd-test.json")
@@ -275,21 +275,21 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 	}
 
 	// Create two issues where A depends on B but B doesn't have A as dependent
-	issueA := storage.Issue{
+	issueA := issuestorage.Issue{
 		ID:           "bd-aaaa",
 		Title:        "Issue A",
-		Status:       storage.StatusOpen,
-		Priority:     storage.PriorityMedium,
-		Type:         storage.TypeTask,
-		Dependencies: []storage.Dependency{{ID: "bd-bbbb", Type: storage.DepTypeBlocks}},
+		Status:       issuestorage.StatusOpen,
+		Priority:     issuestorage.PriorityMedium,
+		Type:         issuestorage.TypeTask,
+		Dependencies: []issuestorage.Dependency{{ID: "bd-bbbb", Type: issuestorage.DepTypeBlocks}},
 	}
-	issueB := storage.Issue{
+	issueB := issuestorage.Issue{
 		ID:         "bd-bbbb",
 		Title:      "Issue B",
-		Status:     storage.StatusOpen,
-		Priority:   storage.PriorityMedium,
-		Type:       storage.TypeTask,
-		Dependents: []storage.Dependency{}, // Missing A!
+		Status:     issuestorage.StatusOpen,
+		Priority:   issuestorage.PriorityMedium,
+		Type:       issuestorage.TypeTask,
+		Dependents: []issuestorage.Dependency{}, // Missing A!
 	}
 
 	dataA, _ := json.Marshal(issueA)
@@ -336,12 +336,12 @@ func TestDoctorBrokenParentReference(t *testing.T) {
 	}
 
 	// Create an issue with a parent that doesn't exist
-	issue := storage.Issue{
+	issue := issuestorage.Issue{
 		ID:       "bd-child",
 		Title:    "Orphan Child",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 		Parent:   "bd-nonexistent-parent",
 	}
 	data, _ := json.Marshal(issue)
@@ -425,24 +425,24 @@ func TestDoctorCleanStorage(t *testing.T) {
 	}
 
 	// Create some valid issues with proper relationships
-	issueA := &storage.Issue{
+	issueA := &issuestorage.Issue{
 		Title:    "Issue A",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
-	issueB := &storage.Issue{
+	issueB := &issuestorage.Issue{
 		Title:    "Issue B",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	}
 
 	idA, _ := fs.Create(ctx, issueA)
 	idB, _ := fs.Create(ctx, issueB)
 
 	// Add a proper dependency
-	fs.AddDependency(ctx, idA, idB, storage.DepTypeBlocks)
+	fs.AddDependency(ctx, idA, idB, issuestorage.DepTypeBlocks)
 
 	// Close one issue properly
 	fs.Close(ctx, idB)
@@ -467,21 +467,21 @@ func TestDoctorAsymmetricBlocks(t *testing.T) {
 	}
 
 	// Create two issues where A blocks B (A has B as dependent) but B doesn't have A in dependencies
-	issueA := storage.Issue{
+	issueA := issuestorage.Issue{
 		ID:         "bd-aaaa",
 		Title:      "Blocker A",
-		Status:     storage.StatusOpen,
-		Priority:   storage.PriorityMedium,
-		Type:       storage.TypeTask,
-		Dependents: []storage.Dependency{{ID: "bd-bbbb", Type: storage.DepTypeBlocks}},
+		Status:     issuestorage.StatusOpen,
+		Priority:   issuestorage.PriorityMedium,
+		Type:       issuestorage.TypeTask,
+		Dependents: []issuestorage.Dependency{{ID: "bd-bbbb", Type: issuestorage.DepTypeBlocks}},
 	}
-	issueB := storage.Issue{
+	issueB := issuestorage.Issue{
 		ID:           "bd-bbbb",
 		Title:        "Blocked B",
-		Status:       storage.StatusOpen,
-		Priority:     storage.PriorityMedium,
-		Type:         storage.TypeTask,
-		Dependencies: []storage.Dependency{}, // Missing A!
+		Status:       issuestorage.StatusOpen,
+		Priority:     issuestorage.PriorityMedium,
+		Type:         issuestorage.TypeTask,
+		Dependencies: []issuestorage.Dependency{}, // Missing A!
 	}
 
 	dataA, _ := json.Marshal(issueA)
@@ -528,20 +528,20 @@ func TestDoctorAsymmetricParentChild(t *testing.T) {
 	}
 
 	// Create two issues where child has parent but parent doesn't list child
-	parent := storage.Issue{
+	parent := issuestorage.Issue{
 		ID:         "bd-parent",
 		Title:      "Parent",
-		Status:     storage.StatusOpen,
-		Priority:   storage.PriorityMedium,
-		Type:       storage.TypeEpic,
-		Dependents: []storage.Dependency{}, // Missing child!
+		Status:     issuestorage.StatusOpen,
+		Priority:   issuestorage.PriorityMedium,
+		Type:       issuestorage.TypeEpic,
+		Dependents: []issuestorage.Dependency{}, // Missing child!
 	}
-	child := storage.Issue{
+	child := issuestorage.Issue{
 		ID:       "bd-child",
 		Title:    "Child",
-		Status:   storage.StatusOpen,
-		Priority: storage.PriorityMedium,
-		Type:     storage.TypeTask,
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 		Parent:   "bd-parent",
 	}
 

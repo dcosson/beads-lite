@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -67,8 +67,8 @@ Examples:
 			dependencyID := args[1]
 
 			// Validate dependency type
-			dt := storage.DependencyType(depType)
-			if !storage.ValidDependencyTypes[dt] {
+			dt := issuestorage.DependencyType(depType)
+			if !issuestorage.ValidDependencyTypes[dt] {
 				return fmt.Errorf("invalid dependency type %q; valid types: blocks, tracks, related, parent-child, discovered-from, until, caused-by, validates, relates-to, supersedes", depType)
 			}
 
@@ -90,16 +90,16 @@ Examples:
 			}
 
 			// Reject adding dependencies on tombstoned issues
-			if issue.Status == storage.StatusTombstone {
+			if issue.Status == issuestorage.StatusTombstone {
 				return fmt.Errorf("cannot add dependency: issue %s is tombstoned", issue.ID)
 			}
-			if dependency.Status == storage.StatusTombstone {
+			if dependency.Status == issuestorage.StatusTombstone {
 				return fmt.Errorf("cannot add dependency on tombstoned issue %s", dependency.ID)
 			}
 
 			// Add the typed dependency (parent-child is handled automatically by AddDependency)
 			if err := store.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
-				if err == storage.ErrCycle {
+				if err == issuestorage.ErrCycle {
 					return fmt.Errorf("cannot add dependency: would create a cycle")
 				}
 				return fmt.Errorf("adding dependency: %w", err)
@@ -230,10 +230,10 @@ Examples:
 			}
 
 			// Validate type filter
-			var typeFilter *storage.DependencyType
+			var typeFilter *issuestorage.DependencyType
 			if filterType != "" {
-				dt := storage.DependencyType(filterType)
-				if !storage.ValidDependencyTypes[dt] {
+				dt := issuestorage.DependencyType(filterType)
+				if !issuestorage.ValidDependencyTypes[dt] {
 					return fmt.Errorf("invalid dependency type %q", filterType)
 				}
 				typeFilter = &dt
@@ -267,11 +267,11 @@ Examples:
 }
 
 // filterDeps filters a dependency slice by type, if typeFilter is non-nil.
-func filterDeps(deps []storage.Dependency, typeFilter *storage.DependencyType) []storage.Dependency {
+func filterDeps(deps []issuestorage.Dependency, typeFilter *issuestorage.DependencyType) []issuestorage.Dependency {
 	if typeFilter == nil {
 		return deps
 	}
-	var filtered []storage.Dependency
+	var filtered []issuestorage.Dependency
 	for _, d := range deps {
 		if d.Type == *typeFilter {
 			filtered = append(filtered, d)
@@ -282,7 +282,7 @@ func filterDeps(deps []storage.Dependency, typeFilter *storage.DependencyType) [
 
 // outputDepListJSON outputs dependency list in JSON format.
 // Returns an array of enriched dependency objects (matching show --json format).
-func outputDepListJSON(app *App, ctx context.Context, issue *storage.Issue, tree bool, direction string, typeFilter *storage.DependencyType) error {
+func outputDepListJSON(app *App, ctx context.Context, issue *issuestorage.Issue, tree bool, direction string, typeFilter *issuestorage.DependencyType) error {
 	showDown := direction == "" || direction == "down"
 	showUp := direction == "" || direction == "up"
 
@@ -293,7 +293,7 @@ func outputDepListJSON(app *App, ctx context.Context, issue *storage.Issue, tree
 		showUp = false
 	}
 
-	var deps []storage.Dependency
+	var deps []issuestorage.Dependency
 	if showDown {
 		deps = filterDeps(issue.Dependencies, typeFilter)
 	} else if showUp {
@@ -315,7 +315,7 @@ type depTreeNode struct {
 }
 
 // buildDepTree recursively builds a dependency tree.
-func buildDepTree(store storage.Storage, ctx context.Context, issue *storage.Issue, visited map[string]bool) *depTreeNode {
+func buildDepTree(store issuestorage.IssueStore, ctx context.Context, issue *issuestorage.Issue, visited map[string]bool) *depTreeNode {
 	node := &depTreeNode{
 		ID:     issue.ID,
 		Title:  issue.Title,
@@ -346,7 +346,7 @@ func buildDepTree(store storage.Storage, ctx context.Context, issue *storage.Iss
 }
 
 // outputDepListText outputs dependency list in text format.
-func outputDepListText(app *App, ctx context.Context, issue *storage.Issue, tree bool, direction string, typeFilter *storage.DependencyType) error {
+func outputDepListText(app *App, ctx context.Context, issue *issuestorage.Issue, tree bool, direction string, typeFilter *issuestorage.DependencyType) error {
 	fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
 	fmt.Fprintln(app.Out, strings.Repeat("-", len(issue.ID)+len(issue.Title)+2))
 
@@ -399,7 +399,7 @@ func outputDepListText(app *App, ctx context.Context, issue *storage.Issue, tree
 }
 
 // outputDepTree outputs a tree view of dependencies.
-func outputDepTree(app *App, ctx context.Context, issue *storage.Issue, depth int, visited map[string]bool) error {
+func outputDepTree(app *App, ctx context.Context, issue *issuestorage.Issue, depth int, visited map[string]bool) error {
 	if depth == 0 {
 		fmt.Fprintln(app.Out, "\nDependency Tree:")
 	}
@@ -434,15 +434,15 @@ func outputDepTree(app *App, ctx context.Context, issue *storage.Issue, depth in
 }
 
 // statusIndicator returns a symbol for the issue status.
-func statusIndicator(status storage.Status) string {
+func statusIndicator(status issuestorage.Status) string {
 	switch status {
-	case storage.StatusClosed:
+	case issuestorage.StatusClosed:
 		return "✓"
-	case storage.StatusInProgress:
+	case issuestorage.StatusInProgress:
 		return "●"
-	case storage.StatusBlocked:
+	case issuestorage.StatusBlocked:
 		return "✗"
-	case storage.StatusTombstone:
+	case issuestorage.StatusTombstone:
 		return "†"
 	default:
 		return "○"
@@ -450,13 +450,13 @@ func statusIndicator(status storage.Status) string {
 }
 
 // resolveIssue finds an issue by ID or prefix.
-func resolveIssue(store storage.Storage, ctx context.Context, idOrPrefix string) (*storage.Issue, error) {
+func resolveIssue(store issuestorage.IssueStore, ctx context.Context, idOrPrefix string) (*issuestorage.Issue, error) {
 	// Try exact match first
 	issue, err := store.Get(ctx, idOrPrefix)
 	if err == nil {
 		return issue, nil
 	}
-	if err != storage.ErrNotFound {
+	if err != issuestorage.ErrNotFound {
 		return nil, err
 	}
 

@@ -1,5 +1,5 @@
 // Package graph provides stateless graph traversal functions for molecule workflows.
-// All functions take (ctx, storage.Storage, ...) with no struct state.
+// All functions take (ctx, issuestorage.IssueStore, ...) with no struct state.
 // Import chain: cmd → meow → graph → storage.
 package graph
 
@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 // StepStatus classifies a molecule step's current state.
@@ -23,7 +23,7 @@ const (
 
 // FindMoleculeRoot walks the parent chain (via DepParentChild dependencies) to
 // find the root epic of a molecule. The root is an issue with no parent.
-func FindMoleculeRoot(ctx context.Context, store storage.Storage, issueID string) (*storage.Issue, error) {
+func FindMoleculeRoot(ctx context.Context, store issuestorage.IssueStore, issueID string) (*issuestorage.Issue, error) {
 	visited := make(map[string]bool)
 	currentID := issueID
 
@@ -47,13 +47,13 @@ func FindMoleculeRoot(ctx context.Context, store storage.Storage, issueID string
 
 // CollectMoleculeChildren recursively collects all descendants of rootID via
 // DepParentChild dependencies. Returns all descendants (not including the root).
-func CollectMoleculeChildren(ctx context.Context, store storage.Storage, rootID string) ([]*storage.Issue, error) {
+func CollectMoleculeChildren(ctx context.Context, store issuestorage.IssueStore, rootID string) ([]*issuestorage.Issue, error) {
 	root, err := store.Get(ctx, rootID)
 	if err != nil {
 		return nil, fmt.Errorf("get root %s: %w", rootID, err)
 	}
 
-	var result []*storage.Issue
+	var result []*issuestorage.Issue
 	queue := root.Children()
 
 	visited := map[string]bool{rootID: true}
@@ -78,13 +78,13 @@ func CollectMoleculeChildren(ctx context.Context, store storage.Storage, rootID 
 
 // TopologicalOrder sorts issues using Kahn's algorithm on DepBlocks edges.
 // Returns issues in dependency-respecting order. Returns an error if cycles exist.
-func TopologicalOrder(children []*storage.Issue) ([]*storage.Issue, error) {
+func TopologicalOrder(children []*issuestorage.Issue) ([]*issuestorage.Issue, error) {
 	if len(children) == 0 {
 		return nil, nil
 	}
 
 	// Build ID → issue lookup and adjacency
-	byID := make(map[string]*storage.Issue, len(children))
+	byID := make(map[string]*issuestorage.Issue, len(children))
 	childSet := make(map[string]bool, len(children))
 	for _, c := range children {
 		byID[c.ID] = c
@@ -101,7 +101,7 @@ func TopologicalOrder(children []*storage.Issue) ([]*storage.Issue, error) {
 			inDegree[c.ID] = 0
 		}
 		// c.Dependencies with type "blocks" means c depends on (is blocked by) dep.ID
-		depType := storage.DepTypeBlocks
+		depType := issuestorage.DepTypeBlocks
 		for _, depID := range c.DependencyIDs(&depType) {
 			if !childSet[depID] {
 				continue // skip deps outside the molecule
@@ -119,7 +119,7 @@ func TopologicalOrder(children []*storage.Issue) ([]*storage.Issue, error) {
 		}
 	}
 
-	var result []*storage.Issue
+	var result []*issuestorage.Issue
 	for len(queue) > 0 {
 		id := queue[0]
 		queue = queue[1:]
@@ -141,16 +141,16 @@ func TopologicalOrder(children []*storage.Issue) ([]*storage.Issue, error) {
 
 // FindReadySteps returns issues that are open and whose blocking dependencies
 // are all in the closedSet.
-func FindReadySteps(children []*storage.Issue, closedSet map[string]bool) []*storage.Issue {
+func FindReadySteps(children []*issuestorage.Issue, closedSet map[string]bool) []*issuestorage.Issue {
 	childSet := make(map[string]bool, len(children))
 	for _, c := range children {
 		childSet[c.ID] = true
 	}
 
-	var ready []*storage.Issue
-	depType := storage.DepTypeBlocks
+	var ready []*issuestorage.Issue
+	depType := issuestorage.DepTypeBlocks
 	for _, c := range children {
-		if c.Status == storage.StatusClosed {
+		if c.Status == issuestorage.StatusClosed {
 			continue
 		}
 		blocked := false
@@ -169,14 +169,14 @@ func FindReadySteps(children []*storage.Issue, closedSet map[string]bool) []*sto
 
 // FindNextStep returns the first ready step after currentID in topological order.
 // An issue is ready if it is not closed and all its blocking deps are in closedSet.
-func FindNextStep(ordered []*storage.Issue, currentID string, closedSet map[string]bool) *storage.Issue {
+func FindNextStep(ordered []*issuestorage.Issue, currentID string, closedSet map[string]bool) *issuestorage.Issue {
 	childSet := make(map[string]bool, len(ordered))
 	for _, c := range ordered {
 		childSet[c.ID] = true
 	}
 
 	pastCurrent := false
-	depType := storage.DepTypeBlocks
+	depType := issuestorage.DepTypeBlocks
 	for _, c := range ordered {
 		if c.ID == currentID {
 			pastCurrent = true
@@ -185,7 +185,7 @@ func FindNextStep(ordered []*storage.Issue, currentID string, closedSet map[stri
 		if !pastCurrent {
 			continue
 		}
-		if c.Status == storage.StatusClosed {
+		if c.Status == issuestorage.StatusClosed {
 			continue
 		}
 		blocked := false
@@ -203,21 +203,21 @@ func FindNextStep(ordered []*storage.Issue, currentID string, closedSet map[stri
 }
 
 // ClassifySteps classifies each child issue as done, current, ready, blocked, or pending.
-func ClassifySteps(children []*storage.Issue, closedSet map[string]bool) map[string]StepStatus {
+func ClassifySteps(children []*issuestorage.Issue, closedSet map[string]bool) map[string]StepStatus {
 	childSet := make(map[string]bool, len(children))
 	for _, c := range children {
 		childSet[c.ID] = true
 	}
 
 	result := make(map[string]StepStatus, len(children))
-	depType := storage.DepTypeBlocks
+	depType := issuestorage.DepTypeBlocks
 
 	for _, c := range children {
-		if c.Status == storage.StatusClosed {
+		if c.Status == issuestorage.StatusClosed {
 			result[c.ID] = StepDone
 			continue
 		}
-		if c.Status == storage.StatusInProgress {
+		if c.Status == issuestorage.StatusInProgress {
 			result[c.ID] = StepCurrent
 			continue
 		}
@@ -240,9 +240,9 @@ func ClassifySteps(children []*storage.Issue, closedSet map[string]bool) map[str
 }
 
 // BuildClosedSet queries all closed issues and returns their IDs as a set.
-func BuildClosedSet(ctx context.Context, store storage.Storage) (map[string]bool, error) {
-	status := storage.StatusClosed
-	closed, err := store.List(ctx, &storage.ListFilter{Status: &status})
+func BuildClosedSet(ctx context.Context, store issuestorage.IssueStore) (map[string]bool, error) {
+	status := issuestorage.StatusClosed
+	closed, err := store.List(ctx, &issuestorage.ListFilter{Status: &status})
 	if err != nil {
 		return nil, fmt.Errorf("list closed issues: %w", err)
 	}

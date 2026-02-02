@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 )
 
 func setupBenchmarkStorage(b *testing.B) *FilesystemStorage {
@@ -26,11 +26,11 @@ func BenchmarkCreate(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := s.Create(ctx, &storage.Issue{
+		_, err := s.Create(ctx, &issuestorage.Issue{
 			Title:       fmt.Sprintf("Benchmark issue %d", i),
 			Description: "A test issue for benchmarking",
-			Priority:    storage.PriorityMedium,
-			Type:        storage.TypeTask,
+			Priority:    issuestorage.PriorityMedium,
+			Type:        issuestorage.TypeTask,
 		})
 		if err != nil {
 			b.Fatal(err)
@@ -45,11 +45,11 @@ func BenchmarkGet(b *testing.B) {
 	ctx := context.Background()
 
 	// Create an issue to retrieve
-	id, err := s.Create(ctx, &storage.Issue{
+	id, err := s.Create(ctx, &issuestorage.Issue{
 		Title:       "Benchmark issue",
 		Description: "A test issue for benchmarking",
-		Priority:    storage.PriorityMedium,
-		Type:        storage.TypeTask,
+		Priority:    issuestorage.PriorityMedium,
+		Type:        issuestorage.TypeTask,
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -72,11 +72,11 @@ func BenchmarkListOpen1000(b *testing.B) {
 
 	// Create 1000 issues
 	for i := 0; i < 1000; i++ {
-		_, err := s.Create(ctx, &storage.Issue{
+		_, err := s.Create(ctx, &issuestorage.Issue{
 			Title:       fmt.Sprintf("Issue %d", i),
 			Description: "A test issue for benchmarking list performance",
-			Priority:    storage.PriorityMedium,
-			Type:        storage.TypeTask,
+			Priority:    issuestorage.PriorityMedium,
+			Type:        issuestorage.TypeTask,
 		})
 		if err != nil {
 			b.Fatal(err)
@@ -102,11 +102,11 @@ func BenchmarkConcurrentReads(b *testing.B) {
 	ctx := context.Background()
 
 	// Create an issue to read
-	id, err := s.Create(ctx, &storage.Issue{
+	id, err := s.Create(ctx, &issuestorage.Issue{
 		Title:       "Benchmark issue",
 		Description: "A test issue for benchmarking concurrent reads",
-		Priority:    storage.PriorityMedium,
-		Type:        storage.TypeTask,
+		Priority:    issuestorage.PriorityMedium,
+		Type:        issuestorage.TypeTask,
 	})
 	if err != nil {
 		b.Fatal(err)

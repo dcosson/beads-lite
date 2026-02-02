@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -70,14 +70,14 @@ Examples:
 			}
 
 			// Get all closed issues
-			closedStatus := storage.StatusClosed
-			issues, err := app.Storage.List(ctx, &storage.ListFilter{Status: &closedStatus})
+			closedStatus := issuestorage.StatusClosed
+			issues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
 			if err != nil {
 				return fmt.Errorf("listing closed issues: %w", err)
 			}
 
 			// Filter by cutoff time if specified
-			var toDelete []*storage.Issue
+			var toDelete []*issuestorage.Issue
 			for _, issue := range issues {
 				if issue.ClosedAt == nil {
 					// Closed issues should have ClosedAt set, but handle edge case

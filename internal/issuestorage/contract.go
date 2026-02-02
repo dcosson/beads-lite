@@ -1,4 +1,4 @@
-package storage
+package issuestorage
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"time"
 )
 
-// RunContractTests runs the full contract test suite against a Storage implementation.
+// RunContractTests runs the full contract test suite against a IssueStore implementation.
 // Each storage engine should call this with its own factory function to ensure
 // consistent behavior across all implementations.
-func RunContractTests(t *testing.T, factory func() Storage) {
+func RunContractTests(t *testing.T, factory func() IssueStore) {
 	t.Run("Create", func(t *testing.T) { testCreate(t, factory()) })
 	t.Run("Get", func(t *testing.T) { testGet(t, factory()) })
 	t.Run("Update", func(t *testing.T) { testUpdate(t, factory()) })
@@ -26,7 +26,7 @@ func RunContractTests(t *testing.T, factory func() Storage) {
 	t.Run("CreateTombstone", func(t *testing.T) { testCreateTombstone(t, factory()) })
 }
 
-func testCreate(t *testing.T, s Storage) {
+func testCreate(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -76,7 +76,7 @@ func testCreate(t *testing.T, s Storage) {
 	}
 }
 
-func testGet(t *testing.T, s Storage) {
+func testGet(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -112,7 +112,7 @@ func testGet(t *testing.T, s Storage) {
 	}
 }
 
-func testUpdate(t *testing.T, s Storage) {
+func testUpdate(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -177,7 +177,7 @@ func testUpdate(t *testing.T, s Storage) {
 	}
 }
 
-func testDelete(t *testing.T, s Storage) {
+func testDelete(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -224,7 +224,7 @@ func testDelete(t *testing.T, s Storage) {
 	}
 }
 
-func testList(t *testing.T, s Storage) {
+func testList(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -326,7 +326,7 @@ func testList(t *testing.T, s Storage) {
 	_ = ids // silence unused variable warning
 }
 
-func testClose(t *testing.T, s Storage) {
+func testClose(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -385,7 +385,7 @@ func testClose(t *testing.T, s Storage) {
 	}
 }
 
-func testDependencies(t *testing.T, s Storage) {
+func testDependencies(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -456,7 +456,7 @@ func testDependencies(t *testing.T, s Storage) {
 	}
 }
 
-func testHierarchy(t *testing.T, s Storage) {
+func testHierarchy(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -567,7 +567,7 @@ func testHierarchy(t *testing.T, s Storage) {
 	}
 }
 
-func testCycleDetection(t *testing.T, s Storage) {
+func testCycleDetection(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -642,7 +642,7 @@ func testCycleDetection(t *testing.T, s Storage) {
 	}
 }
 
-func testComments(t *testing.T, s Storage) {
+func testComments(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -714,7 +714,7 @@ func testComments(t *testing.T, s Storage) {
 	}
 }
 
-func testChildCounters(t *testing.T, s Storage) {
+func testChildCounters(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -780,7 +780,7 @@ func testChildCounters(t *testing.T, s Storage) {
 	}
 }
 
-func testHierarchyDepthLimit(t *testing.T, s Storage) {
+func testHierarchyDepthLimit(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -819,7 +819,7 @@ func testHierarchyDepthLimit(t *testing.T, s Storage) {
 	}
 }
 
-func testCreateTombstone(t *testing.T, s Storage) {
+func testCreateTombstone(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)

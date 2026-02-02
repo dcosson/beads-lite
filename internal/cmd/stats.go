@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +51,8 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 			}
 
 			// Build closed set for ready check
-			closedStatus := storage.StatusClosed
-			closedIssues, err := app.Storage.List(ctx, &storage.ListFilter{Status: &closedStatus})
+			closedStatus := issuestorage.StatusClosed
+			closedIssues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
 			if err != nil {
 				return fmt.Errorf("listing closed issues: %w", err)
 			}
@@ -63,24 +63,24 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 
 			for _, issue := range openIssues {
 				switch issue.Status {
-				case storage.StatusOpen:
+				case issuestorage.StatusOpen:
 					summary.OpenIssues++
 					// Check if ready (no unclosed blocking deps)
 					if isReady(issue, closedSet) {
 						summary.ReadyIssues++
 					}
-				case storage.StatusInProgress:
+				case issuestorage.StatusInProgress:
 					summary.InProgressIssues++
-				case storage.StatusBlocked:
+				case issuestorage.StatusBlocked:
 					summary.BlockedIssues++
-				case storage.StatusDeferred:
+				case issuestorage.StatusDeferred:
 					summary.DeferredIssues++
 				}
 			}
 
 			// Count tombstoned issues
-			tombstoneStatus := storage.StatusTombstone
-			tombstones, err := app.Storage.List(ctx, &storage.ListFilter{Status: &tombstoneStatus})
+			tombstoneStatus := issuestorage.StatusTombstone
+			tombstones, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &tombstoneStatus})
 			if err != nil {
 				return fmt.Errorf("listing tombstoned issues: %w", err)
 			}

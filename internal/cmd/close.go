@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"beads-lite/internal/graph"
-	"beads-lite/internal/storage"
+	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
@@ -92,7 +92,7 @@ Examples:
 						}
 						autoAdvanced := false
 						if nextStep != nil && !noAuto {
-							nextStep.Status = storage.StatusInProgress
+							nextStep.Status = issuestorage.StatusInProgress
 							store.Update(ctx, nextStep)
 							autoAdvanced = true
 						}
@@ -143,7 +143,7 @@ Examples:
 					if noAuto {
 						fmt.Fprintf(app.Out, "Next step: %s %s\n", nextStep.ID, nextStep.Title)
 					} else {
-						nextStep.Status = storage.StatusInProgress
+						nextStep.Status = issuestorage.StatusInProgress
 						if err := store.Update(ctx, nextStep); err != nil {
 							fmt.Fprintf(app.Err, "Error advancing to next step: %v\n", err)
 						} else {
@@ -184,7 +184,7 @@ Examples:
 
 // findNextMoleculeStep finds the next ready step in a molecule after the given issue.
 // Returns nil if the issue is not part of a molecule or there are no more steps.
-func findNextMoleculeStep(ctx context.Context, store storage.Storage, issueID string) *storage.Issue {
+func findNextMoleculeStep(ctx context.Context, store issuestorage.IssueStore, issueID string) *issuestorage.Issue {
 	issue, err := store.Get(ctx, issueID)
 	if err != nil || issue.Parent == "" {
 		return nil
@@ -214,7 +214,7 @@ func findNextMoleculeStep(ctx context.Context, store storage.Storage, issueID st
 }
 
 // findUnblockedDependents returns dependents of the given issue that are newly unblocked.
-func findUnblockedDependents(ctx context.Context, store storage.Storage, issueID string) []map[string]string {
+func findUnblockedDependents(ctx context.Context, store issuestorage.IssueStore, issueID string) []map[string]string {
 	issue, err := store.Get(ctx, issueID)
 	if err != nil {
 		return nil
@@ -227,15 +227,15 @@ func findUnblockedDependents(ctx context.Context, store storage.Storage, issueID
 
 	var unblocked []map[string]string
 	for _, dep := range issue.Dependents {
-		if dep.Type != storage.DepTypeBlocks {
+		if dep.Type != issuestorage.DepTypeBlocks {
 			continue
 		}
 		dependent, err := store.Get(ctx, dep.ID)
-		if err != nil || dependent.Status == storage.StatusClosed {
+		if err != nil || dependent.Status == issuestorage.StatusClosed {
 			continue
 		}
 		allResolved := true
-		blocksType := storage.DepTypeBlocks
+		blocksType := issuestorage.DepTypeBlocks
 		for _, blockingID := range dependent.DependencyIDs(&blocksType) {
 			if !closedSet[blockingID] {
 				allResolved = false

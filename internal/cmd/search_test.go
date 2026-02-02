@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage"
-	"beads-lite/internal/storage/filesystem"
+	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issuestorage/filesystem"
 )
 
 func TestSearchCmd_NoArgs(t *testing.T) {
@@ -39,8 +39,8 @@ func TestSearchCmd_NoMatches(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{Title: "First issue"})
-	s.Create(ctx, &storage.Issue{Title: "Second issue"})
+	s.Create(ctx, &issuestorage.Issue{Title: "First issue"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Second issue"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -67,9 +67,9 @@ func TestSearchCmd_MatchTitle(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{Title: "Fix authentication bug"})
-	s.Create(ctx, &storage.Issue{Title: "Add login feature"})
-	s.Create(ctx, &storage.Issue{Title: "Update docs"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Fix authentication bug"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Add login feature"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Update docs"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -100,11 +100,11 @@ func TestSearchCmd_MatchDescription(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{
+	s.Create(ctx, &issuestorage.Issue{
 		Title:       "Generic issue",
 		Description: "This issue involves authentication changes",
 	})
-	s.Create(ctx, &storage.Issue{Title: "Other issue"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -135,11 +135,11 @@ func TestSearchCmd_TitleOnly(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{
+	s.Create(ctx, &issuestorage.Issue{
 		Title:       "Generic issue",
 		Description: "This issue involves authentication changes",
 	})
-	s.Create(ctx, &storage.Issue{Title: "Authentication fix"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Authentication fix"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -174,8 +174,8 @@ func TestSearchCmd_StatusFilter(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{Title: "Open auth issue"})
-	closedID, _ := s.Create(ctx, &storage.Issue{Title: "Closed auth issue"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Open auth issue"})
+	closedID, _ := s.Create(ctx, &issuestorage.Issue{Title: "Closed auth issue"})
 	s.Close(ctx, closedID)
 
 	// Default search includes closed issues.
@@ -240,7 +240,7 @@ func TestSearchCmd_CaseInsensitive(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{Title: "Fix AUTHENTICATION bug"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Fix AUTHENTICATION bug"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -267,9 +267,9 @@ func TestSearchCmd_JSON(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	s.Create(ctx, &storage.Issue{Title: "Auth issue 1"})
-	s.Create(ctx, &storage.Issue{Title: "Auth issue 2"})
-	s.Create(ctx, &storage.Issue{Title: "Other issue"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Auth issue 1"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Auth issue 2"})
+	s.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
 
 	var out bytes.Buffer
 	app := &App{

@@ -1,4 +1,4 @@
-package storage
+package issuestorage
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// ConcurrentTestSuite runs concurrent access tests against a Storage implementation.
+// ConcurrentTestSuite runs concurrent access tests against a IssueStore implementation.
 // Pass a factory function that creates a fresh, initialized storage for each test.
 type ConcurrentTestSuite struct {
-	NewStorage func(t *testing.T) Storage
+	NewStorage func(t *testing.T) IssueStore
 }
 
 // Run executes all concurrent tests.
