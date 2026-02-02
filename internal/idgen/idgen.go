@@ -1,13 +1,11 @@
-// Package idgen implements deterministic, content-based ID generation
-// compatible with the beads ID format.
+// Package idgen implements random ID generation for the beads ID format.
 package idgen
 
 import (
-	"crypto/sha256"
+	"crypto/rand"
 	"fmt"
 	"math"
 	"math/big"
-	"time"
 )
 
 const (
@@ -18,30 +16,22 @@ const (
 	// MaxCollisionProbability is the threshold above which the adaptive length
 	// is increased. Based on the birthday paradox formula.
 	MaxCollisionProbability = 0.25
-	// MaxNonce is the maximum nonce value tried before escalating ID length.
-	MaxNonce = 9
 )
 
-// HashID generates a deterministic ID from the given content fields.
-// The algorithm:
-//  1. Build content string from title, description, creator, timestamp, nonce
-//  2. Compute SHA256 of the content string
-//  3. Take the first N bytes needed for the requested length
-//  4. Interpret as a big-endian integer, mod by 36^length
-//  5. Encode as base36, zero-padded to exactly `length` characters
-func HashID(prefix, title, description, creator string, timestamp time.Time, nonce, length int) string {
-	content := fmt.Sprintf("%s|%s|%s|%d|%d", title, description, creator, timestamp.UnixNano(), nonce)
-	hash := sha256.Sum256([]byte(content))
+// RandomID generates a random ID with the given prefix and length.
+// It uses crypto/rand to generate length random base36 characters.
+// Returns an error if length is outside [MinLength, MaxLength].
+func RandomID(prefix string, length int) (string, error) {
+	if length < MinLength || length > MaxLength {
+		return "", fmt.Errorf("idgen: length %d out of range [%d, %d]", length, MinLength, MaxLength)
+	}
 
-	// Number of bytes needed: ceil(length * 5 / 8).
-	// Each base36 digit encodes ~5.17 bits; we approximate with 5.
-	numBytes := (length*5 + 7) / 8
-
-	n := new(big.Int).SetBytes(hash[:numBytes])
-
-	// Mod by 36^length to produce exactly `length` base36 digits.
+	// Generate a random number in [0, 36^length).
 	mod := new(big.Int).Exp(big.NewInt(36), big.NewInt(int64(length)), nil)
-	n.Mod(n, mod)
+	n, err := rand.Int(rand.Reader, mod)
+	if err != nil {
+		return "", fmt.Errorf("idgen: crypto/rand: %w", err)
+	}
 
 	// Encode as base36, left-pad with zeros to the target length.
 	encoded := n.Text(36)
@@ -49,7 +39,7 @@ func HashID(prefix, title, description, creator string, timestamp time.Time, non
 		encoded = "0" + encoded
 	}
 
-	return prefix + encoded
+	return prefix + encoded, nil
 }
 
 // AdaptiveLength calculates the minimum ID length needed for the given

@@ -19,6 +19,11 @@ import (
 	"beads-lite/internal/issuestorage"
 )
 
+// MaxIDRetries is the maximum number of random ID generation attempts before
+// returning an error. With AdaptiveLength ensuring ≤25% collision probability,
+// P(20 consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
+const MaxIDRetries = 20
+
 // FilesystemStorage implements issuestorage.IssueStore using filesystem-based JSON files.
 type FilesystemStorage struct {
 	root              string // path to .beads directory
@@ -283,48 +288,51 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		return issue.ID, nil
 	}
 
-	// Deterministic content-based ID generation.
+	// Random ID generation with collision retry.
 	// Count existing issues for adaptive length scaling.
 	count, err := fs.countAllIssues()
 	if err != nil {
 		return "", fmt.Errorf("counting issues for adaptive length: %w", err)
 	}
 
-	baseLength := idgen.AdaptiveLength(count)
+	length := idgen.AdaptiveLength(count)
 	now := time.Now()
 
-	// Collision resolution: try nonces 0-9 at each length, then increase length.
-	for length := baseLength; length <= idgen.MaxLength; length++ {
-		for nonce := 0; nonce <= idgen.MaxNonce; nonce++ {
-			id := idgen.HashID(fs.prefix, issue.Title, issue.Description, issue.CreatedBy, now, nonce, length)
-			path := fs.issuePath(id, false)
-
-			// O_EXCL fails if file exists - collision detection
-			f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-			if os.IsExist(err) {
-				continue // Collision, try next nonce
-			}
-			if err != nil {
-				return "", err
-			}
-			f.Close()
-
-			issue.ID = id
-			issue.CreatedAt = now
-			issue.UpdatedAt = now
-			if issue.Status == "" {
-				issue.Status = issuestorage.StatusOpen
-			}
-
-			if err := atomicWriteJSON(path, issue); err != nil {
-				os.Remove(path)
-				return "", err
-			}
-
-			return id, nil
+	// Retry with fresh random IDs on collision.
+	// AdaptiveLength ensures ≤25% collision probability,
+	// so P(MaxIDRetries consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
+	for attempt := 0; attempt < MaxIDRetries; attempt++ {
+		id, err := idgen.RandomID(fs.prefix, length)
+		if err != nil {
+			return "", fmt.Errorf("generating random ID: %w", err)
 		}
+		path := fs.issuePath(id, false)
+
+		// O_EXCL fails if file exists - collision detection
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+		if os.IsExist(err) {
+			continue // Collision, try next random ID
+		}
+		if err != nil {
+			return "", err
+		}
+		f.Close()
+
+		issue.ID = id
+		issue.CreatedAt = now
+		issue.UpdatedAt = now
+		if issue.Status == "" {
+			issue.Status = issuestorage.StatusOpen
+		}
+
+		if err := atomicWriteJSON(path, issue); err != nil {
+			os.Remove(path)
+			return "", err
+		}
+
+		return id, nil
 	}
-	return "", fmt.Errorf("failed to generate unique ID: all nonces exhausted at all lengths up to %d", idgen.MaxLength)
+	return "", fmt.Errorf("failed to generate unique ID: %d retries exhausted at length %d", MaxIDRetries, length)
 }
 
 // Get retrieves an issue by ID.
