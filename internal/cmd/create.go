@@ -73,8 +73,10 @@ Examples:
 					issueType = issuestorage.TypeEpic
 				case "chore":
 					issueType = issuestorage.TypeChore
+				case "gate":
+					issueType = issuestorage.TypeGate
 				default:
-					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore", typeFlag)
+					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate", typeFlag)
 				}
 			}
 
@@ -187,7 +189,7 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&titleFlag, "title", "", "Issue title (required if no positional title is provided)")
-	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "Issue type (task, bug, feature, epic, chore)")
+	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "Issue type (task, bug, feature, epic, chore, gate)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority (0-4 or P0-P4)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Parent issue ID")
 	cmd.Flags().StringSliceVarP(&deps, "deps", "d", nil, "Dependencies in format 'type:id' or 'id' (can repeat)")

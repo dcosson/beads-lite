@@ -90,6 +90,12 @@ type Issue struct {
 	ClosedAt    *time.Time `json:"closed_at,omitempty"`
 	CloseReason string     `json:"close_reason,omitempty"`
 
+	// Gate fields (async coordination primitives)
+	AwaitType string   `json:"await_type,omitempty"`  // "gh:run", "gh:pr", "timer", "human", "bead"
+	AwaitID   string   `json:"await_id,omitempty"`    // external identifier being waited on
+	TimeoutNS int64    `json:"timeout_ns,omitempty"`  // nanoseconds (matches reference impl column name)
+	Waiters   []string `json:"waiters,omitempty"`     // addresses to notify when gate clears
+
 	// Tombstone fields (set when issue is soft-deleted)
 	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
 	DeletedBy    string     `json:"deleted_by,omitempty"`
@@ -208,6 +214,7 @@ const (
 	TypeFeature IssueType = "feature"
 	TypeEpic    IssueType = "epic"
 	TypeChore   IssueType = "chore"
+	TypeGate    IssueType = "gate"
 )
 
 // ListFilter specifies criteria for listing issues.

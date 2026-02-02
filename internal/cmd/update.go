@@ -231,7 +231,7 @@ Examples:
 	cmd.Flags().StringVar(&title, "title", "", "New title")
 	cmd.Flags().StringVar(&description, "description", "", "New description (use - for stdin)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "New priority (0-4 or P0-P4)")
-	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore)")
+	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore, gate)")
 	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, closed)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user (empty string to unassign)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Set parent issue (empty string to remove parent)")
@@ -271,8 +271,10 @@ func parseType(s string) (issuestorage.IssueType, error) {
 		return issuestorage.TypeEpic, nil
 	case "chore":
 		return issuestorage.TypeChore, nil
+	case "gate":
+		return issuestorage.TypeGate, nil
 	default:
-		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore", s)
+		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate", s)
 	}
 }
 

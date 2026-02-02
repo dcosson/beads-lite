@@ -30,6 +30,10 @@ type IssueJSON struct {
 	UpdatedAt       string            `json:"updated_at"`
 	CloseReason     string            `json:"close_reason,omitempty"`
 	ClosedAt        string            `json:"closed_at,omitempty"`
+	AwaitType       string            `json:"await_type,omitempty"`
+	AwaitID         string            `json:"await_id,omitempty"`
+	TimeoutNS       int64             `json:"timeout_ns,omitempty"`
+	Waiters         []string          `json:"waiters,omitempty"`
 }
 
 // EnrichedDepJSON is a dependency with full issue details for JSON output.
@@ -169,6 +173,12 @@ func ToIssueJSON(ctx context.Context, store issuestorage.IssueStore, issue *issu
 	if issue.ClosedAt != nil {
 		out.ClosedAt = formatTime(*issue.ClosedAt)
 	}
+
+	// Gate fields
+	out.AwaitType = issue.AwaitType
+	out.AwaitID = issue.AwaitID
+	out.TimeoutNS = issue.TimeoutNS
+	out.Waiters = issue.Waiters
 
 	// Comments
 	if len(issue.Comments) > 0 {

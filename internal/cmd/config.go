@@ -273,6 +273,7 @@ var validTypes = map[string]bool{
 	"feature": true,
 	"epic":    true,
 	"chore":   true,
+	"gate":    true,
 }
 
 // configValidators maps known keys to their validation functions.
