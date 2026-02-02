@@ -34,6 +34,7 @@ func newGateCmd(provider *AppProvider) *cobra.Command {
 	cmd.AddCommand(newGateWaitCmd(provider))
 	cmd.AddCommand(newGateAddWaiterCmd(provider))
 	cmd.AddCommand(newGateResolveCmd(provider))
+	cmd.AddCommand(newGateCheckCmd(provider))
 
 	return cmd
 }
