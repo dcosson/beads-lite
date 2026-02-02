@@ -20,18 +20,3 @@ func TestFilesystemContract(t *testing.T) {
 	}
 	issuestorage.RunContractTests(t, factory)
 }
-
-// TestFilesystemConcurrent runs the concurrent access tests against FilesystemStorage.
-func TestFilesystemConcurrent(t *testing.T) {
-	suite := &issuestorage.ConcurrentTestSuite{
-		NewStorage: func(t *testing.T) issuestorage.IssueStore {
-			dir := t.TempDir()
-			fs := filesystem.New(dir, "bd-")
-			if err := fs.Init(context.Background()); err != nil {
-				t.Fatalf("Init failed: %v", err)
-			}
-			return fs
-		},
-	}
-	suite.Run(t)
-}

@@ -118,5 +118,9 @@ func projectRoot() string {
 	if filepath.Base(dir) == "e2etests" {
 		return filepath.Dir(dir)
 	}
+	// If running from a subdirectory of e2etests/ (e.g. e2etests/concurrency/)
+	if filepath.Base(filepath.Dir(dir)) == "e2etests" {
+		return filepath.Dir(filepath.Dir(dir))
+	}
 	return dir
 }
