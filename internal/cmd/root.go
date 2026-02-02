@@ -189,6 +189,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newVersionCmd(provider))
 	rootCmd.AddCommand(newPrimeCmd(provider))
 	rootCmd.AddCommand(newImportCmd(provider))
+	rootCmd.AddCommand(newGateCmd(provider))
 
 	return rootCmd
 }
