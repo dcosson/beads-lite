@@ -306,45 +306,6 @@ func outputDepListJSON(app *App, ctx context.Context, issue *issuestorage.Issue,
 	return json.NewEncoder(app.Out).Encode(result)
 }
 
-// depTreeNode represents a node in the dependency tree for JSON output.
-type depTreeNode struct {
-	ID       string         `json:"id"`
-	Title    string         `json:"title"`
-	Status   string         `json:"status"`
-	Children []*depTreeNode `json:"dependencies,omitempty"`
-}
-
-// buildDepTree recursively builds a dependency tree.
-func buildDepTree(store issuestorage.IssueStore, ctx context.Context, issue *issuestorage.Issue, visited map[string]bool) *depTreeNode {
-	node := &depTreeNode{
-		ID:     issue.ID,
-		Title:  issue.Title,
-		Status: string(issue.Status),
-	}
-
-	// Prevent cycles
-	if visited[issue.ID] {
-		return node
-	}
-	visited[issue.ID] = true
-
-	// Recursively add dependencies
-	for _, dep := range issue.Dependencies {
-		depIssue, err := store.Get(ctx, dep.ID)
-		if err != nil {
-			node.Children = append(node.Children, &depTreeNode{
-				ID:     dep.ID,
-				Title:  "(error loading)",
-				Status: "unknown",
-			})
-			continue
-		}
-		node.Children = append(node.Children, buildDepTree(store, ctx, depIssue, visited))
-	}
-
-	return node
-}
-
 // outputDepListText outputs dependency list in text format.
 func outputDepListText(app *App, ctx context.Context, issue *issuestorage.Issue, tree bool, direction string, typeFilter *issuestorage.DependencyType) error {
 	fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)

@@ -268,7 +268,7 @@ func testList(t *testing.T, s IssueStore) {
 	}
 
 	// List with nil filter should return open issues (default behavior)
-	issues, err = s.List(ctx, nil)
+	_, err = s.List(ctx, nil)
 	if err != nil {
 		t.Fatalf("List nil filter: %v", err)
 	}

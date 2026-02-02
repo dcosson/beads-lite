@@ -1167,25 +1167,6 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	return problems, nil
 }
 
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-func remove(slice []string, item string) []string {
-	result := make([]string, 0, len(slice))
-	for _, s := range slice {
-		if s != item {
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
 // removeDep removes a dependency entry by ID from a Dependency slice.
 func removeDep(deps []issuestorage.Dependency, id string) []issuestorage.Dependency {
 	result := make([]issuestorage.Dependency, 0, len(deps))

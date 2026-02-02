@@ -289,7 +289,6 @@ func TestSlotClearJSON(t *testing.T) {
 
 func TestSlotShowWithTitles(t *testing.T) {
 	app, store := setupSlotTestApp(t)
-	out := app.Out.(*bytes.Buffer)
 	ctx := context.Background()
 
 	beadID, _ := store.Create(ctx, &issuestorage.Issue{
@@ -303,7 +302,7 @@ func TestSlotShowWithTitles(t *testing.T) {
 	}
 
 	app.Out = &bytes.Buffer{}
-	out = app.Out.(*bytes.Buffer)
+	out := app.Out.(*bytes.Buffer)
 
 	showCmd := newSlotShowCmd(NewTestProvider(app))
 	showCmd.SetArgs([]string{"agent-1"})

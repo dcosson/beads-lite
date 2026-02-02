@@ -95,7 +95,7 @@ func TestIssueGenerator_GenerateDependencyChain_Empty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateDependencyChain(0) failed: %v", err)
 	}
-	if ids != nil && len(ids) != 0 {
+	if len(ids) != 0 {
 		t.Errorf("expected nil or empty slice for length 0, got %v", ids)
 	}
 }
