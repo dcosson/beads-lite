@@ -226,7 +226,7 @@ type ListFilter struct {
 type Storage interface {
 	// Create creates a new issue and returns its ID.
 	// If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
-	// Otherwise, a random ID is generated.
+	// Otherwise, a deterministic content-based ID is generated.
 	Create(ctx context.Context, issue *Issue) (string, error)
 
 	// Get retrieves an issue by ID.
