@@ -26,6 +26,7 @@ Use subcommands to create, inspect, and clean up molecules.
 Subcommands:
   pour      Pour a formula to create a molecule
   wisp      Pour an ephemeral (temporary) molecule
+  seed      Preflight check: verify formula files are valid
   current   Show current steps for a molecule
   progress  Show completion statistics
   stale     Find blocking/stale steps
@@ -43,6 +44,7 @@ Subcommands:
 	cmd.AddCommand(newMolBurnCmd(provider))
 	cmd.AddCommand(newMolSquashCmd(provider))
 	cmd.AddCommand(newMolGCCmd(provider))
+	cmd.AddCommand(newMolSeedCmd(provider))
 
 	return cmd
 }

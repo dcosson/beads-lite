@@ -436,7 +436,7 @@ func TestMolSubcommandRegistration(t *testing.T) {
 	app, _ := setupTestApp(t)
 	cmd := newMolCmd(NewTestProvider(app))
 
-	expectedSubs := []string{"pour", "wisp", "current", "progress", "stale", "burn", "squash", "gc"}
+	expectedSubs := []string{"pour", "wisp", "seed", "current", "progress", "stale", "burn", "squash", "gc"}
 	for _, name := range expectedSubs {
 		found := false
 		for _, sub := range cmd.Commands() {
