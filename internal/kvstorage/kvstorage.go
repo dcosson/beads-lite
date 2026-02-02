@@ -14,17 +14,15 @@ import (
 // Each store operates on a single "table" (a named directory under .beads/).
 type KVStore interface {
 	// Set stores a value for the given key.
-	// If opts.FailIfExists is true and the key already exists, returns ErrAlreadyExists.
-	// Otherwise, overwrites the existing value.
+	// Behavior depends on opts.Exists:
+	//   SetAlways (default): create or overwrite.
+	//   FailIfExists: return ErrAlreadyExists if the key is already present.
+	//   FailIfNotExists: return ErrKeyNotFound if the key doesn't exist.
 	Set(ctx context.Context, key string, value []byte, opts SetOptions) error
 
 	// Get retrieves the value for the given key.
 	// Returns ErrKeyNotFound if the key doesn't exist.
 	Get(ctx context.Context, key string) ([]byte, error)
-
-	// Update replaces the value for an existing key.
-	// Returns ErrKeyNotFound if the key doesn't exist.
-	Update(ctx context.Context, key string, value []byte) error
 
 	// Delete removes a key and its value.
 	// Returns ErrKeyNotFound if the key doesn't exist.
@@ -34,10 +32,18 @@ type KVStore interface {
 	List(ctx context.Context) ([]string, error)
 }
 
+// ExistsBehavior controls how Set handles pre-existing keys.
+type ExistsBehavior int
+
+const (
+	SetAlways       ExistsBehavior = iota // create or overwrite (default)
+	FailIfExists                          // create semantics: error if key already exists
+	FailIfNotExists                       // update semantics: error if key doesn't exist
+)
+
 // SetOptions controls Set behavior.
 type SetOptions struct {
-	// FailIfExists causes Set to return ErrAlreadyExists if the key is already present.
-	FailIfExists bool
+	Exists ExistsBehavior
 }
 
 // ReservedTableNames are directory names used by issue storage.

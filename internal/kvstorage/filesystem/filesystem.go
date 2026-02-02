@@ -41,9 +41,14 @@ func (s *Store) Set(ctx context.Context, key string, value []byte, opts kvstorag
 		return err
 	}
 	path := s.keyPath(key)
-	if opts.FailIfExists {
+	switch opts.Exists {
+	case kvstorage.FailIfExists:
 		if _, err := os.Stat(path); err == nil {
 			return fmt.Errorf("key %q: %w", key, kvstorage.ErrAlreadyExists)
+		}
+	case kvstorage.FailIfNotExists:
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return fmt.Errorf("key %q: %w", key, kvstorage.ErrKeyNotFound)
 		}
 	}
 	return atomicWrite(path, value)
@@ -62,18 +67,6 @@ func (s *Store) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
-}
-
-// Update replaces the value for an existing key.
-func (s *Store) Update(ctx context.Context, key string, value []byte) error {
-	if err := validateKey(key); err != nil {
-		return err
-	}
-	path := s.keyPath(key)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return fmt.Errorf("key %q: %w", key, kvstorage.ErrKeyNotFound)
-	}
-	return atomicWrite(path, value)
 }
 
 // Delete removes a key and its value.
