@@ -321,8 +321,16 @@ func gateAddWaiter(provider *AppProvider, cmd *cobra.Command, gateID, waiter str
 	}
 
 	// Append and persist
-	issue.Waiters = append(issue.Waiters, waiter)
-	if err := store.Update(ctx, issue); err != nil {
+	if err := store.Modify(ctx, gateID, func(i *issuestorage.Issue) error {
+		// Re-check for duplicate under lock
+		for _, w := range i.Waiters {
+			if w == waiter {
+				return nil
+			}
+		}
+		i.Waiters = append(i.Waiters, waiter)
+		return nil
+	}); err != nil {
 		return fmt.Errorf("updating issue: %w", err)
 	}
 
@@ -384,21 +392,15 @@ Examples:
 				return fmt.Errorf("gate %s is already closed", gateID)
 			}
 
-			// Close the gate (same path as bd close)
-			if err := store.Close(ctx, gateID); err != nil {
+			// Close the gate
+			if err := store.Modify(ctx, gateID, func(i *issuestorage.Issue) error {
+				i.Status = issuestorage.StatusClosed
+				if reason != "" {
+					i.CloseReason = reason
+				}
+				return nil
+			}); err != nil {
 				return fmt.Errorf("closing gate %s: %w", gateID, err)
-			}
-
-			// If --reason was provided, update the close reason on the now-closed issue
-			if reason != "" {
-				closed, err := store.Get(ctx, gateID)
-				if err != nil {
-					return fmt.Errorf("updating close reason for %s: %w", gateID, err)
-				}
-				closed.CloseReason = reason
-				if err := store.Update(ctx, closed); err != nil {
-					return fmt.Errorf("updating close reason for %s: %w", gateID, err)
-				}
 			}
 
 			// Output

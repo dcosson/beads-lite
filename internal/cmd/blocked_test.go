@@ -192,7 +192,7 @@ func TestBlockedClosedDependency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(ctx, depID); err != nil {
+	if err := store.Modify(ctx, depID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 

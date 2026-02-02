@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"beads-lite/internal/issuestorage"
+
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +36,10 @@ Examples:
 				return fmt.Errorf("routing issue %s: %w", issueID, err)
 			}
 
-			if err := store.Reopen(ctx, issueID); err != nil {
+			if err := store.Modify(ctx, issueID, func(i *issuestorage.Issue) error {
+				i.Status = issuestorage.StatusOpen
+				return nil
+			}); err != nil {
 				return fmt.Errorf("reopening issue %s: %w", issueID, err)
 			}
 

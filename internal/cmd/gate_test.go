@@ -346,9 +346,10 @@ func TestGateWaitDedup(t *testing.T) {
 	gateID := createTestGate(t, store)
 
 	// Pre-populate a waiter
-	issue, _ := store.Get(context.Background(), gateID)
-	issue.Waiters = []string{"beads_lite/polecats/onyx"}
-	if err := store.Update(context.Background(), issue); err != nil {
+	if err := store.Modify(context.Background(), gateID, func(i *issuestorage.Issue) error {
+		i.Waiters = []string{"beads_lite/polecats/onyx"}
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to seed waiter: %v", err)
 	}
 
@@ -363,7 +364,7 @@ func TestGateWaitDedup(t *testing.T) {
 		t.Errorf("expected dedup message, got %q", out.String())
 	}
 
-	issue, _ = store.Get(context.Background(), gateID)
+	issue, _ := store.Get(context.Background(), gateID)
 	if len(issue.Waiters) != 1 {
 		t.Errorf("expected 1 waiter after dedup, got %d", len(issue.Waiters))
 	}
@@ -414,9 +415,10 @@ func TestGateWaitDedupJSON(t *testing.T) {
 	gateID := createTestGate(t, store)
 
 	// Pre-populate a waiter
-	issue, _ := store.Get(context.Background(), gateID)
-	issue.Waiters = []string{"beads_lite/polecats/onyx"}
-	if err := store.Update(context.Background(), issue); err != nil {
+	if err := store.Modify(context.Background(), gateID, func(i *issuestorage.Issue) error {
+		i.Waiters = []string{"beads_lite/polecats/onyx"}
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to seed waiter: %v", err)
 	}
 
@@ -495,7 +497,10 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create gate: %v", err)
 	}
-	if err := store.Close(ctx, closedGateID); err != nil {
+	if err := store.Modify(ctx, closedGateID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close gate: %v", err)
 	}
 
@@ -562,7 +567,10 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create gate: %v", err)
 	}
-	if err := store.Close(ctx, closedGateID); err != nil {
+	if err := store.Modify(ctx, closedGateID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close gate: %v", err)
 	}
 
@@ -889,7 +897,10 @@ func TestGateResolveAlreadyClosed(t *testing.T) {
 		t.Fatalf("failed to create gate: %v", err)
 	}
 
-	if err := store.Close(context.Background(), id); err != nil {
+	if err := store.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close gate: %v", err)
 	}
 

@@ -114,7 +114,10 @@ func burnIssue(ctx context.Context, store issuestorage.IssueStore, issue *issues
 	}
 	// Persistent: close to create tombstone in closed/ directory.
 	if issue.Status != issuestorage.StatusClosed {
-		return store.Close(ctx, issue.ID)
+		return store.Modify(ctx, issue.ID, func(i *issuestorage.Issue) error {
+			i.Status = issuestorage.StatusClosed
+			return nil
+		})
 	}
 	return nil
 }

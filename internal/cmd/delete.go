@@ -388,16 +388,13 @@ func rewriteTextReferences(ctx context.Context, store issuestorage.IssueStore, d
 			continue
 		}
 
-		updated := false
 		newDesc := pattern.ReplaceAllString(connIssue.Description, replacement)
 		if newDesc != connIssue.Description {
-			connIssue.Description = newDesc
-			updated = true
+			store.Modify(ctx, connID, func(i *issuestorage.Issue) error {
+				i.Description = pattern.ReplaceAllString(i.Description, replacement)
+				return nil
+			})
 			count++
-		}
-
-		if updated {
-			store.Update(ctx, connIssue)
 		}
 	}
 

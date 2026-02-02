@@ -59,9 +59,10 @@ func TestGateCheckTimerExpired(t *testing.T) {
 	}
 
 	// Backdate the gate's creation time so the timer is expired
-	gate, _ := store.Get(ctx, id)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	if err := store.Update(ctx, gate); err != nil {
+	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to backdate gate: %v", err)
 	}
 
@@ -170,9 +171,10 @@ func TestGateCheckTimerExpiredWithEscalate(t *testing.T) {
 		t.Fatalf("failed to create gate: %v", err)
 	}
 
-	gate, _ := store.Get(ctx, id)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	if err := store.Update(ctx, gate); err != nil {
+	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to backdate gate: %v", err)
 	}
 
@@ -271,7 +273,10 @@ func TestGateCheckBeadClosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create target bead: %v", err)
 	}
-	if err := store.Close(ctx, targetID); err != nil {
+	if err := store.Modify(ctx, targetID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close target bead: %v", err)
 	}
 
@@ -802,9 +807,10 @@ func TestGateCheckTypeFilter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create timer gate: %v", err)
 	}
-	gate, _ := store.Get(ctx, timerID)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	if err := store.Update(ctx, gate); err != nil {
+	if err := store.Modify(ctx, timerID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to backdate: %v", err)
 	}
 
@@ -855,9 +861,10 @@ func TestGateCheckDryRun(t *testing.T) {
 		t.Fatalf("failed to create gate: %v", err)
 	}
 
-	gate, _ := store.Get(ctx, id)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	if err := store.Update(ctx, gate); err != nil {
+	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to backdate: %v", err)
 	}
 
@@ -923,9 +930,10 @@ func TestGateCheckJSONOutput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create gate: %v", err)
 	}
-	gate, _ := store.Get(ctx, id)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	if err := store.Update(ctx, gate); err != nil {
+	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to backdate: %v", err)
 	}
 
@@ -1089,9 +1097,10 @@ func TestGateCheckMultipleGatesMixed(t *testing.T) {
 		AwaitType: "timer",
 		TimeoutNS: int64(1 * time.Hour),
 	})
-	gate, _ := store.Get(ctx, timerID)
-	gate.CreatedAt = time.Now().Add(-2 * time.Hour)
-	store.Update(ctx, gate)
+	store.Modify(ctx, timerID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-2 * time.Hour)
+		return nil
+	})
 
 	// Human → skipped
 	store.Create(ctx, &issuestorage.Issue{

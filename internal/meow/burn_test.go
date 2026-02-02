@@ -43,8 +43,10 @@ func TestBurn_PersistentMolecule(t *testing.T) {
 
 	// Create root epic + persistent children.
 	root := createBurnIssue(t, ctx, s, "Root", false)
-	root.Type = issuestorage.TypeEpic
-	if err := s.Update(ctx, root); err != nil {
+	if err := s.Modify(ctx, root.ID, func(i *issuestorage.Issue) error {
+		i.Type = issuestorage.TypeEpic
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 

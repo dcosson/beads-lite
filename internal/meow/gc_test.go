@@ -41,13 +41,11 @@ func createGCIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore,
 // ageIssue backdates an issue's CreatedAt to simulate an old issue.
 func ageIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, issue *issuestorage.Issue, age time.Duration) {
 	t.Helper()
-	fresh, err := s.Get(ctx, issue.ID)
-	if err != nil {
-		t.Fatalf("Get %s: %v", issue.ID, err)
-	}
-	fresh.CreatedAt = time.Now().Add(-age)
-	if err := s.Update(ctx, fresh); err != nil {
-		t.Fatalf("Update %s: %v", issue.ID, err)
+	if err := s.Modify(ctx, issue.ID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Now().Add(-age)
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify %s: %v", issue.ID, err)
 	}
 }
 

@@ -113,8 +113,10 @@ Examples:
 			}
 
 			// Update description
-			issue.Description = newDescription
-			if err := store.Update(ctx, issue); err != nil {
+			if err := store.Modify(ctx, issue.ID, func(i *issuestorage.Issue) error {
+				i.Description = newDescription
+				return nil
+			}); err != nil {
 				return fmt.Errorf("updating issue: %w", err)
 			}
 

@@ -302,7 +302,10 @@ func TestSwarmStatus(t *testing.T) {
 
 	// Close A to make B ready
 	ctx := context.Background()
-	if err := store.Close(ctx, byTitle["A"]); err != nil {
+	if err := store.Modify(ctx, byTitle["A"], func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("close A: %v", err)
 	}
 
@@ -330,7 +333,10 @@ func TestSwarmStatus_JSON(t *testing.T) {
 	})
 
 	ctx := context.Background()
-	if err := store.Close(ctx, byTitle["A"]); err != nil {
+	if err := store.Modify(ctx, byTitle["A"], func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("close A: %v", err)
 	}
 

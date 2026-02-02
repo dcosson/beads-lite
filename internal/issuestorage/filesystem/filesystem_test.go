@@ -287,13 +287,10 @@ func TestFilesystemStorage_ConcurrentWrites(t *testing.T) {
 	for i := 0; i < numWriters; i++ {
 		go func(workerID int) {
 			for j := 0; j < writesPerWorker; j++ {
-				got, err := s.Get(ctx, id)
-				if err != nil {
-					errChan <- err
-					continue
-				}
-				got.Description = got.Description + "x"
-				if err := s.Update(ctx, got); err != nil {
+				if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error {
+					i.Description = i.Description + "x"
+					return nil
+				}); err != nil {
 					errChan <- err
 					continue
 				}
@@ -462,7 +459,7 @@ func TestClose(t *testing.T) {
 	ctx := context.Background()
 
 	// Close non-existent issue should return ErrNotFound
-	err := s.Close(ctx, "nonexistent-id")
+	err := s.Modify(ctx, "nonexistent-id", func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 	if err != issuestorage.ErrNotFound {
 		t.Errorf("Close non-existent: got %v, want ErrNotFound", err)
 	}
@@ -480,7 +477,7 @@ func TestClose(t *testing.T) {
 	}
 
 	// Close it
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -513,12 +510,12 @@ func TestReopen(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
 	// Reopen it
-	if err := s.Reopen(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusOpen; return nil }); err != nil {
 		t.Fatalf("Reopen failed: %v", err)
 	}
 
@@ -564,7 +561,7 @@ func TestCloseMovesFile(t *testing.T) {
 	}
 
 	// Close the issue
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -621,10 +618,10 @@ func TestReopenMovesFile(t *testing.T) {
 	}
 
 	// Close then reopen
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
-	if err := s.Reopen(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusOpen; return nil }); err != nil {
 		t.Fatalf("Reopen failed: %v", err)
 	}
 
@@ -645,7 +642,7 @@ func TestReopenNonExistent(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
-	err := s.Reopen(ctx, "nonexistent-id")
+	err := s.Modify(ctx, "nonexistent-id", func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusOpen; return nil })
 	if err != issuestorage.ErrNotFound {
 		t.Errorf("Reopen non-existent: got %v, want ErrNotFound", err)
 	}
@@ -671,7 +668,7 @@ func TestCloseAndGetPreservesData(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -727,7 +724,7 @@ func TestListExcludesClosedByDefault(t *testing.T) {
 	}
 
 	// Close one
-	if err := s.Close(ctx, id2); err != nil {
+	if err := s.Modify(ctx, id2, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -761,7 +758,7 @@ func TestListClosedFilter(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -1204,7 +1201,7 @@ func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
 	createIssueWithID(t, s, child1ID, "Child 1")
 
 	// Close child .1 (soft delete)
-	if err := s.Close(ctx, child1ID); err != nil {
+	if err := s.Modify(ctx, child1ID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close child 1 failed: %v", err)
 	}
 
@@ -1447,16 +1444,15 @@ func TestStaleLockCleanup(t *testing.T) {
 		t.Fatal("Stale lock file should exist")
 	}
 
-	// Now perform an operation - it should clean up the stale lock
-	issue, _ = s.Get(ctx, id)
-	issue.Title = "Updated"
-	if err := s.Update(ctx, issue); err != nil {
-		t.Fatalf("Update failed: %v", err)
+	// Modify uses flock on the data file, not separate lock files.
+	// Stale lock cleanup happens on Init. Re-init to clean up.
+	if err := s.Init(ctx); err != nil {
+		t.Fatalf("Init failed: %v", err)
 	}
 
-	// Lock file should be cleaned up after the operation
+	// Lock file should be cleaned up by Init
 	if fileExists(staleLockPath) {
-		t.Error("Stale lock file should be cleaned up after Update")
+		t.Error("Stale lock file should be cleaned up by Init")
 	}
 }
 
@@ -1496,8 +1492,8 @@ func TestStaleLockCleanupOnInit(t *testing.T) {
 	}
 }
 
-// TestLockFileCleanupAfterUpdate verifies that lock files are removed after Update operations.
-func TestLockFileCleanupAfterUpdate(t *testing.T) {
+// TestLockFileCleanupAfterModify verifies that lock files are removed after Modify operations.
+func TestLockFileCleanupAfterModify(t *testing.T) {
 	dir := t.TempDir()
 	s := New(dir, "bd-")
 	ctx := context.Background()
@@ -1513,17 +1509,18 @@ func TestLockFileCleanupAfterUpdate(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Update the issue
-	issue, _ = s.Get(ctx, id)
-	issue.Title = "Updated title"
-	if err := s.Update(ctx, issue); err != nil {
-		t.Fatalf("Update failed: %v", err)
+	// Modify the issue
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.Title = "Updated title"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify failed: %v", err)
 	}
 
 	// Check that no lock file remains
 	lockPath := filepath.Join(dir, "open", id+".lock")
 	if fileExists(lockPath) {
-		t.Errorf("Lock file should be cleaned up after Update, but %s still exists", lockPath)
+		t.Errorf("Lock file should be cleaned up after Modify, but %s still exists", lockPath)
 	}
 }
 

@@ -35,7 +35,7 @@ func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(ctx, closedID); err != nil {
+	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(ctx, closedID); err != nil {
+	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -134,7 +134,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(ctx, closedID); err != nil {
+	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -187,9 +187,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Update status to in-progress
-	issue, _ := store.Get(ctx, inProgressID)
-	issue.Status = issuestorage.StatusInProgress
-	store.Update(ctx, issue)
+	store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
 
 	var out bytes.Buffer
 	app := &App{

@@ -445,7 +445,10 @@ func TestDoctorCleanStorage(t *testing.T) {
 	fs.AddDependency(ctx, idA, idB, issuestorage.DepTypeBlocks)
 
 	// Close one issue properly
-	fs.Close(ctx, idB)
+	fs.Modify(ctx, idB, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	})
 
 	// Doctor should report no problems
 	problems, err := fs.Doctor(ctx, false)

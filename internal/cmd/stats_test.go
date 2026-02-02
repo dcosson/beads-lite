@@ -66,8 +66,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 		}
 		// Update status after create (create sets to open by default)
 		if issue.Status != issuestorage.StatusOpen {
-			issueCopy.ID = id
-			if err := s.Update(ctx, &issueCopy); err != nil {
+			if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issue.Status; return nil }); err != nil {
 				t.Fatalf("failed to update issue: %v", err)
 			}
 		}
@@ -78,7 +77,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := s.Close(ctx, closeID); err != nil {
+	if err := s.Modify(ctx, closeID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -126,7 +125,7 @@ func TestStatsCmd_JSON(t *testing.T) {
 	s.Create(ctx, &issuestorage.Issue{Title: "Issue 1"})
 	s.Create(ctx, &issuestorage.Issue{Title: "Issue 2"})
 	id, _ := s.Create(ctx, &issuestorage.Issue{Title: "Issue 3"})
-	s.Close(ctx, id)
+	s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	var out bytes.Buffer
 	app := &App{

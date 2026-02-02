@@ -92,19 +92,14 @@ func Squash(ctx context.Context, store issuestorage.IssueStore, opts SquashOptio
 		return nil, fmt.Errorf("add parent-child dep for digest: %w", err)
 	}
 
-	// Close the digest immediately. store.Close overwrites CloseReason,
-	// so re-apply our squash-specific reason afterwards.
+	// Close the digest immediately with the squash-specific reason.
 	closeReason := digest.CloseReason
-	if err := store.Close(ctx, digestID); err != nil {
+	if err := store.Modify(ctx, digestID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		i.CloseReason = closeReason
+		return nil
+	}); err != nil {
 		return nil, fmt.Errorf("close digest issue: %w", err)
-	}
-	closed, err := store.Get(ctx, digestID)
-	if err != nil {
-		return nil, fmt.Errorf("reload closed digest: %w", err)
-	}
-	closed.CloseReason = closeReason
-	if err := store.Update(ctx, closed); err != nil {
-		return nil, fmt.Errorf("set digest close reason: %w", err)
 	}
 
 	// 6. Post-squash: handle ephemeral children.
@@ -116,8 +111,10 @@ func Squash(ctx context.Context, store issuestorage.IssueStore, opts SquashOptio
 	if opts.KeepChildren {
 		// Promote ephemeral children to persistent.
 		for _, child := range ephemeral {
-			child.Ephemeral = false
-			if err := store.Update(ctx, child); err != nil {
+			if err := store.Modify(ctx, child.ID, func(i *issuestorage.Issue) error {
+				i.Ephemeral = false
+				return nil
+			}); err != nil {
 				return nil, fmt.Errorf("promote child %s: %w", child.ID, err)
 			}
 		}

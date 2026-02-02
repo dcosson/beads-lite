@@ -18,11 +18,11 @@ func TestCompactDryRun(t *testing.T) {
 	// Create and close some issues
 	issue1 := &issuestorage.Issue{Title: "Closed issue 1", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(context.Background(), issue1)
-	store.Close(context.Background(), id1)
+	store.Modify(context.Background(), id1, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	issue2 := &issuestorage.Issue{Title: "Closed issue 2", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(context.Background(), issue2)
-	store.Close(context.Background(), id2)
+	store.Modify(context.Background(), id2, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	// Keep one open
 	issue3 := &issuestorage.Issue{Title: "Open issue", Type: issuestorage.TypeTask}
@@ -62,7 +62,7 @@ func TestCompactWithForce(t *testing.T) {
 	// Create and close an issue
 	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
-	store.Close(context.Background(), id)
+	store.Modify(context.Background(), id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--force"})
@@ -103,18 +103,16 @@ func TestCompactOlderThan(t *testing.T) {
 	// Create and close an issue, then manually set its ClosedAt to be old
 	issue1 := &issuestorage.Issue{Title: "Old closed issue", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(ctx, issue1)
-	store.Close(ctx, id1)
+	store.Modify(ctx, id1, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
-	// Fetch and update ClosedAt to 60 days ago
-	oldIssue, _ := store.Get(ctx, id1)
+	// Update ClosedAt to 60 days ago
 	oldTime := time.Now().Add(-60 * 24 * time.Hour)
-	oldIssue.ClosedAt = &oldTime
-	store.Update(ctx, oldIssue)
+	store.Modify(ctx, id1, func(i *issuestorage.Issue) error { i.ClosedAt = &oldTime; return nil })
 
 	// Create a recently closed issue
 	issue2 := &issuestorage.Issue{Title: "Recent closed issue", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(ctx, issue2)
-	store.Close(ctx, id2)
+	store.Modify(ctx, id2, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--older-than", "30d", "--force"})
@@ -142,17 +140,15 @@ func TestCompactBefore(t *testing.T) {
 	// Create and close an issue with old ClosedAt
 	issue1 := &issuestorage.Issue{Title: "Old closed issue", Type: issuestorage.TypeTask}
 	id1, _ := store.Create(ctx, issue1)
-	store.Close(ctx, id1)
+	store.Modify(ctx, id1, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
-	oldIssue, _ := store.Get(ctx, id1)
 	oldTime := time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC)
-	oldIssue.ClosedAt = &oldTime
-	store.Update(ctx, oldIssue)
+	store.Modify(ctx, id1, func(i *issuestorage.Issue) error { i.ClosedAt = &oldTime; return nil })
 
 	// Create a recently closed issue
 	issue2 := &issuestorage.Issue{Title: "Recent closed issue", Type: issuestorage.TypeTask}
 	id2, _ := store.Create(ctx, issue2)
-	store.Close(ctx, id2)
+	store.Modify(ctx, id2, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--before", "2024-01-01", "--force"})
@@ -181,7 +177,7 @@ func TestCompactJSONOutput(t *testing.T) {
 	// Create and close an issue
 	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
-	store.Close(context.Background(), id)
+	store.Modify(context.Background(), id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--force"})
@@ -212,7 +208,7 @@ func TestCompactDryRunJSONOutput(t *testing.T) {
 	// Create and close an issue
 	issue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	id, _ := store.Create(context.Background(), issue)
-	store.Close(context.Background(), id)
+	store.Modify(context.Background(), id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--dry-run"})
@@ -333,7 +329,7 @@ func TestCompactPreservesOpenIssues(t *testing.T) {
 	// Create closed issue
 	closedIssue := &issuestorage.Issue{Title: "Closed issue", Type: issuestorage.TypeTask}
 	closedID, _ := store.Create(ctx, closedIssue)
-	store.Close(ctx, closedID)
+	store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	cmd := newCompactCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{"--force"})

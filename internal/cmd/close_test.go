@@ -253,16 +253,19 @@ func TestCloseAlreadyClosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(context.Background(), id); err != nil {
+	if err := store.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
-	// Try to close again - should return an error since file is no longer in open/
+	// Closing again via Modify is idempotent — should succeed without error
 	cmd := newCloseCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{id})
 	err = cmd.Execute()
-	if err == nil {
-		t.Error("expected error when closing already-closed issue")
+	if err != nil {
+		t.Errorf("closing already-closed issue should succeed (idempotent), got: %v", err)
 	}
 }
 
@@ -450,10 +453,16 @@ func TestCloseContinueEndOfMolecule(t *testing.T) {
 	_, idA, idB, idC := setupMolecule(t, store)
 
 	// Close A and B first so C is the last step
-	if err := store.Close(ctx, idA); err != nil {
+	if err := store.Modify(ctx, idA, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close A: %v", err)
 	}
-	if err := store.Close(ctx, idB); err != nil {
+	if err := store.Modify(ctx, idB, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close B: %v", err)
 	}
 

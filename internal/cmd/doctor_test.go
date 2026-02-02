@@ -59,10 +59,12 @@ func TestDoctorCmd_WithProblems(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Update with the broken parent reference
-	issue.ID = id
-	if err := s.Update(context.Background(), issue); err != nil {
-		t.Fatalf("failed to update issue: %v", err)
+	// Ensure the broken parent reference is set
+	if err := s.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Parent = "bd-nonexistent"
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to modify issue: %v", err)
 	}
 
 	var out bytes.Buffer
@@ -133,10 +135,12 @@ func TestDoctorCmd_Fix(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	// Update with the broken parent reference
-	issue.ID = id
-	if err := s.Update(context.Background(), issue); err != nil {
-		t.Fatalf("failed to update issue: %v", err)
+	// Ensure the broken parent reference is set
+	if err := s.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Parent = "bd-nonexistent"
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to modify issue: %v", err)
 	}
 
 	var out bytes.Buffer

@@ -268,7 +268,7 @@ func TestShowClosedIssue(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	if err := store.Close(ctx, id); err != nil {
+	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 

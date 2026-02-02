@@ -176,7 +176,7 @@ func TestSearchCmd_StatusFilter(t *testing.T) {
 
 	s.Create(ctx, &issuestorage.Issue{Title: "Open auth issue"})
 	closedID, _ := s.Create(ctx, &issuestorage.Issue{Title: "Closed auth issue"})
-	s.Close(ctx, closedID)
+	s.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	// Default search includes closed issues.
 	var out bytes.Buffer

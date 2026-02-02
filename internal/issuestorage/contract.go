@@ -13,10 +13,10 @@ import (
 func RunContractTests(t *testing.T, factory func() IssueStore) {
 	t.Run("Create", func(t *testing.T) { testCreate(t, factory()) })
 	t.Run("Get", func(t *testing.T) { testGet(t, factory()) })
-	t.Run("Update", func(t *testing.T) { testUpdate(t, factory()) })
+	t.Run("Modify", func(t *testing.T) { testModify(t, factory()) })
 	t.Run("Delete", func(t *testing.T) { testDelete(t, factory()) })
 	t.Run("List", func(t *testing.T) { testList(t, factory()) })
-	t.Run("Close", func(t *testing.T) { testClose(t, factory()) })
+	t.Run("CloseReopen", func(t *testing.T) { testCloseReopen(t, factory()) })
 	t.Run("Dependencies", func(t *testing.T) { testDependencies(t, factory()) })
 	t.Run("Hierarchy", func(t *testing.T) { testHierarchy(t, factory()) })
 	t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
@@ -112,16 +112,16 @@ func testGet(t *testing.T, s IssueStore) {
 	}
 }
 
-func testUpdate(t *testing.T, s IssueStore) {
+func testModify(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 
-	// Update non-existent issue should return ErrNotFound
-	err := s.Update(ctx, &Issue{ID: "nonexistent-id", Title: "test"})
+	// Modify non-existent issue should return ErrNotFound
+	err := s.Modify(ctx, "nonexistent-id", func(i *Issue) error { i.Title = "test"; return nil })
 	if err != ErrNotFound {
-		t.Errorf("Update non-existent: got %v, want ErrNotFound", err)
+		t.Errorf("Modify non-existent: got %v, want ErrNotFound", err)
 	}
 
 	// Create an issue
@@ -137,7 +137,7 @@ func testUpdate(t *testing.T, s IssueStore) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Update it
+	// Modify it
 	updated := &Issue{
 		ID:          id,
 		Title:       "Updated Title",
@@ -148,14 +148,14 @@ func testUpdate(t *testing.T, s IssueStore) {
 		Labels:      []string{"urgent"},
 		Assignee:    "alice",
 	}
-	if err := s.Update(ctx, updated); err != nil {
-		t.Fatalf("Update failed: %v", err)
+	if err := s.Modify(ctx, id, func(i *Issue) error { *i = *updated; return nil }); err != nil {
+		t.Fatalf("Modify failed: %v", err)
 	}
 
 	// Verify the update
 	got, err := s.Get(ctx, id)
 	if err != nil {
-		t.Fatalf("Get after Update failed: %v", err)
+		t.Fatalf("Get after Modify failed: %v", err)
 	}
 	if got.Title != updated.Title {
 		t.Errorf("Title mismatch: got %q, want %q", got.Title, updated.Title)
@@ -326,14 +326,14 @@ func testList(t *testing.T, s IssueStore) {
 	_ = ids // silence unused variable warning
 }
 
-func testClose(t *testing.T, s IssueStore) {
+func testCloseReopen(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
 	}
 
 	// Close non-existent issue should return ErrNotFound
-	err := s.Close(ctx, "nonexistent-id")
+	err := s.Modify(ctx, "nonexistent-id", func(i *Issue) error { i.Status = StatusClosed; return nil })
 	if err != ErrNotFound {
 		t.Errorf("Close non-existent: got %v, want ErrNotFound", err)
 	}
@@ -351,7 +351,7 @@ func testClose(t *testing.T, s IssueStore) {
 	}
 
 	// Close it
-	if err := s.Close(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *Issue) error { i.Status = StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
@@ -368,7 +368,7 @@ func testClose(t *testing.T, s IssueStore) {
 	}
 
 	// Reopen it
-	if err := s.Reopen(ctx, id); err != nil {
+	if err := s.Modify(ctx, id, func(i *Issue) error { i.Status = StatusOpen; return nil }); err != nil {
 		t.Fatalf("Reopen failed: %v", err)
 	}
 
@@ -927,7 +927,7 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 	if err != nil {
 		t.Fatalf("Create closed issue failed: %v", err)
 	}
-	if err := s.Close(ctx, closedID); err != nil {
+	if err := s.Modify(ctx, closedID, func(i *Issue) error { i.Status = StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close issue failed: %v", err)
 	}
 	if err := s.CreateTombstone(ctx, closedID, "actor", "obsolete"); err != nil {

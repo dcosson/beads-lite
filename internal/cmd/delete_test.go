@@ -182,7 +182,10 @@ func TestDeleteClosedIssue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(context.Background(), id); err != nil {
+	if err := store.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -213,7 +216,10 @@ func TestDeleteByPrefixClosedIssue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Close(context.Background(), id); err != nil {
+	if err := store.Modify(context.Background(), id, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -351,9 +357,10 @@ func TestDeleteTextReferenceRewriting(t *testing.T) {
 	}
 
 	// Set description with reference and add dependency
-	refIssue, _ = store.Get(ctx, refID)
-	refIssue.Description = "See " + delID + " for details"
-	store.Update(ctx, refIssue)
+	store.Modify(ctx, refID, func(i *issuestorage.Issue) error {
+		i.Description = "See " + delID + " for details"
+		return nil
+	})
 
 	store.AddDependency(ctx, refID, delID, issuestorage.DepTypeBlocks)
 

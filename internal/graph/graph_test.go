@@ -422,7 +422,10 @@ func TestBuildClosedSet(t *testing.T) {
 	a := createIssue(t, ctx, s, "Open Issue", issuestorage.TypeTask)
 	b := createIssue(t, ctx, s, "Closed Issue", issuestorage.TypeTask)
 
-	if err := s.Close(ctx, b.ID); err != nil {
+	if err := s.Modify(ctx, b.ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("Close: %v", err)
 	}
 

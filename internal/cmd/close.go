@@ -46,7 +46,10 @@ Examples:
 					errors = append(errors, fmt.Errorf("routing %s: %w", issueID, err))
 					continue
 				}
-				if err := store.Close(ctx, issueID); err != nil {
+				if err := store.Modify(ctx, issueID, func(i *issuestorage.Issue) error {
+					i.Status = issuestorage.StatusClosed
+					return nil
+				}); err != nil {
 					errors = append(errors, fmt.Errorf("closing %s: %w", issueID, err))
 				} else {
 					closed = append(closed, issueID)
@@ -92,8 +95,11 @@ Examples:
 						}
 						autoAdvanced := false
 						if nextStep != nil && !noAuto {
+							store.Modify(ctx, nextStep.ID, func(i *issuestorage.Issue) error {
+								i.Status = issuestorage.StatusInProgress
+								return nil
+							})
 							nextStep.Status = issuestorage.StatusInProgress
-							store.Update(ctx, nextStep)
 							autoAdvanced = true
 						}
 						var nextStepJSON *MolIssueJSON
@@ -143,8 +149,10 @@ Examples:
 					if noAuto {
 						fmt.Fprintf(app.Out, "Next step: %s %s\n", nextStep.ID, nextStep.Title)
 					} else {
-						nextStep.Status = issuestorage.StatusInProgress
-						if err := store.Update(ctx, nextStep); err != nil {
+						if err := store.Modify(ctx, nextStep.ID, func(i *issuestorage.Issue) error {
+							i.Status = issuestorage.StatusInProgress
+							return nil
+						}); err != nil {
 							fmt.Fprintf(app.Err, "Error advancing to next step: %v\n", err)
 						} else {
 							fmt.Fprintf(app.Out, "Advanced to %s %s\n", nextStep.ID, nextStep.Title)

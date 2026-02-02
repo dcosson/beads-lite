@@ -384,34 +384,15 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.
 	return &issue, nil
 }
 
-// Update replaces an issue's data.
-func (fs *FilesystemStorage) Update(ctx context.Context, issue *issuestorage.Issue) error {
-	lock, err := fs.acquireLock(issue.ID)
-	if err != nil {
-		return err
-	}
-	defer lock.release()
-
-	// Check if issue exists (open -> closed -> deleted)
-	path := fs.issuePath(issue.ID, false)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = fs.issuePath(issue.ID, true)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			path = fs.issuePathInDir(issue.ID, issuestorage.DirDeleted)
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				return issuestorage.ErrNotFound
-			}
-		}
-	}
-
-	issue.UpdatedAt = time.Now()
-	return atomicWriteJSON(path, issue)
-}
-
 // Modify atomically reads an issue, applies fn, and writes it back.
 // It flocks the issue JSON file itself (not a separate lock file),
 // so there is no flock+unlink race. A .backup copy is created before
 // the in-place write for crash recovery.
+//
+// If fn changes the issue's status such that it belongs in a different
+// directory (e.g., open/ → closed/), Modify handles the file movement
+// automatically. Status transition side effects (ClosedAt, CloseReason)
+// are applied via ApplyStatusDefaults.
 func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
 	// Find the issue file.
 	path := fs.issuePath(id, false)
@@ -447,40 +428,56 @@ func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*iss
 		return fmt.Errorf("parsing issue file: %w", err)
 	}
 
+	oldStatus := issue.Status
+
 	if err := fn(&issue); err != nil {
 		return err
 	}
 
+	// Apply status transition side effects.
+	old := issuestorage.Issue{Status: oldStatus}
+	issuestorage.ApplyStatusDefaults(&old, &issue)
+
 	issue.UpdatedAt = time.Now()
 
-	newData, err := json.MarshalIndent(&issue, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encoding issue: %w", err)
-	}
-	newData = append(newData, '\n')
+	oldDir := issuestorage.DirForStatus(oldStatus)
+	newDir := issuestorage.DirForStatus(issue.Status)
 
-	// Create backup before in-place write; recovered by Init if we crash.
-	backupPath := path + ".backup"
-	if err := os.WriteFile(backupPath, data, 0644); err != nil {
-		return fmt.Errorf("writing backup: %w", err)
-	}
+	if oldDir == newDir {
+		// Same directory — in-place write with backup (current behavior).
+		newData, err := json.MarshalIndent(&issue, "", "  ")
+		if err != nil {
+			return fmt.Errorf("encoding issue: %w", err)
+		}
+		newData = append(newData, '\n')
 
-	// Write in-place to the same inode (preserving the flock).
-	if _, err := f.Seek(0, 0); err != nil {
-		return fmt.Errorf("seeking issue file: %w", err)
-	}
-	if err := f.Truncate(0); err != nil {
-		return fmt.Errorf("truncating issue file: %w", err)
-	}
-	if _, err := f.Write(newData); err != nil {
-		return fmt.Errorf("writing issue file: %w", err)
-	}
-	if err := f.Sync(); err != nil {
-		return fmt.Errorf("syncing issue file: %w", err)
-	}
+		backupPath := path + ".backup"
+		if err := os.WriteFile(backupPath, data, 0644); err != nil {
+			return fmt.Errorf("writing backup: %w", err)
+		}
 
-	// Write complete — remove the backup.
-	os.Remove(backupPath)
+		if _, err := f.Seek(0, 0); err != nil {
+			return fmt.Errorf("seeking issue file: %w", err)
+		}
+		if err := f.Truncate(0); err != nil {
+			return fmt.Errorf("truncating issue file: %w", err)
+		}
+		if _, err := f.Write(newData); err != nil {
+			return fmt.Errorf("writing issue file: %w", err)
+		}
+		if err := f.Sync(); err != nil {
+			return fmt.Errorf("syncing issue file: %w", err)
+		}
+
+		os.Remove(backupPath)
+	} else {
+		// Different directory — write to new location, remove old.
+		newPath := fs.issuePathInDir(id, newDir)
+		if err := atomicWriteJSON(newPath, &issue); err != nil {
+			return fmt.Errorf("writing issue to %s: %w", newDir, err)
+		}
+		os.Remove(path)
+	}
 
 	return nil
 }
@@ -654,45 +651,6 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 	return true
 }
 
-// Close moves an issue to closed status.
-func (fs *FilesystemStorage) Close(ctx context.Context, id string) error {
-	lock, err := fs.acquireLock(id)
-	if err != nil {
-		return err
-	}
-	defer lock.release()
-
-	issue, err := fs.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	issue.Status = issuestorage.StatusClosed
-	now := time.Now()
-	issue.ClosedAt = &now
-	issue.CloseReason = "Closed"
-	issue.UpdatedAt = now
-
-	// Write to closed/ first
-	closedPath := fs.issuePath(id, true)
-	if err := atomicWriteJSON(closedPath, issue); err != nil {
-		return err
-	}
-
-	// Remove from open/
-	openPath := fs.issuePath(id, false)
-	if err := os.Remove(openPath); err != nil {
-		// Rollback: remove from closed/
-		os.Remove(closedPath)
-		return err
-	}
-
-	// Clean up the lock file (it's no longer needed for closed issues)
-	os.Remove(fs.lockPath(id))
-
-	return nil
-}
-
 // CreateTombstone converts an issue to a tombstone (soft-delete).
 func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, actor string, reason string) error {
 	lock, err := fs.acquireLock(id)
@@ -750,41 +708,6 @@ func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, act
 
 	// Clean up lock file
 	os.Remove(fs.lockPath(id))
-
-	return nil
-}
-
-// Reopen moves a closed issue back to open status.
-func (fs *FilesystemStorage) Reopen(ctx context.Context, id string) error {
-	lock, err := fs.acquireLock(id)
-	if err != nil {
-		return err
-	}
-	defer lock.release()
-
-	issue, err := fs.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	issue.Status = issuestorage.StatusOpen
-	issue.ClosedAt = nil
-	issue.CloseReason = ""
-	issue.UpdatedAt = time.Now()
-
-	// Write to open/ first
-	openPath := fs.issuePath(id, false)
-	if err := atomicWriteJSON(openPath, issue); err != nil {
-		return err
-	}
-
-	// Remove from closed/
-	closedPath := fs.issuePath(id, true)
-	if err := os.Remove(closedPath); err != nil && !os.IsNotExist(err) {
-		// Rollback: remove from open/
-		os.Remove(openPath)
-		return err
-	}
 
 	return nil
 }

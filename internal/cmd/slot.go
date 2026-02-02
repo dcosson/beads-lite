@@ -130,12 +130,10 @@ func newSlotSetCmd(provider *AppProvider) *cobra.Command {
 
 			// GUPP: setting the hook slot marks the target bead as hooked
 			if slotName == "hook" {
-				issue, err := store.Get(ctx, beadID)
-				if err != nil {
-					return fmt.Errorf("re-fetching bead %s: %w", beadID, err)
-				}
-				issue.Status = issuestorage.StatusHooked
-				if err := store.Update(ctx, issue); err != nil {
+				if err := store.Modify(ctx, beadID, func(i *issuestorage.Issue) error {
+					i.Status = issuestorage.StatusHooked
+					return nil
+				}); err != nil {
 					return fmt.Errorf("setting hooked status on %s: %w", beadID, err)
 				}
 			}

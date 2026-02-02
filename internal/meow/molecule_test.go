@@ -99,7 +99,10 @@ func TestCurrent_ShowsCorrectStatusMarkers(t *testing.T) {
 	assertStepStatus(t, byID, children["C"].ID, graph.StepBlocked)
 
 	// Close A: B should become ready.
-	if err := s.Close(ctx, children["A"].ID); err != nil {
+	if err := s.Modify(ctx, children["A"].ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("Close A: %v", err)
 	}
 
@@ -122,12 +125,10 @@ func TestCurrent_InProgressMarkedAsCurrent(t *testing.T) {
 	root, children := buildTestMolecule(t, ctx, s)
 
 	// Set A to in_progress.
-	a, err := s.Get(ctx, children["A"].ID)
-	if err != nil {
-		t.Fatalf("Get A: %v", err)
-	}
-	a.Status = issuestorage.StatusInProgress
-	if err := s.Update(ctx, a); err != nil {
+	if err := s.Modify(ctx, children["A"].ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusInProgress
+		return nil
+	}); err != nil {
 		t.Fatalf("Update A: %v", err)
 	}
 
@@ -181,7 +182,10 @@ func TestProgress_ReturnsCorrectCounts(t *testing.T) {
 	}
 
 	// Close A: 1 done, 1 ready (B), 1 blocked (C).
-	if err := s.Close(ctx, children["A"].ID); err != nil {
+	if err := s.Modify(ctx, children["A"].ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
 		t.Fatalf("Close A: %v", err)
 	}
 
@@ -240,12 +244,10 @@ func TestFindStaleSteps_NoStaleWhenInProgress(t *testing.T) {
 	root, children := buildTestMolecule(t, ctx, s)
 
 	// Set A to in_progress — no longer stale.
-	a, err := s.Get(ctx, children["A"].ID)
-	if err != nil {
-		t.Fatalf("Get A: %v", err)
-	}
-	a.Status = issuestorage.StatusInProgress
-	if err := s.Update(ctx, a); err != nil {
+	if err := s.Modify(ctx, children["A"].ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusInProgress
+		return nil
+	}); err != nil {
 		t.Fatalf("Update A: %v", err)
 	}
 

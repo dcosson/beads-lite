@@ -11,6 +11,34 @@ import (
 	"unicode"
 )
 
+// ApplyStatusDefaults sets side-effect fields for status transitions.
+// Called by Modify implementations after fn() returns, before writing.
+func ApplyStatusDefaults(old, updated *Issue) {
+	if updated.Status == StatusClosed && old.Status != StatusClosed {
+		now := time.Now()
+		updated.ClosedAt = &now
+		if updated.CloseReason == "" {
+			updated.CloseReason = "Closed"
+		}
+	}
+	if old.Status == StatusClosed && updated.Status != StatusClosed {
+		updated.ClosedAt = nil
+		updated.CloseReason = ""
+	}
+}
+
+// DirForStatus returns the directory name for the given issue status.
+func DirForStatus(status Status) string {
+	switch status {
+	case StatusClosed:
+		return DirClosed
+	case StatusTombstone:
+		return DirDeleted
+	default:
+		return DirOpen
+	}
+}
+
 // DefaultMaxHierarchyDepth is the maximum number of dot-notation levels
 // allowed in hierarchical child IDs (e.g., bd-a3f8.1.2.3 = depth 3).
 const DefaultMaxHierarchyDepth = 3
@@ -263,12 +291,11 @@ type IssueStore interface {
 	// Returns ErrNotFound if the issue doesn't exist.
 	Get(ctx context.Context, id string) (*Issue, error)
 
-	// Update replaces an issue's data.
-	// Returns ErrNotFound if the issue doesn't exist.
-	Update(ctx context.Context, issue *Issue) error
-
 	// Modify atomically reads an issue, applies fn to it, and writes it back.
 	// fn receives the current issue from disk (under lock) and should mutate it.
+	// Status transitions (e.g., setting StatusClosed or reopening) are handled
+	// automatically: ApplyStatusDefaults sets ClosedAt/CloseReason, and
+	// filesystem implementations move files between directories as needed.
 	// Returns ErrNotFound if the issue doesn't exist.
 	Modify(ctx context.Context, id string, fn func(*Issue) error) error
 
@@ -279,14 +306,6 @@ type IssueStore interface {
 	// List returns all issues matching the filter.
 	// If filter is nil, returns all open issues.
 	List(ctx context.Context, filter *ListFilter) ([]*Issue, error)
-
-	// Close moves an issue to closed status.
-	// This is separate from Update because implementations may
-	// handle closed issues differently (e.g., move to different directory).
-	Close(ctx context.Context, id string) error
-
-	// Reopen moves a closed issue back to open status.
-	Reopen(ctx context.Context, id string) error
 
 	// AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
 	// Locks both issues, then updates:

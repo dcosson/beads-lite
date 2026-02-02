@@ -104,7 +104,10 @@ Examples:
 				r, shouldClose := checker.evaluate(ctx, gate)
 
 				if shouldClose && !dryRun {
-					if closeErr := app.Storage.Close(ctx, gate.ID); closeErr != nil {
+					if closeErr := app.Storage.Modify(ctx, gate.ID, func(i *issuestorage.Issue) error {
+						i.Status = issuestorage.StatusClosed
+						return nil
+					}); closeErr != nil {
 						fmt.Fprintf(app.Err, "warning: failed to close gate %s: %v\n", gate.ID, closeErr)
 						r.Result = "pending"
 						r.Reason = fmt.Sprintf("close failed: %v", closeErr)
