@@ -56,7 +56,7 @@ This table tracks implementation status across major feature areas.
 | Issue types (task, bug, feature, epic, chore) | ✅ | ✅ | |
 | Priorities (P0-P4) | ✅ | ✅ | |
 | Statuses (open, in_progress, blocked, deferred, closed) | ✅ | ✅ | |
-| `hooked` status | ✅ | ⬜ | For GUPP protocol (agent hook attachment) |
+| `hooked` status | ✅ | ✅ | For GUPP protocol (agent hook attachment) |
 | Close / reopen | ✅ | ✅ | |
 | Assignees | ✅ | ✅ | |
 | Labels | ✅ | ✅ | |
@@ -69,8 +69,8 @@ This table tracks implementation status across major feature areas.
 | Compact (prune old closed issues) | ✅ | ✅ | |
 | Ready / blocked views | ✅ | ✅ | |
 | Batch close with `--continue`/`--suggest-next` | ✅ | ✅ | |
-| `bd edit` (open in `$EDITOR`) | ✅ | ⬜ | |
-| `bd label` management | ✅ | 🟡 | Labels set via `bd update --label` |
+| `bd edit` (open in `$EDITOR`) | ✅ | ✅ | |
+| `bd label` management | ✅ | ✅ | |
 | `bd rename` (rename issue ID) | ✅ | ⬜ | |
 | `bd move` / `bd refile` (move between rigs) | ✅ | ⬜ | |
 | `bd duplicate` / `bd duplicates` | ✅ | ⬜ | |
@@ -79,9 +79,7 @@ This table tracks implementation status across major feature areas.
 | `bd graph` (dependency graph) | ✅ | 🟡 | `internal/graph` pkg exists, no CLI command |
 | Export / import (JSONL) | ✅ | ⬜ | |
 
-> 🟡 **label**: Labels can be set via `bd update --label`, but there's no dedicated `bd label` management command.
 > 🟡 **graph**: The `internal/graph` package implements the dependency graph logic, but no `bd graph` CLI command exposes it yet.
-> 🟡 **gate**: show, list, wait, add-waiter, resolve are implemented. `gate check` (auto-evaluate conditions) is not yet built.
 
 ### Molecular Expression of Work (MEOW)
 
@@ -97,18 +95,18 @@ This table tracks implementation status across major feature areas.
 | `bd mol gc` (clean old wisps) | ✅ | ✅ | |
 | `bd mol bond` (combine protos/mols) | ✅ | ⬜ | |
 | `bd mol distill` (extract formula from epic) | ✅ | ⬜ | |
-| `bd mol seed --patrol` | ✅ | ⬜ | Verify patrol formulas accessible |
+| `bd mol seed --patrol` | ✅ | ✅ | |
 | `bd cook` (compile formula to proto) | ✅ | ✅ | |
 
 ### Gas Town (Multi-Agent Coordination)
 
 | Feature | beads | beads-lite | Notes |
 |---------|:-----:|:----------:|-------|
-| `bd agent` (state, heartbeat) | ✅ | ⬜ | |
-| `bd slot` (set, clear, list) | ✅ | ⬜ | Needs KV storage (bl-r2nl) |
-| `bd gate` (async coordination) | ✅ | 🟡 | show, list, wait, add-waiter, resolve done; `gate check` missing |
-| `bd swarm` (structured epics) | ✅ | ⬜ | |
-| Seed patrol (formula seeding) | ✅ | ⬜ | |
+| `bd agent` (state, heartbeat) | ✅ | ✅ | |
+| `bd slot` (set, clear, show) | ✅ | ✅ | Built on KV storage |
+| `bd gate` (async coordination) | ✅ | ✅ | show, list, wait, add-waiter, resolve, check |
+| `bd swarm` (validate, create, status, list) | ✅ | ✅ | |
+| Seed patrol (formula seeding) | ✅ | ✅ | |
 | `bd merge-slot` (serialized conflict resolution) | ✅ | ⬜ | |
 | `bd audit` (append-only activity log) | ✅ | ⬜ | |
 | `bd set-state` / `bd state` | ✅ | ⬜ | |
@@ -131,8 +129,8 @@ This table tracks implementation status across major feature areas.
 | `bd migrate` | ✅ | ✅ | No-op (no DB to migrate) |
 | `bd prime` | ✅ | ✅ | No-op |
 | `bd import` | ✅ | ✅ | No-op (accepts flags for compatibility) |
-| `init --prefix` | ✅ | ⬜ | Has `--project` but not `--prefix` |
-| `-q`/`--quiet` global flag | ✅ | ⬜ | |
+| `init --prefix` | ✅ | ✅ | |
+| `-q`/`--quiet` global flag | ✅ | ✅ | |
 
 ### Sync & Integrations
 
