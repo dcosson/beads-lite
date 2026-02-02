@@ -174,6 +174,139 @@ func TestConcurrentIssueUpdates(t *testing.T) {
 	}
 }
 
+// TestConcurrentStatusUpdates verifies that concurrent status transitions
+// (update --status, close, reopen) don't corrupt issue data.
+func TestConcurrentStatusUpdates(t *testing.T) {
+	bdCmd := os.Getenv("BD_CMD")
+	if bdCmd == "" {
+		t.Skip("BD_CMD environment variable not set")
+	}
+
+	r := &reference.Runner{BdCmd: bdCmd}
+	sandbox, err := r.SetupSandbox()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.TeardownSandbox(sandbox)
+
+	// Create an issue with known fields so we can verify they survive.
+	createRes := r.Run(sandbox, "create", "status-test", "--json", "-p", "1", "-t", "bug")
+	if createRes.ExitCode != 0 {
+		t.Fatalf("bd create: exit %d, stderr: %s", createRes.ExitCode, createRes.Stderr)
+	}
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(createRes.Stdout)), &created); err != nil {
+		t.Fatalf("parsing create JSON: %v", err)
+	}
+	id := created.ID
+
+	// Add some labels so we can verify they survive status changes.
+	for _, label := range []string{"keep-me", "also-keep"} {
+		res := r.Run(sandbox, "update", id, "--add-label", label)
+		if res.ExitCode != 0 {
+			t.Fatalf("bd update --add-label %s: exit %d, stderr: %s", label, res.ExitCode, res.Stderr)
+		}
+	}
+
+	// verifyIntegrity checks that the issue's non-status fields survived.
+	type issueJSON struct {
+		ID       string   `json:"id"`
+		Title    string   `json:"title"`
+		Status   string   `json:"status"`
+		Priority int      `json:"priority"`
+		Type     string   `json:"issue_type"`
+		Labels   []string `json:"labels"`
+	}
+	verifyIntegrity := func(phase string, wantStatus string) {
+		t.Helper()
+		showRes := r.Run(sandbox, "show", id, "--json")
+		if showRes.ExitCode != 0 {
+			t.Fatalf("[%s] bd show: exit %d, stderr: %s", phase, showRes.ExitCode, showRes.Stderr)
+		}
+		var issues []issueJSON
+		if err := json.Unmarshal([]byte(strings.TrimSpace(showRes.Stdout)), &issues); err != nil {
+			t.Fatalf("[%s] parsing show JSON: %v\nraw: %s", phase, err, showRes.Stdout)
+		}
+		if len(issues) == 0 {
+			t.Fatalf("[%s] empty show result", phase)
+		}
+		issue := issues[0]
+		if issue.Title != "status-test" {
+			t.Errorf("[%s] title: got %q, want %q", phase, issue.Title, "status-test")
+		}
+		if issue.Priority != 1 {
+			t.Errorf("[%s] priority: got %d, want %d", phase, issue.Priority, 1)
+		}
+		if issue.Type != "bug" {
+			t.Errorf("[%s] type: got %q, want %q", phase, issue.Type, "bug")
+		}
+		if issue.Status != wantStatus {
+			t.Errorf("[%s] status: got %q, want %q", phase, issue.Status, wantStatus)
+		}
+		labelSet := make(map[string]bool)
+		for _, l := range issue.Labels {
+			labelSet[l] = true
+		}
+		for _, want := range []string{"keep-me", "also-keep"} {
+			if !labelSet[want] {
+				t.Errorf("[%s] missing label %q, got %v", phase, want, issue.Labels)
+			}
+		}
+	}
+
+	const numGoroutines = 20
+
+	// Phase 1: concurrent open → in-progress
+	var wg sync.WaitGroup
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer wg.Done()
+			r.Run(sandbox, "update", id, "--status", "in-progress")
+		}()
+	}
+	wg.Wait()
+	verifyIntegrity("open→in-progress", "in_progress")
+
+	// Phase 2: close (single, since bd close moves files between directories)
+	closeRes := r.Run(sandbox, "close", id)
+	if closeRes.ExitCode != 0 {
+		t.Fatalf("bd close: exit %d, stderr: %s", closeRes.ExitCode, closeRes.Stderr)
+	}
+	verifyIntegrity("close", "closed")
+
+	// Phase 3: reopen (single, since bd reopen moves files between directories)
+	reopenRes := r.Run(sandbox, "reopen", id)
+	if reopenRes.ExitCode != 0 {
+		t.Fatalf("bd reopen: exit %d, stderr: %s", reopenRes.ExitCode, reopenRes.Stderr)
+	}
+	verifyIntegrity("reopen", "open")
+
+	// Phase 4: concurrent open → blocked
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer wg.Done()
+			r.Run(sandbox, "update", id, "--status", "blocked")
+		}()
+	}
+	wg.Wait()
+	verifyIntegrity("open→blocked", "blocked")
+
+	// Phase 5: concurrent blocked → in-progress
+	wg.Add(numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			defer wg.Done()
+			r.Run(sandbox, "update", id, "--status", "in-progress")
+		}()
+	}
+	wg.Wait()
+	verifyIntegrity("blocked→in-progress", "in_progress")
+}
+
 // TestConcurrentIssueDependencies verifies that 20 goroutines can add
 // dependencies concurrently without deadlock, and that bidirectional
 // consistency is maintained.
