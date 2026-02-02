@@ -268,12 +268,13 @@ var validPriorities = map[string]bool{
 
 // validTypes is the set of valid issue type values.
 var validTypes = map[string]bool{
-	"task":    true,
-	"bug":     true,
-	"feature": true,
-	"epic":    true,
-	"chore":   true,
-	"gate":    true,
+	"task":     true,
+	"bug":      true,
+	"feature":  true,
+	"epic":     true,
+	"chore":    true,
+	"gate":     true,
+	"molecule": true,
 }
 
 // configValidators maps known keys to their validation functions.

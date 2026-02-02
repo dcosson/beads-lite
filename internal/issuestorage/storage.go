@@ -211,12 +211,13 @@ func (p Priority) Display() string {
 type IssueType string
 
 const (
-	TypeTask    IssueType = "task"
-	TypeBug     IssueType = "bug"
-	TypeFeature IssueType = "feature"
-	TypeEpic    IssueType = "epic"
-	TypeChore   IssueType = "chore"
-	TypeGate    IssueType = "gate"
+	TypeTask     IssueType = "task"
+	TypeBug      IssueType = "bug"
+	TypeFeature  IssueType = "feature"
+	TypeEpic     IssueType = "epic"
+	TypeChore    IssueType = "chore"
+	TypeGate     IssueType = "gate"
+	TypeMolecule IssueType = "molecule"
 )
 
 // MolType represents the molecule type of an issue.

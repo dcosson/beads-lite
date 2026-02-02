@@ -452,6 +452,127 @@ func TestBuildClosedSet_Empty(t *testing.T) {
 	}
 }
 
+func TestTopologicalWaves(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	// A -> B -> C (linear chain: 3 waves)
+	_, children := buildMolecule(t, ctx, s, "Root", []string{"A", "B", "C"},
+		map[string][]string{
+			"B": {"A"},
+			"C": {"B"},
+		})
+
+	waves, err := TopologicalWaves(children)
+	if err != nil {
+		t.Fatalf("TopologicalWaves: %v", err)
+	}
+	if len(waves) != 3 {
+		t.Fatalf("got %d waves, want 3", len(waves))
+	}
+
+	byTitle := make(map[string]string)
+	for _, c := range children {
+		byTitle[c.Title] = c.ID
+	}
+
+	if len(waves[0]) != 1 || waves[0][0] != byTitle["A"] {
+		t.Errorf("wave 0: got %v, want [%s]", waves[0], byTitle["A"])
+	}
+	if len(waves[1]) != 1 || waves[1][0] != byTitle["B"] {
+		t.Errorf("wave 1: got %v, want [%s]", waves[1], byTitle["B"])
+	}
+	if len(waves[2]) != 1 || waves[2][0] != byTitle["C"] {
+		t.Errorf("wave 2: got %v, want [%s]", waves[2], byTitle["C"])
+	}
+}
+
+func TestTopologicalWaves_Parallel(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	// A has no deps, B and C both blocked by A → 2 waves
+	_, children := buildMolecule(t, ctx, s, "Root", []string{"A", "B", "C"},
+		map[string][]string{
+			"B": {"A"},
+			"C": {"A"},
+		})
+
+	waves, err := TopologicalWaves(children)
+	if err != nil {
+		t.Fatalf("TopologicalWaves: %v", err)
+	}
+	if len(waves) != 2 {
+		t.Fatalf("got %d waves, want 2", len(waves))
+	}
+
+	byTitle := make(map[string]string)
+	for _, c := range children {
+		byTitle[c.Title] = c.ID
+	}
+
+	if len(waves[0]) != 1 || waves[0][0] != byTitle["A"] {
+		t.Errorf("wave 0: got %v, want [%s]", waves[0], byTitle["A"])
+	}
+	if len(waves[1]) != 2 {
+		t.Errorf("wave 1: got %d items, want 2", len(waves[1]))
+	}
+}
+
+func TestTopologicalWaves_NoDeps(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	// No deps: all in wave 0
+	_, children := buildMolecule(t, ctx, s, "Root", []string{"X", "Y", "Z"}, nil)
+
+	waves, err := TopologicalWaves(children)
+	if err != nil {
+		t.Fatalf("TopologicalWaves: %v", err)
+	}
+	if len(waves) != 1 {
+		t.Fatalf("got %d waves, want 1", len(waves))
+	}
+	if len(waves[0]) != 3 {
+		t.Errorf("wave 0: got %d items, want 3", len(waves[0]))
+	}
+}
+
+func TestTopologicalWaves_Empty(t *testing.T) {
+	waves, err := TopologicalWaves(nil)
+	if err != nil {
+		t.Fatalf("TopologicalWaves(nil): %v", err)
+	}
+	if waves != nil {
+		t.Errorf("expected nil, got %v", waves)
+	}
+}
+
+func TestTopologicalWaves_Cycle(t *testing.T) {
+	depType := issuestorage.DepTypeBlocks
+	a := &issuestorage.Issue{
+		ID:     "a",
+		Title:  "A",
+		Status: issuestorage.StatusOpen,
+		Dependencies: []issuestorage.Dependency{
+			{ID: "b", Type: depType},
+		},
+	}
+	b := &issuestorage.Issue{
+		ID:     "b",
+		Title:  "B",
+		Status: issuestorage.StatusOpen,
+		Dependencies: []issuestorage.Dependency{
+			{ID: "a", Type: depType},
+		},
+	}
+
+	_, err := TopologicalWaves([]*issuestorage.Issue{a, b})
+	if err == nil {
+		t.Fatal("expected cycle error")
+	}
+}
+
 // helpers
 
 func titlesOf(issues []*issuestorage.Issue) []string {

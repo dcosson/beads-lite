@@ -76,8 +76,10 @@ Examples:
 					issueType = issuestorage.TypeChore
 				case "gate":
 					issueType = issuestorage.TypeGate
+				case "molecule":
+					issueType = issuestorage.TypeMolecule
 				default:
-					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate", typeFlag)
+					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate, molecule", typeFlag)
 				}
 			}
 

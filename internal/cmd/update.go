@@ -273,8 +273,10 @@ func parseType(s string) (issuestorage.IssueType, error) {
 		return issuestorage.TypeChore, nil
 	case "gate":
 		return issuestorage.TypeGate, nil
+	case "molecule":
+		return issuestorage.TypeMolecule, nil
 	default:
-		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate", s)
+		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate, molecule", s)
 	}
 }
 

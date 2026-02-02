@@ -239,6 +239,71 @@ func ClassifySteps(children []*issuestorage.Issue, closedSet map[string]bool) ma
 	return result
 }
 
+// TopologicalWaves groups issues into waves of parallelizable work using Kahn's
+// algorithm. Wave 0 contains issues with no intra-set blockers, wave 1 contains
+// issues whose blockers are all in wave 0, etc. Returns an error if a cycle exists.
+func TopologicalWaves(children []*issuestorage.Issue) ([][]string, error) {
+	if len(children) == 0 {
+		return nil, nil
+	}
+
+	// Build ID → issue lookup and adjacency
+	childSet := make(map[string]bool, len(children))
+	for _, c := range children {
+		childSet[c.ID] = true
+	}
+
+	inDegree := make(map[string]int, len(children))
+	outEdges := make(map[string][]string, len(children))
+
+	for _, c := range children {
+		if _, ok := inDegree[c.ID]; !ok {
+			inDegree[c.ID] = 0
+		}
+		depType := issuestorage.DepTypeBlocks
+		for _, depID := range c.DependencyIDs(&depType) {
+			if !childSet[depID] {
+				continue
+			}
+			outEdges[depID] = append(outEdges[depID], c.ID)
+			inDegree[c.ID]++
+		}
+	}
+
+	// Kahn's algorithm processing one wave at a time
+	var queue []string
+	for _, c := range children {
+		if inDegree[c.ID] == 0 {
+			queue = append(queue, c.ID)
+		}
+	}
+
+	var waves [][]string
+	processed := 0
+	for len(queue) > 0 {
+		wave := make([]string, len(queue))
+		copy(wave, queue)
+		waves = append(waves, wave)
+		processed += len(wave)
+
+		var nextQueue []string
+		for _, id := range queue {
+			for _, next := range outEdges[id] {
+				inDegree[next]--
+				if inDegree[next] == 0 {
+					nextQueue = append(nextQueue, next)
+				}
+			}
+		}
+		queue = nextQueue
+	}
+
+	if processed != len(children) {
+		return nil, fmt.Errorf("cycle detected in dependency graph: processed %d of %d issues", processed, len(children))
+	}
+	return waves, nil
+}
+
 // BuildClosedSet queries all closed issues and returns their IDs as a set.
 func BuildClosedSet(ctx context.Context, store issuestorage.IssueStore) (map[string]bool, error) {
 	status := issuestorage.StatusClosed
