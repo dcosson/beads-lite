@@ -88,6 +88,11 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, fmt.Errorf("creating slot store: %w", err)
 	}
 
+	agentStore, err := kvfs.New(paths.DataDir, "agents")
+	if err != nil {
+		return nil, fmt.Errorf("creating agent store: %w", err)
+	}
+
 	router, err := routing.New(paths.ConfigDir)
 	if err != nil {
 		return nil, err
@@ -103,9 +108,10 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage:     store,
-		SlotStore:   slotStore,
-		Router:      router,
+		Storage:    store,
+		SlotStore:  slotStore,
+		AgentStore: agentStore,
+		Router:     router,
 		ConfigStore: configStore,
 		ConfigDir:   paths.ConfigDir,
 		FormulaPath: meow.DefaultSearchPath(paths.ConfigDir),
@@ -217,6 +223,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newImportCmd(provider))
 	rootCmd.AddCommand(newGateCmd(provider))
 	rootCmd.AddCommand(newSlotCmd(provider))
+	rootCmd.AddCommand(newAgentCmd(provider))
 	rootCmd.AddCommand(newLabelCmd(provider))
 
 	return rootCmd

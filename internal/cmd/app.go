@@ -18,9 +18,10 @@ import (
 
 // App holds application state shared across commands.
 type App struct {
-	Storage     issuestorage.IssueStore
-	SlotStore   kvstorage.KVStore
-	Router      *routing.Router // nil if no routes.json
+	Storage    issuestorage.IssueStore
+	SlotStore  kvstorage.KVStore
+	AgentStore kvstorage.KVStore
+	Router     *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory
 	FormulaPath meow.FormulaSearchPath

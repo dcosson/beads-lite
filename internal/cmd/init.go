@@ -131,6 +131,15 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 		return fmt.Errorf("initializing slot store: %w", err)
 	}
 
+	// Create the agent KV store
+	agentStore, err := kvfs.New(dataPath, "agents")
+	if err != nil {
+		return fmt.Errorf("creating agent store: %w", err)
+	}
+	if err := agentStore.Init(context.Background()); err != nil {
+		return fmt.Errorf("initializing agent store: %w", err)
+	}
+
 	fmt.Fprintf(out, "Initialized beads-lite repository at %s\n", beadsPath)
 	return nil
 }
