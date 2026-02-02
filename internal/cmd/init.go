@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
@@ -98,6 +99,9 @@ func runInit(force bool, projectName, prefix string) error {
 		return fmt.Errorf("setting project name: %w", err)
 	}
 	if prefix != "" {
+		if !strings.HasSuffix(prefix, "-") {
+			prefix += "-"
+		}
 		if err := store.Set("id.prefix", prefix); err != nil {
 			return fmt.Errorf("setting id prefix: %w", err)
 		}

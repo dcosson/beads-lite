@@ -241,6 +241,37 @@ func TestInit(t *testing.T) {
 		}
 	})
 
+	t.Run("appends dash to prefix if missing", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{"--prefix", "myp"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
+		store, err := yamlstore.New(configPath)
+		if err != nil {
+			t.Fatalf("loading config store: %v", err)
+		}
+		if v, _ := store.Get("id.prefix"); v != "myp-" {
+			t.Errorf("config id.prefix = %q, want %q", v, "myp-")
+		}
+	})
+
 	t.Run("uses default prefix when flag not provided", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
