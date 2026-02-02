@@ -21,12 +21,12 @@ func TestCookReturnsCorrectStructure(t *testing.T) {
 		t.Fatalf("Cook() error = %v", err)
 	}
 
-	// Root should mirror formula description.
-	if result.Root.Title != "Deploy pipeline" {
-		t.Errorf("Root.Title = %q, want %q", result.Root.Title, "Deploy pipeline")
+	// Description should mirror formula.
+	if result.Description != "Deploy pipeline" {
+		t.Errorf("Description = %q, want %q", result.Description, "Deploy pipeline")
 	}
-	if result.Root.Type != "epic" {
-		t.Errorf("Root.Type = %q, want %q", result.Root.Type, "epic")
+	if result.Source == "" {
+		t.Error("Source should not be empty")
 	}
 
 	// Should have 3 steps.
@@ -36,8 +36,8 @@ func TestCookReturnsCorrectStructure(t *testing.T) {
 
 	// Verify step fields.
 	build := result.Steps[0]
-	if build.StepID != "build" {
-		t.Errorf("Steps[0].StepID = %q, want %q", build.StepID, "build")
+	if build.ID != "build" {
+		t.Errorf("Steps[0].ID = %q, want %q", build.ID, "build")
 	}
 	if build.Title != "Build artifacts" {
 		t.Errorf("Steps[0].Title = %q, want %q", build.Title, "Build artifacts")
@@ -53,9 +53,9 @@ func TestCookReturnsCorrectStructure(t *testing.T) {
 	}
 
 	// Verify depends_on uses step IDs.
-	test := result.Steps[1]
-	if len(test.DependsOn) != 1 || test.DependsOn[0] != "build" {
-		t.Errorf("Steps[1].DependsOn = %v, want [build]", test.DependsOn)
+	testStep := result.Steps[1]
+	if len(testStep.DependsOn) != 1 || testStep.DependsOn[0] != "build" {
+		t.Errorf("Steps[1].DependsOn = %v, want [build]", testStep.DependsOn)
 	}
 
 	ship := result.Steps[2]
@@ -88,8 +88,8 @@ func TestCookSubstitutesVariables(t *testing.T) {
 		t.Fatalf("Cook() error = %v", err)
 	}
 
-	if result.Root.Title != "Deploy api-gateway" {
-		t.Errorf("Root.Title = %q, want %q", result.Root.Title, "Deploy api-gateway")
+	if result.Description != "Deploy api-gateway" {
+		t.Errorf("Description = %q, want %q", result.Description, "Deploy api-gateway")
 	}
 	if result.Steps[0].Title != "Build api-gateway" {
 		t.Errorf("Steps[0].Title = %q, want %q", result.Steps[0].Title, "Build api-gateway")
@@ -145,7 +145,7 @@ func TestCookMissingRequiredVarFails(t *testing.T) {
 	}
 }
 
-func TestCookRootTitleFallsBackToFormulaName(t *testing.T) {
+func TestCookEmptyDescription(t *testing.T) {
 	dir := t.TempDir()
 	sp := writeTestFormula(t, dir, "no-desc", `{
 		"formula": "no-desc",
@@ -161,12 +161,16 @@ func TestCookRootTitleFallsBackToFormulaName(t *testing.T) {
 		t.Fatalf("Cook() error = %v", err)
 	}
 
-	if result.Root.Title != "no-desc" {
-		t.Errorf("Root.Title = %q, want %q (formula name fallback)", result.Root.Title, "no-desc")
+	// Formula name is in the Formula field; description is empty.
+	if result.Formula.Formula != "no-desc" {
+		t.Errorf("Formula = %q, want %q", result.Formula.Formula, "no-desc")
+	}
+	if result.Description != "" {
+		t.Errorf("Description = %q, want empty", result.Description)
 	}
 }
 
-func TestCookDefaultStepTypeIsTask(t *testing.T) {
+func TestCookPreservesStepType(t *testing.T) {
 	dir := t.TempDir()
 	sp := writeTestFormula(t, dir, "default-type", `{
 		"formula": "default-type",
@@ -174,7 +178,8 @@ func TestCookDefaultStepTypeIsTask(t *testing.T) {
 		"version": 1,
 		"type": "workflow",
 		"steps": [
-			{"id": "s1", "title": "No explicit type"}
+			{"id": "s1", "title": "No explicit type"},
+			{"id": "s2", "title": "Explicit type", "type": "bug"}
 		]
 	}`)
 
@@ -183,7 +188,11 @@ func TestCookDefaultStepTypeIsTask(t *testing.T) {
 		t.Fatalf("Cook() error = %v", err)
 	}
 
-	if result.Steps[0].Type != "task" {
-		t.Errorf("Steps[0].Type = %q, want %q", result.Steps[0].Type, "task")
+	// Cook returns the formula as-is; type defaulting to "task" happens at pour time.
+	if result.Steps[0].Type != "" {
+		t.Errorf("Steps[0].Type = %q, want empty", result.Steps[0].Type)
+	}
+	if result.Steps[1].Type != "bug" {
+		t.Errorf("Steps[1].Type = %q, want %q", result.Steps[1].Type, "bug")
 	}
 }

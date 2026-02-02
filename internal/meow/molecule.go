@@ -21,10 +21,11 @@ type MoleculeView struct {
 
 // StepView describes a single step with its classified status.
 type StepView struct {
-	ID       string          `json:"id"`
-	Title    string          `json:"title"`
+	ID       string           `json:"id"`
+	Title    string           `json:"title"`
 	Status   graph.StepStatus `json:"status"`
-	Assignee string          `json:"assignee,omitempty"`
+	Assignee string           `json:"assignee,omitempty"`
+	Issue    *storage.Issue   `json:"-"` // full issue data for JSON conversion in cmd layer
 }
 
 // ProgressStats holds completion statistics for a molecule.
@@ -108,6 +109,7 @@ func Current(ctx context.Context, store storage.Storage, opts CurrentOptions) (*
 			Title:    child.Title,
 			Status:   status,
 			Assignee: child.Assignee,
+			Issue:    child,
 		})
 	}
 

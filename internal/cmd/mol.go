@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"beads-lite/internal/graph"
 	"beads-lite/internal/meow"
+	"beads-lite/internal/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -34,6 +36,7 @@ Subcommands:
 
 	cmd.AddCommand(newMolPourCmd(provider))
 	cmd.AddCommand(newMolWispCmd(provider))
+	cmd.AddCommand(newMolShowCmd(provider))
 	cmd.AddCommand(newMolCurrentCmd(provider))
 	cmd.AddCommand(newMolProgressCmd(provider))
 	cmd.AddCommand(newMolStaleCmd(provider))
@@ -81,8 +84,8 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Poured molecule: %s\n", result.RootID)
-			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
+			fmt.Fprintf(app.Out, "Poured molecule: %s\n", result.NewEpicID)
+			fmt.Fprintf(app.Out, "  Children: %d\n", result.Created-1)
 			return nil
 		},
 	}
@@ -128,8 +131,8 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.RootID)
-			fmt.Fprintf(app.Out, "  Children: %d\n", len(result.ChildIDs))
+			fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.NewEpicID)
+			fmt.Fprintf(app.Out, "  Children: %d\n", result.Created-1)
 			return nil
 		},
 	}
@@ -137,6 +140,91 @@ Examples:
 	cmd.Flags().StringArrayVar(&vars, "var", nil, "Variable assignment (key=value, repeatable)")
 
 	return cmd
+}
+
+// newMolShowCmd creates the "mol show" subcommand.
+func newMolShowCmd(provider *AppProvider) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "show <molecule-id>",
+		Short: "Show full molecule details including issues and dependencies",
+		Long: `Display all issues, dependencies, and metadata for a molecule.
+
+Examples:
+  bd mol show bd-a1b2
+  bd mol show bd-a1b2 --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+			molID := args[0]
+
+			root, err := app.Storage.Get(ctx, molID)
+			if err != nil {
+				return fmt.Errorf("get molecule root %s: %w", molID, err)
+			}
+
+			children, err := graph.CollectMoleculeChildren(ctx, app.Storage, molID)
+			if err != nil {
+				return fmt.Errorf("collect children of %s: %w", molID, err)
+			}
+
+			if app.JSON {
+				return json.NewEncoder(app.Out).Encode(molShowToJSON(root, children))
+			}
+
+			// Text output.
+			fmt.Fprintf(app.Out, "Molecule: %s (%s)\n", root.ID, root.Title)
+			fmt.Fprintf(app.Out, "  Status: %s\n", root.Status)
+			fmt.Fprintf(app.Out, "  Issues: %d\n", len(children)+1)
+			for _, child := range children {
+				fmt.Fprintf(app.Out, "  - %s: %s [%s]\n", child.ID, child.Title, child.Status)
+			}
+			return nil
+		},
+	}
+
+	return cmd
+}
+
+// molShowToJSON builds the MolShowJSON output from root and children.
+func molShowToJSON(root *storage.Issue, children []*storage.Issue) MolShowJSON {
+	// Gather all dependencies across all issues in the molecule.
+	allIssues := make([]*storage.Issue, 0, len(children)+1)
+	allIssues = append(allIssues, root)
+	allIssues = append(allIssues, children...)
+
+	var deps []ListDepJSON
+	for _, issue := range allIssues {
+		for _, dep := range issue.Dependencies {
+			deps = append(deps, ListDepJSON{
+				CreatedAt:   formatTime(issue.CreatedAt),
+				CreatedBy:   issue.CreatedBy,
+				DependsOnID: dep.ID,
+				IssueID:     issue.ID,
+				Type:        string(dep.Type),
+			})
+		}
+	}
+
+	// Convert all issues to MolIssueJSON (children + root, matching reference format).
+	issues := make([]MolIssueJSON, 0, len(children)+1)
+	for _, child := range children {
+		issues = append(issues, ToMolIssueJSON(child))
+	}
+	issues = append(issues, ToMolIssueJSON(root))
+
+	return MolShowJSON{
+		BondedFrom:   nil,
+		Dependencies: deps,
+		IsCompound:   false,
+		Issues:       issues,
+		Root:         ToMolIssueJSON(root),
+		Variables:    nil,
+	}
 }
 
 // newMolCurrentCmd creates the "mol current" subcommand.
@@ -185,7 +273,7 @@ Examples:
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(result)
+				return json.NewEncoder(app.Out).Encode(molCurrentToJSON(result))
 			}
 
 			if len(result.Steps) == 0 {
@@ -432,6 +520,53 @@ Examples:
 	cmd.Flags().StringVar(&olderThan, "older-than", "", "Remove molecules older than this duration (e.g. 24h, 168h)")
 
 	return cmd
+}
+
+// molCurrentToJSON converts a MoleculeView to the reference JSON format.
+func molCurrentToJSON(view *meow.MoleculeView) []MolCurrentJSON {
+	steps := make([]MolCurrentStepJSON, 0, len(view.Steps))
+	var nextStep *MolIssueJSON
+
+	for _, s := range view.Steps {
+		// Map graph status to reference output status.
+		var status string
+		var isCurrent bool
+		switch s.Status {
+		case "done":
+			status = "completed"
+		case "current":
+			status = "in_progress"
+			isCurrent = true
+		case "ready":
+			status = "ready"
+			if nextStep == nil && s.Issue != nil {
+				ij := ToMolIssueJSON(s.Issue)
+				nextStep = &ij
+			}
+		case "blocked", "pending":
+			status = "pending"
+		default:
+			status = string(s.Status)
+		}
+
+		step := MolCurrentStepJSON{
+			IsCurrent: isCurrent,
+			Status:    status,
+		}
+		if s.Issue != nil {
+			step.Issue = ToMolIssueJSON(s.Issue)
+		}
+		steps = append(steps, step)
+	}
+
+	return []MolCurrentJSON{{
+		Completed:     view.Progress.Completed,
+		MoleculeID:    view.RootID,
+		MoleculeTitle: view.Title,
+		NextStep:      nextStep,
+		Steps:         steps,
+		Total:         view.Progress.Total,
+	}}
 }
 
 // parseVarFlags converts ["key=value", ...] into a map.

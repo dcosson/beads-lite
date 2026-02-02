@@ -52,9 +52,9 @@ func TestCookTextOutput(t *testing.T) {
 
 	output := out.String()
 
-	// Root line
-	if !strings.Contains(output, "Root: Deploy pipeline (epic)") {
-		t.Errorf("expected root line, got:\n%s", output)
+	// Formula line
+	if !strings.Contains(output, "Formula: deploy — Deploy pipeline") {
+		t.Errorf("expected formula line, got:\n%s", output)
 	}
 
 	// Steps header
@@ -105,22 +105,25 @@ func TestCookJSONOutput(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	var result meow.CookResult
+	var result meow.CookOutput
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("failed to parse JSON output: %v\nraw: %s", err, out.String())
 	}
 
-	if result.Root.Title != "Deploy pipeline" {
-		t.Errorf("Root.Title = %q, want %q", result.Root.Title, "Deploy pipeline")
+	if result.Description != "Deploy pipeline" {
+		t.Errorf("Description = %q, want %q", result.Description, "Deploy pipeline")
 	}
-	if result.Root.Type != "epic" {
-		t.Errorf("Root.Type = %q, want %q", result.Root.Type, "epic")
+	if string(result.Type) != "workflow" {
+		t.Errorf("Type = %q, want %q", result.Type, "workflow")
 	}
 	if len(result.Steps) != 2 {
 		t.Fatalf("len(Steps) = %d, want 2", len(result.Steps))
 	}
-	if result.Steps[0].StepID != "build" {
-		t.Errorf("Steps[0].StepID = %q, want %q", result.Steps[0].StepID, "build")
+	if result.Steps[0].ID != "build" {
+		t.Errorf("Steps[0].ID = %q, want %q", result.Steps[0].ID, "build")
+	}
+	if result.Source == "" {
+		t.Error("Source should not be empty")
 	}
 }
 
@@ -231,8 +234,8 @@ func TestCookNoSteps(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "Root: Empty formula (epic)") {
-		t.Errorf("expected root line, got:\n%s", output)
+	if !strings.Contains(output, "Formula: empty — Empty formula") {
+		t.Errorf("expected formula line, got:\n%s", output)
 	}
 	if !strings.Contains(output, "(no steps)") {
 		t.Errorf("expected '(no steps)' message, got:\n%s", output)

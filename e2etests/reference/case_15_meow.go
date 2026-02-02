@@ -12,6 +12,12 @@ import (
 func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 
+	// Meow commands require --no-daemon with the reference binary.
+	// beads-lite accepts it as a no-op, so this is safe for both.
+	prevExtraArgs := r.ExtraArgs
+	r.ExtraArgs = append(append([]string{}, r.ExtraArgs...), "--no-daemon")
+	defer func() { r.ExtraArgs = prevExtraArgs }()
+
 	// 1. Formula setup — write test formula into sandbox .beads/formulas/ directory.
 	formulaDir := filepath.Join(sandbox, ".beads", "formulas")
 	if err := os.MkdirAll(formulaDir, 0o755); err != nil {
@@ -65,6 +71,13 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", fmt.Errorf("missing step IDs from pour: setup=%q build=%q test=%q", step1ID, step2ID, step3ID)
 	}
 
+	// 3b. Mol show — inspect molecule after pour.
+	result, err = mustRun(r, sandbox, "mol", "show", rootID, "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "mol show after pour", n.NormalizeJSON([]byte(result.Stdout)))
+
 	// 4. Mol current — show all steps with status markers.
 	result, err = mustRun(r, sandbox, "mol", "current", rootID, "--json")
 	if err != nil {
@@ -95,6 +108,13 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "close step 1 continue", n.NormalizeJSON([]byte(result.Stdout)))
 
+	// 5b. Mol show — inspect molecule mid-workflow (step 1 closed, step 2 claimed).
+	result, err = mustRun(r, sandbox, "mol", "show", rootID, "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "mol show mid-workflow", n.NormalizeJSON([]byte(result.Stdout)))
+
 	// Close step 2, verify step 3 advances.
 	result, err = mustRun(r, sandbox, "close", step2ID, "--continue", "--json")
 	if err != nil {
@@ -108,6 +128,13 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 		return "", err
 	}
 	section(&out, "close step 3", n.NormalizeJSON([]byte(result.Stdout)))
+
+	// Mol show — inspect molecule after all steps closed.
+	result, err = mustRun(r, sandbox, "mol", "show", rootID, "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "mol show complete", n.NormalizeJSON([]byte(result.Stdout)))
 
 	// Mol progress — verify 100% completion.
 	result, err = mustRun(r, sandbox, "mol", "progress", rootID, "--json")
@@ -186,57 +213,50 @@ type pourResult struct {
 }
 
 // extractPourResult parses the JSON output of "mol pour" or "mol wisp".
-// Handles both the reference binary format (new_epic_id/id_mapping) and
-// the beads-lite format (RootID/ChildIDs).
-// TODO: investigate, I think this should be the same
+// Both the reference binary and beads-lite use the same format:
+// {new_epic_id, id_mapping, created, attached, phase}.
 func extractPourResult(jsonOutput string) (pourResult, error) {
 	var raw map[string]interface{}
 	if err := json.Unmarshal([]byte(jsonOutput), &raw); err != nil {
 		return pourResult{}, fmt.Errorf("parsing pour/wisp result: %w\nraw: %s", err, jsonOutput)
 	}
 
-	// Reference binary format: {new_epic_id, id_mapping}
-	if epicID, ok := raw["new_epic_id"].(string); ok && epicID != "" {
-		idMapping, _ := raw["id_mapping"].(map[string]interface{})
-		stepIDs := make(map[string]string)
-		// Find the formula name (the key that maps to the root ID)
-		var formulaName string
-		for key, val := range idMapping {
-			if id, ok := val.(string); ok && id == epicID {
-				formulaName = key
-				break
-			}
-		}
-		// Extract child step IDs: keys are "formula.step_name"
-		prefix := formulaName + "."
-		for key, val := range idMapping {
-			if strings.HasPrefix(key, prefix) {
-				stepName := strings.TrimPrefix(key, prefix)
-				if id, ok := val.(string); ok {
-					stepIDs[stepName] = id
-				}
-			}
-		}
-		return pourResult{RootID: epicID, StepIDs: stepIDs}, nil
+	epicID, ok := raw["new_epic_id"].(string)
+	if !ok || epicID == "" {
+		return pourResult{}, fmt.Errorf("missing new_epic_id in pour/wisp output, raw: %s", jsonOutput)
 	}
 
-	// Beads-lite format: {RootID, ChildIDs}
-	if rootID, ok := raw["RootID"].(string); ok && rootID != "" {
-		childIDs, _ := raw["ChildIDs"].([]interface{})
-		stepIDs := make(map[string]string)
-		// ChildIDs are in formula step order; map them to step names
-		// by looking up step names from the id_mapping if available,
-		// otherwise fall back to index-based names.
-		stepNames := []string{"setup", "build", "test"}
-		for i, id := range childIDs {
-			if idStr, ok := id.(string); ok && i < len(stepNames) {
-				stepIDs[stepNames[i]] = idStr
+	idMapping, _ := raw["id_mapping"].(map[string]interface{})
+	stepIDs := make(map[string]string)
+
+	// Find the formula name (the key that maps to the root ID).
+	var formulaName string
+	for key, val := range idMapping {
+		if id, ok := val.(string); ok && id == epicID {
+			formulaName = key
+			break
+		}
+	}
+	// Extract child step IDs: keys are "formula.step_name".
+	prefix := formulaName + "."
+	for key, val := range idMapping {
+		if strings.HasPrefix(key, prefix) {
+			stepName := strings.TrimPrefix(key, prefix)
+			if id, ok := val.(string); ok {
+				stepIDs[stepName] = id
 			}
 		}
-		return pourResult{RootID: rootID, StepIDs: stepIDs}, nil
 	}
+	return pourResult{RootID: epicID, StepIDs: stepIDs}, nil
+}
 
-	return pourResult{}, fmt.Errorf("unrecognized pour/wisp output format, raw: %s", jsonOutput)
+// patchMeowExpected transforms the reference binary's expected output for
+// sections where beads-lite intentionally differs. Applied after -update
+// generates the expected file from the reference binary.
+func patchMeowExpected(s string) string {
+	// Patches will be added once we see what the reference output looks like
+	// with --no-daemon and what beads-lite produces differently.
+	return s
 }
 
 // extractSquashDigestID parses the JSON output of "mol squash" and returns

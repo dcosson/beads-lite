@@ -54,7 +54,7 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 	}
 
 	// Root should be an epic.
-	root, err := store.Get(ctx, result.RootID)
+	root, err := store.Get(ctx, result.NewEpicID)
 	if err != nil {
 		t.Fatalf("Get root: %v", err)
 	}
@@ -65,19 +65,22 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 		t.Errorf("root.Title = %q, want %q", root.Title, "Deploy pipeline")
 	}
 
-	// Should have 3 children.
-	if len(result.ChildIDs) != 3 {
-		t.Fatalf("len(ChildIDs) = %d, want 3", len(result.ChildIDs))
+	// Should have 3 children (plus 1 root = 4 entries in IDMapping).
+	if result.Created != 4 {
+		t.Fatalf("Created = %d, want 4", result.Created)
 	}
 
 	// Each child should have parent-child dep to root.
-	for i, childID := range result.ChildIDs {
+	for key, childID := range result.IDMapping {
+		if childID == result.NewEpicID {
+			continue // skip root entry
+		}
 		child, err := store.Get(ctx, childID)
 		if err != nil {
-			t.Fatalf("Get child[%d]: %v", i, err)
+			t.Fatalf("Get child %s: %v", key, err)
 		}
-		if child.Parent != result.RootID {
-			t.Errorf("child[%d].Parent = %q, want %q", i, child.Parent, result.RootID)
+		if child.Parent != result.NewEpicID {
+			t.Errorf("child %s.Parent = %q, want %q", key, child.Parent, result.NewEpicID)
 		}
 	}
 }
@@ -107,7 +110,7 @@ func TestPourChildrenAreParentChildDeps(t *testing.T) {
 	}
 
 	// Verify root's dependents include parent-child for each child.
-	root, err := store.Get(ctx, result.RootID)
+	root, err := store.Get(ctx, result.NewEpicID)
 	if err != nil {
 		t.Fatalf("Get root: %v", err)
 	}
@@ -142,21 +145,25 @@ func TestPourDependsOnBecomesBlocksDep(t *testing.T) {
 		t.Fatalf("Pour() error = %v", err)
 	}
 
-	// test (child[1]) should have a blocks dep on build (child[0]).
-	testIssue, err := store.Get(ctx, result.ChildIDs[1])
+	buildID := result.IDMapping["pipeline.build"]
+	testID := result.IDMapping["pipeline.test"]
+	shipID := result.IDMapping["pipeline.ship"]
+
+	// test should have a blocks dep on build.
+	testIssue, err := store.Get(ctx, testID)
 	if err != nil {
 		t.Fatalf("Get test issue: %v", err)
 	}
-	if !testIssue.HasDependency(result.ChildIDs[0]) {
+	if !testIssue.HasDependency(buildID) {
 		t.Errorf("test issue should depend on build issue; deps = %v", testIssue.Dependencies)
 	}
 
-	// ship (child[2]) should have a blocks dep on test (child[1]).
-	shipIssue, err := store.Get(ctx, result.ChildIDs[2])
+	// ship should have a blocks dep on test.
+	shipIssue, err := store.Get(ctx, shipID)
 	if err != nil {
 		t.Fatalf("Get ship issue: %v", err)
 	}
-	if !shipIssue.HasDependency(result.ChildIDs[1]) {
+	if !shipIssue.HasDependency(testID) {
 		t.Errorf("ship issue should depend on test issue; deps = %v", shipIssue.Dependencies)
 	}
 }
@@ -187,7 +194,7 @@ func TestPourWispSetsEphemeral(t *testing.T) {
 	}
 
 	// Root should be ephemeral.
-	root, err := store.Get(ctx, result.RootID)
+	root, err := store.Get(ctx, result.NewEpicID)
 	if err != nil {
 		t.Fatalf("Get root: %v", err)
 	}
@@ -196,13 +203,16 @@ func TestPourWispSetsEphemeral(t *testing.T) {
 	}
 
 	// Children should be ephemeral.
-	for i, childID := range result.ChildIDs {
+	for key, childID := range result.IDMapping {
+		if childID == result.NewEpicID {
+			continue
+		}
 		child, err := store.Get(ctx, childID)
 		if err != nil {
-			t.Fatalf("Get child[%d]: %v", i, err)
+			t.Fatalf("Get child %s: %v", key, err)
 		}
 		if !child.Ephemeral {
-			t.Errorf("child[%d].Ephemeral = false, want true", i)
+			t.Errorf("child %s.Ephemeral = false, want true", key)
 		}
 	}
 }
@@ -235,7 +245,7 @@ func TestPourSubstitutesVariables(t *testing.T) {
 		t.Fatalf("Pour() error = %v", err)
 	}
 
-	child, err := store.Get(ctx, result.ChildIDs[0])
+	child, err := store.Get(ctx, result.IDMapping["vars.s1"])
 	if err != nil {
 		t.Fatalf("Get child: %v", err)
 	}
@@ -412,7 +422,7 @@ func TestPourRootTitleFallsBackToFormulaName(t *testing.T) {
 		t.Fatalf("Pour() error = %v", err)
 	}
 
-	root, err := store.Get(ctx, result.RootID)
+	root, err := store.Get(ctx, result.NewEpicID)
 	if err != nil {
 		t.Fatalf("Get root: %v", err)
 	}
@@ -452,7 +462,7 @@ func TestPourSetsStepFields(t *testing.T) {
 		t.Fatalf("Pour() error = %v", err)
 	}
 
-	child, err := store.Get(ctx, result.ChildIDs[0])
+	child, err := store.Get(ctx, result.IDMapping["fields.s1"])
 	if err != nil {
 		t.Fatalf("Get child: %v", err)
 	}

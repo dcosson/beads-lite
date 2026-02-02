@@ -9,25 +9,30 @@ import (
 type TestCase struct {
 	Name string
 	Fn   func(r *Runner, n *Normalizer, sandbox string) (string, error)
+	// PostUpdate optionally transforms the expected output after generating
+  // it from the reference binary. Used when we can't or don't want our
+  // implementation to perfectly match the reference implementation due to a
+  // bug or confusing behavior.
+	PostUpdate func(string) string
 }
 
 // testCases is the ordered registry of all e2e test cases.
 var testCases = []TestCase{
-	{"01_create", caseCreate},
-	{"02_show", caseShow},
-	{"03_update", caseUpdate},
-	{"04_list", caseList},
-	{"05_close_reopen", caseCloseReopen},
-	{"06_delete", caseDelete},
-	{"07_deps", caseDeps},
-	{"08_parent_children", caseParentChildren},
-	{"09_comment", caseComment},
-	{"10_ready_blocked", caseReadyBlocked},
-	{"11_search", caseSearch},
-	{"12_stats", caseStats},
-	{"13_config", caseConfig},
-	{"14_dot_notation_ids", caseDotNotationIDs},
-	{"15_meow", caseMeow},
+	{Name: "01_create", Fn: caseCreate},
+	{Name: "02_show", Fn: caseShow},
+	{Name: "03_update", Fn: caseUpdate},
+	{Name: "04_list", Fn: caseList},
+	{Name: "05_close_reopen", Fn: caseCloseReopen},
+	{Name: "06_delete", Fn: caseDelete},
+	{Name: "07_deps", Fn: caseDeps},
+	{Name: "08_parent_children", Fn: caseParentChildren},
+	{Name: "09_comment", Fn: caseComment},
+	{Name: "10_ready_blocked", Fn: caseReadyBlocked},
+	{Name: "11_search", Fn: caseSearch},
+	{Name: "12_stats", Fn: caseStats},
+	{Name: "13_config", Fn: caseConfig},
+	{Name: "14_dot_notation_ids", Fn: caseDotNotationIDs},
+	{Name: "15_meow", Fn: caseMeow, PostUpdate: patchMeowExpected},
 }
 
 // section writes a section header and normalized JSON content to the builder.

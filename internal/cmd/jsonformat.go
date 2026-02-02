@@ -258,6 +258,71 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 	return out
 }
 
+// MolIssueJSON is the JSON format for issues within molecule commands
+// (mol current, mol show). Includes optional fields that appear only when set.
+type MolIssueJSON struct {
+	Assignee    string `json:"assignee,omitempty"`
+	CloseReason string `json:"close_reason,omitempty"`
+	ClosedAt    string `json:"closed_at,omitempty"`
+	CreatedAt   string `json:"created_at"`
+	Description string `json:"description,omitempty"`
+	ID          string `json:"id"`
+	IssueType   string `json:"issue_type"`
+	Priority    int    `json:"priority"`
+	Status      string `json:"status"`
+	Title       string `json:"title"`
+	UpdatedAt   string `json:"updated_at"`
+}
+
+// ToMolIssueJSON converts a storage.Issue to MolIssueJSON format.
+func ToMolIssueJSON(issue *storage.Issue) MolIssueJSON {
+	out := MolIssueJSON{
+		Assignee:    issue.Assignee,
+		CreatedAt:   formatTime(issue.CreatedAt),
+		Description: issue.Description,
+		ID:          issue.ID,
+		IssueType:   string(issue.Type),
+		Priority:    priorityToInt(issue.Priority),
+		Status:      string(issue.Status),
+		Title:       issue.Title,
+		UpdatedAt:   formatTime(issue.UpdatedAt),
+	}
+	if issue.CloseReason != "" {
+		out.CloseReason = issue.CloseReason
+	}
+	if issue.ClosedAt != nil {
+		out.ClosedAt = formatTime(*issue.ClosedAt)
+	}
+	return out
+}
+
+// MolCurrentJSON is the JSON output format for "mol current".
+type MolCurrentJSON struct {
+	Completed     int                  `json:"completed"`
+	MoleculeID    string               `json:"molecule_id"`
+	MoleculeTitle string               `json:"molecule_title"`
+	NextStep      *MolIssueJSON        `json:"next_step"`
+	Steps         []MolCurrentStepJSON `json:"steps"`
+	Total         int                  `json:"total"`
+}
+
+// MolCurrentStepJSON is a single step entry in mol current output.
+type MolCurrentStepJSON struct {
+	IsCurrent bool         `json:"is_current"`
+	Issue     MolIssueJSON `json:"issue"`
+	Status    string       `json:"status"`
+}
+
+// MolShowJSON is the JSON output format for "mol show".
+type MolShowJSON struct {
+	BondedFrom   interface{}    `json:"bonded_from"`
+	Dependencies []ListDepJSON  `json:"dependencies"`
+	IsCompound   bool           `json:"is_compound"`
+	Issues       []MolIssueJSON `json:"issues"`
+	Root         MolIssueJSON   `json:"root"`
+	Variables    interface{}    `json:"variables"`
+}
+
 // enrichDependencies fetches full issue details for each dependency.
 func enrichDependencies(ctx context.Context, store storage.Storage, deps []storage.Dependency) []EnrichedDepJSON {
 	result := make([]EnrichedDepJSON, 0, len(deps))

@@ -46,8 +46,12 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			// Text output: root issue then each step.
-			fmt.Fprintf(app.Out, "Root: %s (%s)\n", result.Root.Title, result.Root.Type)
+			// Text output: formula info then each step.
+			desc := result.Description
+			if desc == "" {
+				desc = result.Formula.Formula
+			}
+			fmt.Fprintf(app.Out, "Formula: %s — %s\n", result.Formula.Formula, desc)
 			if len(result.Steps) == 0 {
 				fmt.Fprintln(app.Out, "  (no steps)")
 				return nil
@@ -58,7 +62,11 @@ Examples:
 				if len(step.DependsOn) > 0 {
 					deps = fmt.Sprintf(" → depends on: %s", strings.Join(step.DependsOn, ", "))
 				}
-				fmt.Fprintf(app.Out, "  [%s] %s: %s%s\n", step.Type, step.StepID, step.Title, deps)
+				stepType := step.Type
+				if stepType == "" {
+					stepType = "task"
+				}
+				fmt.Fprintf(app.Out, "  [%s] %s: %s%s\n", stepType, step.ID, step.Title, deps)
 			}
 			return nil
 		},

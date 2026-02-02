@@ -70,6 +70,9 @@ func TestE2E(t *testing.T) {
 				if err := os.MkdirAll("expected", 0755); err != nil {
 					t.Fatalf("failed to create expected dir: %v", err)
 				}
+				if tc.PostUpdate != nil {
+					actual = tc.PostUpdate(actual)
+				}
 				if err := os.WriteFile(expectedFile, []byte(actual), 0644); err != nil {
 					t.Fatalf("failed to write expected file: %v", err)
 				}

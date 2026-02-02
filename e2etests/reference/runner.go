@@ -11,8 +11,9 @@ import (
 
 // Runner executes bd commands against a sandbox directory.
 type Runner struct {
-	BdCmd        string // path to bd binary
-	KillDaemons  bool   // kill reference binary daemons between sandboxes
+	BdCmd        string   // path to bd binary
+	KillDaemons  bool     // kill reference binary daemons between sandboxes
+	ExtraArgs    []string // extra args prepended to every command (e.g. --no-daemon)
 }
 
 // SetupSandbox creates a fresh beads sandbox directory by running the setup script.
@@ -66,7 +67,8 @@ type RunResult struct {
 // to the sandbox so the command finds the right data directory.
 // Pass an empty sandbox for commands that don't need one (e.g., --help).
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
-	cmd := exec.Command(r.BdCmd, args...)
+	allArgs := append(r.ExtraArgs, args...)
+	cmd := exec.Command(r.BdCmd, allArgs...)
 	if sandbox != "" {
 		cmd.Dir = sandbox
 		cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)

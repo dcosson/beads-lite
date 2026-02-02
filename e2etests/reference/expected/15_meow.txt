@@ -2,7 +2,7 @@
 {
   "description": "Test workflow",
   "formula": "test-workflow",
-  "source": "/private/var/folders/z8/_6lf4ssn7j71pk5gsck8c17w0000gn/T/beads-sandbox-NbHyUa1X/.beads/formulas/test-workflow.formula.json",
+  "source": "/private/var/folders/z8/_6lf4ssn7j71pk5gsck8c17w0000gn/T/beads-sandbox-uSefJZzb/.beads/formulas/test-workflow.formula.json",
   "steps": [
     {
       "depends_on": [
@@ -40,24 +40,117 @@
   "attached": 0,
   "created": 4,
   "id_mapping": {
-    "test-workflow": "ISSUE_1-j0z",
-    "test-workflow.build": "ISSUE_1-x0c",
-    "test-workflow.setup": "ISSUE_1-itq",
-    "test-workflow.test": "ISSUE_1-bxl"
+    "test-workflow": "ISSUE_1-43c",
+    "test-workflow.build": "ISSUE_1-7yn",
+    "test-workflow.setup": "ISSUE_1-86d",
+    "test-workflow.test": "ISSUE_1-l1f"
   },
-  "new_epic_id": "ISSUE_1-j0z",
+  "new_epic_id": "ISSUE_1-43c",
   "phase": "liquid"
+}
+
+=== mol show after pour ===
+{
+  "bonded_from": null,
+  "dependencies": [
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-86d",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-86d",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-7yn",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "blocks"
+    }
+  ],
+  "is_compound": false,
+  "issues": [
+    {
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-7yn",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "open",
+      "title": "Build",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-86d",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "open",
+      "title": "Setup demo",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-l1f",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "open",
+      "title": "Test",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "description": "Test workflow",
+      "id": "ISSUE_1-43c",
+      "issue_type": "epic",
+      "priority": 2,
+      "status": "open",
+      "title": "test-workflow",
+      "updated_at": "TIMESTAMP"
+    }
+  ],
+  "root": {
+    "created_at": "TIMESTAMP",
+    "description": "Test workflow",
+    "id": "ISSUE_1-43c",
+    "issue_type": "epic",
+    "priority": 2,
+    "status": "open",
+    "title": "test-workflow",
+    "updated_at": "TIMESTAMP"
+  },
+  "variables": null
 }
 
 === mol current ===
 [
   {
     "completed": 0,
-    "molecule_id": "ISSUE_1-j0z",
+    "molecule_id": "ISSUE_1-43c",
     "molecule_title": "test-workflow",
     "next_step": {
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-itq",
+      "id": "ISSUE_1-86d",
       "issue_type": "task",
       "priority": 2,
       "status": "open",
@@ -69,7 +162,7 @@
         "is_current": false,
         "issue": {
           "created_at": "TIMESTAMP",
-          "id": "ISSUE_1-itq",
+          "id": "ISSUE_1-86d",
           "issue_type": "task",
           "priority": 2,
           "status": "open",
@@ -82,11 +175,11 @@
         "is_current": false,
         "issue": {
           "created_at": "TIMESTAMP",
-          "id": "ISSUE_1-bxl",
+          "id": "ISSUE_1-7yn",
           "issue_type": "task",
           "priority": 2,
           "status": "open",
-          "title": "Test",
+          "title": "Build",
           "updated_at": "TIMESTAMP"
         },
         "status": "pending"
@@ -95,11 +188,11 @@
         "is_current": false,
         "issue": {
           "created_at": "TIMESTAMP",
-          "id": "ISSUE_1-x0c",
+          "id": "ISSUE_1-l1f",
           "issue_type": "task",
           "priority": 2,
           "status": "open",
-          "title": "Build",
+          "title": "Test",
           "updated_at": "TIMESTAMP"
         },
         "status": "pending"
@@ -115,7 +208,7 @@
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
     "description": "Test workflow",
-    "id": "ISSUE_1-j0z",
+    "id": "ISSUE_1-43c",
     "issue_type": "epic",
     "priority": 2,
     "status": "in_progress",
@@ -129,7 +222,7 @@
   {
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
-    "id": "ISSUE_1-itq",
+    "id": "ISSUE_1-86d",
     "issue_type": "task",
     "priority": 2,
     "status": "in_progress",
@@ -146,7 +239,7 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-itq",
+      "id": "ISSUE_1-86d",
       "issue_type": "task",
       "priority": 2,
       "status": "closed",
@@ -161,7 +254,7 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-itq",
+      "id": "ISSUE_1-86d",
       "issue_type": "task",
       "priority": 2,
       "status": "closed",
@@ -169,10 +262,10 @@
       "updated_at": "TIMESTAMP"
     },
     "molecule_complete": false,
-    "molecule_id": "ISSUE_1-j0z",
+    "molecule_id": "ISSUE_1-43c",
     "next_step": {
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-x0c",
+      "id": "ISSUE_1-7yn",
       "issue_type": "task",
       "priority": 2,
       "status": "open",
@@ -182,6 +275,103 @@
   }
 }
 
+=== mol show mid-workflow ===
+{
+  "bonded_from": null,
+  "dependencies": [
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-86d",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-86d",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-7yn",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "blocks"
+    }
+  ],
+  "is_compound": false,
+  "issues": [
+    {
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-7yn",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "in_progress",
+      "title": "Build",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "assignee": "testuser",
+      "closed_at": "TIMESTAMP",
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-86d",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "closed",
+      "title": "Setup demo",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-l1f",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "open",
+      "title": "Test",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "assignee": "testuser",
+      "created_at": "TIMESTAMP",
+      "description": "Test workflow",
+      "id": "ISSUE_1-43c",
+      "issue_type": "epic",
+      "priority": 2,
+      "status": "in_progress",
+      "title": "test-workflow",
+      "updated_at": "TIMESTAMP"
+    }
+  ],
+  "root": {
+    "assignee": "testuser",
+    "created_at": "TIMESTAMP",
+    "description": "Test workflow",
+    "id": "ISSUE_1-43c",
+    "issue_type": "epic",
+    "priority": 2,
+    "status": "in_progress",
+    "title": "test-workflow",
+    "updated_at": "TIMESTAMP"
+  },
+  "variables": null
+}
+
 === close step 2 continue ===
 {
   "closed": [
@@ -189,7 +379,7 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-x0c",
+      "id": "ISSUE_1-7yn",
       "issue_type": "task",
       "priority": 2,
       "status": "closed",
@@ -203,7 +393,7 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-x0c",
+      "id": "ISSUE_1-7yn",
       "issue_type": "task",
       "priority": 2,
       "status": "closed",
@@ -211,10 +401,10 @@
       "updated_at": "TIMESTAMP"
     },
     "molecule_complete": false,
-    "molecule_id": "ISSUE_1-j0z",
+    "molecule_id": "ISSUE_1-43c",
     "next_step": {
       "created_at": "TIMESTAMP",
-      "id": "ISSUE_1-bxl",
+      "id": "ISSUE_1-l1f",
       "issue_type": "task",
       "priority": 2,
       "status": "open",
@@ -230,7 +420,7 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
-    "id": "ISSUE_1-bxl",
+    "id": "ISSUE_1-l1f",
     "issue_type": "task",
     "priority": 2,
     "status": "closed",
@@ -239,16 +429,115 @@
   }
 ]
 
+=== mol show complete ===
+{
+  "bonded_from": null,
+  "dependencies": [
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-86d",
+      "issue_id": "ISSUE_1-7yn",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-86d",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-43c",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "parent-child"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
+      "depends_on_id": "ISSUE_1-7yn",
+      "issue_id": "ISSUE_1-l1f",
+      "type": "blocks"
+    }
+  ],
+  "is_compound": false,
+  "issues": [
+    {
+      "closed_at": "TIMESTAMP",
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-7yn",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "closed",
+      "title": "Build",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "assignee": "testuser",
+      "closed_at": "TIMESTAMP",
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-86d",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "closed",
+      "title": "Setup demo",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "closed_at": "TIMESTAMP",
+      "created_at": "TIMESTAMP",
+      "id": "ISSUE_1-l1f",
+      "issue_type": "task",
+      "priority": 2,
+      "status": "closed",
+      "title": "Test",
+      "updated_at": "TIMESTAMP"
+    },
+    {
+      "assignee": "testuser",
+      "created_at": "TIMESTAMP",
+      "description": "Test workflow",
+      "id": "ISSUE_1-43c",
+      "issue_type": "epic",
+      "priority": 2,
+      "status": "in_progress",
+      "title": "test-workflow",
+      "updated_at": "TIMESTAMP"
+    }
+  ],
+  "root": {
+    "assignee": "testuser",
+    "created_at": "TIMESTAMP",
+    "description": "Test workflow",
+    "id": "ISSUE_1-43c",
+    "issue_type": "epic",
+    "priority": 2,
+    "status": "in_progress",
+    "title": "test-workflow",
+    "updated_at": "TIMESTAMP"
+  },
+  "variables": null
+}
+
 === mol progress complete ===
 {
   "completed": 3,
   "current_step_id": "",
   "eta_hours": 0,
   "in_progress": 0,
-  "molecule_id": "ISSUE_1-j0z",
+  "molecule_id": "ISSUE_1-43c",
   "molecule_title": "test-workflow",
   "percent": 100,
-  "rate_per_hour": 37722.40501288849,
+  "rate_per_hour": 24861.19167978785,
   "total": 3
 }
 
@@ -257,22 +546,22 @@
   "attached": 0,
   "created": 4,
   "id_mapping": {
-    "test-workflow": "ISSUE_1-civ",
-    "test-workflow.build": "ISSUE_1-5aj",
-    "test-workflow.setup": "ISSUE_1-mps",
-    "test-workflow.test": "ISSUE_1-09h"
+    "test-workflow": "ISSUE_1-jxs",
+    "test-workflow.build": "ISSUE_1-1fe",
+    "test-workflow.setup": "ISSUE_1-xsi",
+    "test-workflow.test": "ISSUE_1-2s7"
   },
-  "new_epic_id": "ISSUE_1-civ",
+  "new_epic_id": "ISSUE_1-jxs",
   "phase": "liquid"
 }
 
 === burn molecule ===
 {
   "deleted": [
-    "ISSUE_1-civ",
-    "ISSUE_1-09h",
-    "ISSUE_1-5aj",
-    "ISSUE_1-mps"
+    "ISSUE_1-jxs",
+    "ISSUE_1-1fe",
+    "ISSUE_1-2s7",
+    "ISSUE_1-xsi"
   ],
   "deleted_count": 4,
   "dependencies_removed": 5,
@@ -286,12 +575,12 @@
 {
   "created": 4,
   "id_mapping": {
-    "test-workflow": "ISSUE_2p-4zx",
-    "test-workflow.build": "ISSUE_2p-xu3",
-    "test-workflow.setup": "ISSUE_2p-gir",
-    "test-workflow.test": "ISSUE_2p-myt"
+    "test-workflow": "ISSUE_2p-auo",
+    "test-workflow.build": "ISSUE_2p-15x",
+    "test-workflow.setup": "ISSUE_2p-8tu",
+    "test-workflow.test": "ISSUE_2p-ds1"
   },
-  "new_epic_id": "ISSUE_2p-4zx",
+  "new_epic_id": "ISSUE_2p-auo",
   "phase": "vapor"
 }
 
@@ -303,12 +592,12 @@
   "deleted_count": 3,
   "digest_id": "ISSUE_3",
   "kept_children": false,
-  "molecule_id": "ISSUE_2p-4zx",
+  "molecule_id": "ISSUE_2p-auo",
   "squashed_count": 3,
   "squashed_ids": [
-    "ISSUE_2p-gir",
-    "ISSUE_2p-myt",
-    "ISSUE_2p-xu3"
+    "ISSUE_2p-15x",
+    "ISSUE_2p-8tu",
+    "ISSUE_2p-ds1"
   ]
 }
 
@@ -324,7 +613,7 @@
         "dependency_type": "parent-child",
         "description": "Test workflow",
         "ephemeral": true,
-        "id": "ISSUE_2p-4zx",
+        "id": "ISSUE_2p-auo",
         "issue_type": "epic",
         "priority": 2,
         "status": "open",
@@ -335,7 +624,7 @@
     "description": "Test summary",
     "id": "ISSUE_3",
     "issue_type": "task",
-    "parent": "ISSUE_2p-4zx",
+    "parent": "ISSUE_2p-auo",
     "priority": 2,
     "status": "closed",
     "title": "Digest: test-workflow",

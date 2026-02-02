@@ -18,9 +18,11 @@ type PourOptions struct {
 
 // PourResult contains the issues created by a Pour or Wisp operation.
 type PourResult struct {
-	RootID   string
-	ChildIDs []string
-	Formula  *Formula
+	NewEpicID string            `json:"new_epic_id"`
+	IDMapping map[string]string `json:"id_mapping"`
+	Created   int               `json:"created"`
+	Attached  int               `json:"attached"`
+	Phase     string            `json:"phase"`
 }
 
 // Pour resolves a formula, validates and substitutes variables, then creates
@@ -117,9 +119,25 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 		}
 	}
 
+	// Build id_mapping: formula name → root ID, formula.step → child ID.
+	idMapping := make(map[string]string, 1+len(stepToIssue))
+	idMapping[opts.FormulaName] = rootID
+	for _, step := range formula.Steps {
+		if childID, ok := stepToIssue[step.ID]; ok {
+			idMapping[opts.FormulaName+"."+step.ID] = childID
+		}
+	}
+
+	phase := "liquid"
+	if opts.Ephemeral {
+		phase = "vapor"
+	}
+
 	return &PourResult{
-		RootID:   rootID,
-		ChildIDs: childIDs,
-		Formula:  formula,
+		NewEpicID: rootID,
+		IDMapping: idMapping,
+		Created:   1 + len(childIDs),
+		Attached:  0,
+		Phase:     phase,
 	}, nil
 }
