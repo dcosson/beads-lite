@@ -25,7 +25,7 @@ func setupConfigTestApp(t *testing.T) (*App, *bytes.Buffer) {
 // seedConfigStore creates a YAMLStore with the given key-value pairs.
 func seedConfigStore(t *testing.T, dir string, pairs map[string]string) {
 	t.Helper()
-	store, err := yamlstore.New(filepath.Join(dir, "settings.yaml"))
+	store, err := yamlstore.New(filepath.Join(dir, "config.yaml"))
 	if err != nil {
 		t.Fatalf("creating store: %v", err)
 	}
@@ -107,8 +107,8 @@ func TestConfigGet_JSON(t *testing.T) {
 	if result["value"] != "bob" {
 		t.Errorf("value = %v, want bob", result["value"])
 	}
-	if result["set"] != true {
-		t.Errorf("set = %v, want true", result["set"])
+	if result["location"] != "config.yaml" {
+		t.Errorf("location = %v, want config.yaml", result["location"])
 	}
 }
 
@@ -126,8 +126,8 @@ func TestConfigGet_JSON_NotSet(t *testing.T) {
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if result["set"] != false {
-		t.Errorf("set = %v, want false", result["set"])
+	if result["value"] != "" {
+		t.Errorf("value = %v, want empty string", result["value"])
 	}
 }
 
@@ -145,7 +145,7 @@ func TestConfigSet_CoreKey(t *testing.T) {
 	}
 
 	// Verify persistence
-	store, err := yamlstore.New(filepath.Join(app.ConfigDir, "settings.yaml"))
+	store, err := yamlstore.New(filepath.Join(app.ConfigDir, "config.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,8 +189,8 @@ func TestConfigSet_JSON(t *testing.T) {
 	if result["value"] != "charlie" {
 		t.Errorf("value = %v, want charlie", result["value"])
 	}
-	if result["status"] != "set" {
-		t.Errorf("status = %v, want set", result["status"])
+	if result["location"] != "config.yaml" {
+		t.Errorf("location = %v, want config.yaml", result["location"])
 	}
 }
 
@@ -211,7 +211,7 @@ func TestConfigUnset_CoreKey(t *testing.T) {
 	}
 
 	// Verify removal
-	store, err := yamlstore.New(filepath.Join(app.ConfigDir, "settings.yaml"))
+	store, err := yamlstore.New(filepath.Join(app.ConfigDir, "config.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,9 +254,6 @@ func TestConfigUnset_JSON(t *testing.T) {
 	if result["key"] != "actor" {
 		t.Errorf("key = %v, want actor", result["key"])
 	}
-	if result["status"] != "unset" {
-		t.Errorf("status = %v, want unset", result["status"])
-	}
 }
 
 func TestConfigList_Empty(t *testing.T) {
@@ -267,8 +264,8 @@ func TestConfigList_Empty(t *testing.T) {
 		t.Fatalf("config list failed: %v", err)
 	}
 
-	if got := strings.TrimSpace(out.String()); got != "No configuration set" {
-		t.Errorf("output = %q, want %q", got, "No configuration set")
+	if got := strings.TrimSpace(out.String()); !strings.HasPrefix(got, "Configuration:") {
+		t.Errorf("output = %q, want Configuration header", got)
 	}
 }
 
@@ -312,18 +309,12 @@ func TestConfigList_JSON_Empty(t *testing.T) {
 		t.Fatalf("config list --json failed: %v", err)
 	}
 
-	var result struct {
-		Entries []map[string]string `json:"entries"`
-		Count   int                 `json:"count"`
-	}
+	var result map[string]string
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if result.Count != 0 {
-		t.Errorf("count = %d, want 0", result.Count)
-	}
-	if len(result.Entries) != 0 {
-		t.Errorf("entries = %v, want empty", result.Entries)
+	if _, ok := result["compact_model"]; !ok {
+		t.Errorf("expected compact_model in result, got %v", result)
 	}
 }
 
@@ -340,24 +331,15 @@ func TestConfigList_JSON_WithEntries(t *testing.T) {
 		t.Fatalf("config list --json failed: %v", err)
 	}
 
-	var result struct {
-		Entries []map[string]string `json:"entries"`
-		Count   int                 `json:"count"`
-	}
+	var result map[string]string
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if result.Count != 2 {
-		t.Errorf("count = %d, want 2", result.Count)
+	if result["actor"] != "alice" {
+		t.Errorf("actor = %q, want alice", result["actor"])
 	}
-	// Entries should be sorted
-	if len(result.Entries) >= 2 {
-		if result.Entries[0]["key"] != "actor" {
-			t.Errorf("first entry key = %q, want actor", result.Entries[0]["key"])
-		}
-		if result.Entries[1]["key"] != "defaults.priority" {
-			t.Errorf("second entry key = %q, want defaults.priority", result.Entries[1]["key"])
-		}
+	if result["defaults.priority"] != "high" {
+		t.Errorf("defaults.priority = %q, want high", result["defaults.priority"])
 	}
 }
 
@@ -425,7 +407,7 @@ func TestConfigValidate_JSON_Valid(t *testing.T) {
 
 	var result struct {
 		Valid  bool     `json:"valid"`
-		Errors []string `json:"errors"`
+		Issues []string `json:"issues"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
@@ -449,7 +431,7 @@ func TestConfigValidate_JSON_Errors(t *testing.T) {
 
 	var result struct {
 		Valid  bool     `json:"valid"`
-		Errors []string `json:"errors"`
+		Issues []string `json:"issues"`
 	}
 	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
@@ -457,8 +439,8 @@ func TestConfigValidate_JSON_Errors(t *testing.T) {
 	if result.Valid {
 		t.Error("valid = true, want false")
 	}
-	if len(result.Errors) != 1 {
-		t.Errorf("expected 1 error, got %d", len(result.Errors))
+	if len(result.Issues) != 1 {
+		t.Errorf("expected 1 error, got %d", len(result.Issues))
 	}
 }
 

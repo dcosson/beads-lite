@@ -10,7 +10,7 @@
   "compact_tier2_days": "90",
   "compact_tier2_dep_levels": "5",
   "compaction_enabled": "false",
-  "issue_prefix": "beads-sandbox-3DUTGOK1"
+  "issue_prefix": "SANDBOX_PATH"
 }
 
 === config get actor (not set) ===
@@ -60,7 +60,7 @@
   "compaction_enabled": "false",
   "custom.key": "myvalue",
   "defaults.priority": "high",
-  "issue_prefix": "beads-sandbox-3DUTGOK1"
+  "issue_prefix": "SANDBOX_PATH"
 }
 
 === config validate clean ===
@@ -93,6 +93,6 @@
   "compact_tier2_dep_levels": "5",
   "compaction_enabled": "false",
   "defaults.priority": "high",
-  "issue_prefix": "beads-sandbox-3DUTGOK1"
+  "issue_prefix": "SANDBOX_PATH"
 }
 

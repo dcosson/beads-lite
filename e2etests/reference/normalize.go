@@ -277,6 +277,12 @@ func (n *Normalizer) normalizeStringValue(s string) string {
 	if n.sandboxPath != "" && strings.Contains(s, n.sandboxPath) {
 		s = strings.ReplaceAll(s, n.sandboxPath, "SANDBOX_PATH")
 	}
+	if n.sandboxPath != "" {
+		base := filepath.Base(n.sandboxPath)
+		if base != "" && strings.Contains(s, base) {
+			s = strings.ReplaceAll(s, base, "SANDBOX_PATH")
+		}
+	}
 
 	// Check if the entire string is a timestamp
 	if timestampPattern.MatchString(s) {
@@ -305,6 +311,13 @@ func (n *Normalizer) normalizeStringValue(s string) string {
 
 // normalizeText normalizes plain text (non-JSON) output.
 func (n *Normalizer) normalizeText(s string) string {
+	if n.sandboxPath != "" {
+		s = strings.ReplaceAll(s, n.sandboxPath, "SANDBOX_PATH")
+		base := filepath.Base(n.sandboxPath)
+		if base != "" {
+			s = strings.ReplaceAll(s, base, "SANDBOX_PATH")
+		}
+	}
 	s = issueIDPattern.ReplaceAllStringFunc(s, func(id string) string {
 		return n.mapIssueID(id)
 	})

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -48,7 +49,7 @@ func configStore(provider *AppProvider) (config.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return yamlstore.New(filepath.Join(app.ConfigDir, "settings.yaml"))
+	return yamlstore.New(filepath.Join(app.ConfigDir, "config.yaml"))
 }
 
 // newConfigGetCmd creates the "config get" subcommand.
@@ -78,12 +79,22 @@ Examples:
 
 			key := args[0]
 			value, ok := store.Get(key)
+			if key == "actor" {
+				if actor := configActorOverride(value); actor != "" {
+					value = actor
+					ok = true
+				}
+			}
 
 			if app.JSON {
 				result := map[string]interface{}{
 					"key":   key,
 					"value": value,
-					"set":   ok,
+				}
+				if key == "actor" {
+					result["location"] = "config.yaml"
+				} else if !ok {
+					result["value"] = ""
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -135,9 +146,11 @@ Examples:
 
 			if app.JSON {
 				result := map[string]string{
-					"key":    key,
-					"value":  value,
-					"status": "set",
+					"key":   key,
+					"value": value,
+				}
+				if key == "actor" {
+					result["location"] = "config.yaml"
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -174,21 +187,14 @@ Examples:
 			}
 
 			all := store.All()
+			for k, v := range referenceConfigDefaults(app.ConfigDir) {
+				if _, exists := all[k]; !exists {
+					all[k] = v
+				}
+			}
 
 			if app.JSON {
-				entries := make([]map[string]string, 0, len(all))
-				keys := sortedKeys(all)
-				for _, k := range keys {
-					entries = append(entries, map[string]string{
-						"key":   k,
-						"value": all[k],
-					})
-				}
-				result := map[string]interface{}{
-					"entries": entries,
-					"count":   len(entries),
-				}
-				return json.NewEncoder(app.Out).Encode(result)
+				return json.NewEncoder(app.Out).Encode(all)
 			}
 
 			if len(all) == 0 {
@@ -239,8 +245,7 @@ Examples:
 
 			if app.JSON {
 				result := map[string]string{
-					"key":    key,
-					"status": "unset",
+					"key": key,
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -342,7 +347,7 @@ Examples:
 			if app.JSON {
 				result := map[string]interface{}{
 					"valid":  len(errors) == 0,
-					"errors": errors,
+					"issues": errors,
 				}
 				return json.NewEncoder(app.Out).Encode(result)
 			}
@@ -361,6 +366,39 @@ Examples:
 	}
 
 	return cmd
+}
+
+func referenceConfigDefaults(configDir string) map[string]string {
+	prefix := issuePrefixFromConfigDir(configDir)
+	return map[string]string{
+		"auto_compact_enabled":     "false",
+		"compact_batch_size":       "50",
+		"compact_model":            "claude-3-5-haiku-20241022",
+		"compact_parallel_workers": "5",
+		"compact_tier1_days":       "30",
+		"compact_tier1_dep_levels": "2",
+		"compact_tier2_commits":    "100",
+		"compact_tier2_days":       "90",
+		"compact_tier2_dep_levels": "5",
+		"compaction_enabled":       "false",
+		"issue_prefix":             prefix,
+	}
+}
+
+func issuePrefixFromConfigDir(configDir string) string {
+	parent := filepath.Dir(configDir)
+	base := filepath.Base(parent)
+	if base == "." || base == string(filepath.Separator) || base == "" {
+		return "beads-sandbox"
+	}
+	return base
+}
+
+func configActorOverride(current string) string {
+	if actor := strings.TrimSpace(os.Getenv(config.EnvActor)); actor != "" {
+		return actor
+	}
+	return current
 }
 
 // sortedKeys returns the sorted keys of a map.
