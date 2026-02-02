@@ -22,6 +22,7 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 	var (
 		force       bool
 		projectName string
+		prefix      string
 	)
 
 	cmd := &cobra.Command{
@@ -29,17 +30,18 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 		Short: "Initialize a new beads-lite repository",
 		Long:  `Initialize a new beads-lite repository in the current directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(force, projectName)
+			return runInit(force, projectName, prefix)
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Force initialization even if .beads exists")
 	cmd.Flags().StringVar(&projectName, "project", "issues", "Project name for data directory")
+	cmd.Flags().StringVar(&prefix, "prefix", "", "ID prefix for issues (e.g. 'proj-')")
 
 	return cmd
 }
 
-func runInit(force bool, projectName string) error {
+func runInit(force bool, projectName, prefix string) error {
 	if projectName == "" {
 		return errors.New("project name cannot be empty")
 	}
@@ -95,13 +97,18 @@ func runInit(force bool, projectName string) error {
 	if err := store.Set("project.name", projectName); err != nil {
 		return fmt.Errorf("setting project name: %w", err)
 	}
+	if prefix != "" {
+		if err := store.Set("id.prefix", prefix); err != nil {
+			return fmt.Errorf("setting id prefix: %w", err)
+		}
+	}
 
-	prefix, _ := store.Get("id.prefix")
+	idPrefix, _ := store.Get("id.prefix")
 
 	dataPath := filepath.Join(beadsPath, projectName)
 
 	// Create the issue storage
-	issueStore := filesystem.New(dataPath, prefix)
+	issueStore := filesystem.New(dataPath, idPrefix)
 	if err := issueStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
 	}
