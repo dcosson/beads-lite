@@ -19,9 +19,12 @@ type SquashOptions struct {
 
 // SquashResult describes the outcome of a Squash.
 type SquashResult struct {
-	DigestID     string   `json:"digest_id"`
-	SquashedIDs  []string `json:"squashed_ids"`
-	KeepChildren bool     `json:"keep_children"`
+	DeletedCount  int      `json:"deleted_count"`
+	DigestID      string   `json:"digest_id"`
+	KeptChildren  bool     `json:"kept_children"`
+	MoleculeID    string   `json:"molecule_id"`
+	SquashedCount int      `json:"squashed_count"`
+	SquashedIDs   []string `json:"squashed_ids"`
 }
 
 // Squash creates a permanent digest issue from ephemeral wisp children,
@@ -127,10 +130,18 @@ func Squash(ctx context.Context, store storage.Storage, opts SquashOptions) (*Sq
 		}
 	}
 
+	deletedCount := 0
+	if !opts.KeepChildren {
+		deletedCount = len(squashedIDs)
+	}
+
 	return &SquashResult{
-		DigestID:     digestID,
-		SquashedIDs:  squashedIDs,
-		KeepChildren: opts.KeepChildren,
+		DeletedCount:  deletedCount,
+		DigestID:      digestID,
+		KeptChildren:  opts.KeepChildren,
+		MoleculeID:    opts.MoleculeID,
+		SquashedCount: len(squashedIDs),
+		SquashedIDs:   squashedIDs,
 	}, nil
 }
 

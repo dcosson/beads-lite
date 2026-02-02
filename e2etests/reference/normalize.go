@@ -3,6 +3,7 @@ package reference
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -11,10 +12,11 @@ import (
 // Normalizer tracks ID mappings across a test case and normalizes
 // JSON output for deterministic comparison.
 type Normalizer struct {
-	issueIDs   map[string]string // "bd-a1f3" -> "ISSUE_1"
-	commentIDs map[string]string // "c-ab12" -> "COMMENT_1"
-	issueSeq   int
-	commentSeq int
+	issueIDs    map[string]string // "bd-a1f3" -> "ISSUE_1"
+	commentIDs  map[string]string // "c-ab12" -> "COMMENT_1"
+	issueSeq    int
+	commentSeq  int
+	sandboxPath string // if set, replaced with SANDBOX_PATH in output
 }
 
 // NewNormalizer creates a new Normalizer with empty state.
@@ -25,12 +27,26 @@ func NewNormalizer() *Normalizer {
 	}
 }
 
+// SetSandboxPath registers the sandbox directory path so it can be
+// replaced with SANDBOX_PATH in normalized output. Resolves symlinks
+// so it matches paths that have been through filepath.EvalSymlinks
+// (e.g., /var -> /private/var on macOS).
+func (n *Normalizer) SetSandboxPath(path string) {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		n.sandboxPath = resolved
+	} else {
+		n.sandboxPath = path
+	}
+}
+
 var (
 	// Match beads-lite IDs (bd-XXXX with optional .N.N suffix), original beads IDs
 	// (e2etests-XXX with optional .N.N suffix), or sandbox IDs
-	// (beads-sandbox-XXXXXXXX-XXX with optional .N.N suffix).
+	// (beads-sandbox-XXXXXXXX-XXX-YYY with optional extra suffix and .N.N suffix).
 	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(\.\d+)*)`)
+	// The (-[0-9a-z]+)? captures the extra ID suffix the reference binary adds
+	// in non-daemon mode (e.g., beads-sandbox-XXXXXXXX-abc-43c).
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
@@ -129,6 +145,7 @@ func (n *Normalizer) NormalizeJSONSorted(input []byte) string {
 // Keys whose values should be replaced with "FLOAT" for deterministic comparison
 var floatKeys = map[string]bool{
 	"average_lead_time_hours": true,
+	"rate_per_hour":           true,
 }
 
 // walkAndNormalize recursively walks a JSON value and replaces IDs and timestamps.
@@ -182,6 +199,11 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 
 // normalizeStringValue replaces IDs and timestamps in a string value.
 func (n *Normalizer) normalizeStringValue(s string) string {
+	// Replace sandbox path prefix before other normalization.
+	if n.sandboxPath != "" && strings.Contains(s, n.sandboxPath) {
+		s = strings.ReplaceAll(s, n.sandboxPath, "SANDBOX_PATH")
+	}
+
 	// Check if the entire string is a timestamp
 	if timestampPattern.MatchString(s) {
 		return "TIMESTAMP"

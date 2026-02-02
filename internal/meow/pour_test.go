@@ -61,8 +61,11 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 	if root.Type != storage.TypeEpic {
 		t.Errorf("root.Type = %q, want %q", root.Type, storage.TypeEpic)
 	}
-	if root.Title != "Deploy pipeline" {
-		t.Errorf("root.Title = %q, want %q", root.Title, "Deploy pipeline")
+	if root.Title != "deploy" {
+		t.Errorf("root.Title = %q, want %q", root.Title, "deploy")
+	}
+	if root.Description != "Deploy pipeline" {
+		t.Errorf("root.Description = %q, want %q", root.Description, "Deploy pipeline")
 	}
 
 	// Should have 3 children (plus 1 root = 4 entries in IDMapping).

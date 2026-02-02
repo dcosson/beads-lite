@@ -320,13 +320,58 @@ Examples:
 				return err
 			}
 
-			result, err := meow.Progress(cmd.Context(), app.Storage, args[0])
+			ctx := cmd.Context()
+			molID := args[0]
+
+			result, err := meow.Progress(ctx, app.Storage, molID)
 			if err != nil {
 				return fmt.Errorf("progress: %w", err)
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(result)
+				// Load root issue for title.
+				root, rootErr := app.Storage.Get(ctx, molID)
+				title := ""
+				if rootErr == nil {
+					title = root.Title
+				}
+
+				// Find current step ID.
+				currentStepID := ""
+				view, viewErr := meow.Current(ctx, app.Storage, meow.CurrentOptions{MoleculeID: molID})
+				if viewErr == nil {
+					for _, s := range view.Steps {
+						if s.Status == "current" {
+							currentStepID = s.ID
+							break
+						}
+					}
+				}
+
+				// Compute rate/ETA based on elapsed time.
+				var ratePerHour, etaHours float64
+				if rootErr == nil && result.Completed > 0 {
+					elapsed := time.Since(root.CreatedAt).Hours()
+					if elapsed > 0 {
+						ratePerHour = float64(result.Completed) / elapsed
+						remaining := result.Total - result.Completed
+						if remaining > 0 && ratePerHour > 0 {
+							etaHours = float64(remaining) / ratePerHour
+						}
+					}
+				}
+
+				return json.NewEncoder(app.Out).Encode(MolProgressJSON{
+					Completed:     result.Completed,
+					CurrentStepID: currentStepID,
+					ETAHours:      etaHours,
+					InProgress:    result.InProgress,
+					MoleculeID:    molID,
+					MoleculeTitle: title,
+					Percent:       result.Percent,
+					RatePerHour:   ratePerHour,
+					Total:         result.Total,
+				})
 			}
 
 			fmt.Fprintf(app.Out, "Progress: %d/%d (%.0f%%)\n", result.Completed, result.Total, result.Percent)
@@ -402,15 +447,16 @@ Examples:
 				return err
 			}
 
-			if err := meow.Burn(cmd.Context(), app.Storage, args[0]); err != nil {
+			result, err := meow.Burn(cmd.Context(), app.Storage, args[0])
+			if err != nil {
 				return fmt.Errorf("burn: %w", err)
 			}
 
 			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(map[string]string{"status": "burned", "molecule_id": args[0]})
+				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Burned molecule: %s\n", args[0])
+			fmt.Fprintf(app.Out, "Burned molecule: %s (%d issues deleted)\n", args[0], result.DeletedCount)
 			return nil
 		},
 	}

@@ -59,6 +59,7 @@ func TestE2E(t *testing.T) {
 			prevSandbox = sandbox
 
 			norm := NewNormalizer()
+			norm.SetSandboxPath(sandbox)
 			actual, err := tc.Fn(runner, norm, sandbox)
 			if err != nil {
 				t.Fatalf("test case failed: %v", err)

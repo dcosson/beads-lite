@@ -49,22 +49,23 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 		fmt.Fprintf(os.Stderr, "warning: formula %q has phase \"vapor\"; consider using wisp instead of pour\n", formula.Formula)
 	}
 
-	// 5. Create root epic issue.
-	rootTitle := formula.Description
-	if rootTitle == "" {
-		rootTitle = formula.Formula
-	}
+	// 5. Resolve actor for created_by.
+	actor := ResolveUser()
+
+	// 6. Create root epic issue.
 	rootIssue := &storage.Issue{
-		Type:      storage.TypeEpic,
-		Title:     rootTitle,
-		Ephemeral: opts.Ephemeral,
+		Type:        storage.TypeEpic,
+		Title:       formula.Formula,
+		Description: formula.Description,
+		Ephemeral:   opts.Ephemeral,
+		CreatedBy:   actor,
 	}
 	rootID, err := store.Create(ctx, rootIssue)
 	if err != nil {
 		return nil, fmt.Errorf("creating root issue: %w", err)
 	}
 
-	// 6. Pass 1 — create all child issues and record step-ID → issue-ID mapping.
+	// 7. Pass 1 — create all child issues and record step-ID → issue-ID mapping.
 	stepToIssue := make(map[string]string, len(formula.Steps))
 	childIDs := make([]string, 0, len(formula.Steps))
 
@@ -88,6 +89,7 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 			Labels:      step.Labels,
 			Assignee:    step.Assignee,
 			Ephemeral:   opts.Ephemeral,
+			CreatedBy:   actor,
 		}
 		if _, err := store.Create(ctx, child); err != nil {
 			return nil, fmt.Errorf("creating child issue for step %q: %w", step.ID, err)
@@ -102,7 +104,7 @@ func Pour(ctx context.Context, store storage.Storage, opts PourOptions) (*PourRe
 		childIDs = append(childIDs, childID)
 	}
 
-	// 7. Pass 2 — wire DependsOn as DepTypeBlocks dependencies.
+	// 8. Pass 2 — wire DependsOn as DepTypeBlocks dependencies.
 	for _, step := range formula.Steps {
 		if len(step.DependsOn) == 0 {
 			continue

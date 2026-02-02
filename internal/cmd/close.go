@@ -71,15 +71,50 @@ Examples:
 					issues = append(issues, ToIssueJSON(ctx, s, issue, false, false))
 				}
 
-				// --continue logic (JSON)
+				// --continue logic (JSON): wrap in {closed, continue} format
 				if continueFlag {
+					var continueResult *CloseContinueJSON
 					for _, issueID := range closed {
 						nextStep := findNextMoleculeStep(ctx, store, issueID)
+						// Find molecule root for the closed issue.
+						closedIssue, _ := store.Get(ctx, issueID)
+						var molID string
+						if closedIssue != nil && closedIssue.Parent != "" {
+							if root, err := graph.FindMoleculeRoot(ctx, store, issueID); err == nil {
+								molID = root.ID
+							}
+						}
+						// Find the closed step's JSON for the continue block.
+						var closedStep *MolIssueJSON
+						if closedIssue != nil {
+							cs := ToMolIssueJSON(closedIssue)
+							closedStep = &cs
+						}
+						autoAdvanced := false
 						if nextStep != nil && !noAuto {
 							nextStep.Status = storage.StatusInProgress
 							store.Update(ctx, nextStep)
+							autoAdvanced = true
+						}
+						var nextStepJSON *MolIssueJSON
+						if nextStep != nil {
+							ns := ToMolIssueJSON(nextStep)
+							nextStepJSON = &ns
+						}
+						// Check if molecule is complete (no more steps).
+						molComplete := nextStep == nil
+						continueResult = &CloseContinueJSON{
+							AutoAdvanced:     autoAdvanced,
+							ClosedStep:       closedStep,
+							MoleculeComplete: molComplete,
+							MoleculeID:       molID,
+							NextStep:         nextStepJSON,
 						}
 					}
+					return json.NewEncoder(app.Out).Encode(CloseWithContinueJSON{
+						Closed:   issues,
+						Continue: continueResult,
+					})
 				}
 
 				// --suggest-next logic (JSON)

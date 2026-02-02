@@ -37,6 +37,8 @@ type EnrichedDepJSON struct {
 	CreatedAt      string `json:"created_at"`
 	CreatedBy      string `json:"created_by,omitempty"`
 	DependencyType string `json:"dependency_type"`
+	Description    string `json:"description,omitempty"`
+	Ephemeral      *bool  `json:"ephemeral,omitempty"`
 	ID             string `json:"id"`
 	IssueType      string `json:"issue_type"`
 	Owner          string `json:"owner,omitempty"`
@@ -258,6 +260,21 @@ func ToIssueListJSON(issue *storage.Issue) IssueListJSON {
 	return out
 }
 
+// CloseWithContinueJSON is the JSON output format for "close --continue".
+type CloseWithContinueJSON struct {
+	Closed   []IssueJSON        `json:"closed"`
+	Continue *CloseContinueJSON `json:"continue"`
+}
+
+// CloseContinueJSON holds the continue/advance info for close --continue.
+type CloseContinueJSON struct {
+	AutoAdvanced     bool          `json:"auto_advanced"`
+	ClosedStep       *MolIssueJSON `json:"closed_step"`
+	MoleculeComplete bool          `json:"molecule_complete"`
+	MoleculeID       string        `json:"molecule_id"`
+	NextStep         *MolIssueJSON `json:"next_step"`
+}
+
 // MolIssueJSON is the JSON format for issues within molecule commands
 // (mol current, mol show). Includes optional fields that appear only when set.
 type MolIssueJSON struct {
@@ -323,6 +340,19 @@ type MolShowJSON struct {
 	Variables    interface{}    `json:"variables"`
 }
 
+// MolProgressJSON is the JSON output format for "mol progress".
+type MolProgressJSON struct {
+	Completed     int     `json:"completed"`
+	CurrentStepID string  `json:"current_step_id"`
+	ETAHours      float64 `json:"eta_hours"`
+	InProgress    int     `json:"in_progress"`
+	MoleculeID    string  `json:"molecule_id"`
+	MoleculeTitle string  `json:"molecule_title"`
+	Percent       float64 `json:"percent"`
+	RatePerHour   float64 `json:"rate_per_hour"`
+	Total         int     `json:"total"`
+}
+
 // enrichDependencies fetches full issue details for each dependency.
 func enrichDependencies(ctx context.Context, store storage.Storage, deps []storage.Dependency) []EnrichedDepJSON {
 	result := make([]EnrichedDepJSON, 0, len(deps))
@@ -338,10 +368,11 @@ func enrichDependencies(ctx context.Context, store storage.Storage, deps []stora
 			continue
 		}
 
-		result = append(result, EnrichedDepJSON{
+		enriched := EnrichedDepJSON{
 			CreatedAt:      formatTime(issue.CreatedAt),
 			CreatedBy:      issue.CreatedBy,
 			DependencyType: string(dep.Type),
+			Description:    issue.Description,
 			ID:             issue.ID,
 			IssueType:      string(issue.Type),
 			Owner:          issue.Owner,
@@ -349,7 +380,12 @@ func enrichDependencies(ctx context.Context, store storage.Storage, deps []stora
 			Status:         string(issue.Status),
 			Title:          issue.Title,
 			UpdatedAt:      formatTime(issue.UpdatedAt),
-		})
+		}
+		if issue.Ephemeral {
+			eph := true
+			enriched.Ephemeral = &eph
+		}
+		result = append(result, enriched)
 	}
 
 	return result

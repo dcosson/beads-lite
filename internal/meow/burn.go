@@ -9,6 +9,17 @@ import (
 	"beads-lite/internal/storage"
 )
 
+// BurnResult contains statistics from a Burn operation.
+type BurnResult struct {
+	Deleted             []string    `json:"deleted"`
+	DeletedCount        int         `json:"deleted_count"`
+	DependenciesRemoved int         `json:"dependencies_removed"`
+	EventsRemoved       int         `json:"events_removed"`
+	LabelsRemoved       int         `json:"labels_removed"`
+	OrphanedIssues      interface{} `json:"orphaned_issues"`
+	ReferencesUpdated   int         `json:"references_updated"`
+}
+
 // Burn cascade-deletes a molecule and all its children.
 //
 // Behavior differs by issue phase:
@@ -17,20 +28,20 @@ import (
 //     to remotes via bd sync
 //
 // Deletion proceeds from leaves up to avoid dangling parent references.
-func Burn(ctx context.Context, store storage.Storage, molID string) error {
+func Burn(ctx context.Context, store storage.Storage, molID string) (*BurnResult, error) {
 	// 1. Load root issue.
 	root, err := store.Get(ctx, molID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return fmt.Errorf("molecule %s not found: %w", molID, err)
+			return nil, fmt.Errorf("molecule %s not found: %w", molID, err)
 		}
-		return fmt.Errorf("load molecule %s: %w", molID, err)
+		return nil, fmt.Errorf("load molecule %s: %w", molID, err)
 	}
 
 	// 2. Collect all children.
 	children, err := graph.CollectMoleculeChildren(ctx, store, molID)
 	if err != nil {
-		return fmt.Errorf("collect children of %s: %w", molID, err)
+		return nil, fmt.Errorf("collect children of %s: %w", molID, err)
 	}
 
 	// 3. Build deletion order: leaves first, root last.
@@ -46,17 +57,53 @@ func Burn(ctx context.Context, store storage.Storage, molID string) error {
 		burnSet[issue.ID] = true
 	}
 
-	// 4-5. Delete each issue according to its Ephemeral flag.
+	// Count dependencies before deletion.
+	depsRemoved := 0
 	for _, issue := range all {
-		if err := cleanExternalDeps(ctx, store, issue, burnSet); err != nil {
-			return fmt.Errorf("clean external deps for %s: %w", issue.ID, err)
-		}
-		if err := burnIssue(ctx, store, issue); err != nil {
-			return fmt.Errorf("burn issue %s: %w", issue.ID, err)
+		depsRemoved += len(issue.Dependencies) + len(issue.Dependents)
+	}
+	// Avoid double-counting internal deps.
+	internalDeps := 0
+	for _, issue := range all {
+		for _, dep := range issue.Dependencies {
+			if burnSet[dep.ID] {
+				internalDeps++
+			}
 		}
 	}
+	depsRemoved = internalDeps // Only count deps within the molecule.
 
-	return nil
+	// Count events (approximate: each issue has create + possible status changes).
+	eventsRemoved := 0
+	for _, issue := range all {
+		eventsRemoved++ // create event
+		if issue.Status != storage.StatusOpen {
+			eventsRemoved++ // status change event
+		}
+		eventsRemoved += len(issue.Comments)
+	}
+
+	// 4-5. Delete each issue according to its Ephemeral flag.
+	deletedIDs := make([]string, 0, len(all))
+	for _, issue := range all {
+		if err := cleanExternalDeps(ctx, store, issue, burnSet); err != nil {
+			return nil, fmt.Errorf("clean external deps for %s: %w", issue.ID, err)
+		}
+		if err := burnIssue(ctx, store, issue); err != nil {
+			return nil, fmt.Errorf("burn issue %s: %w", issue.ID, err)
+		}
+		deletedIDs = append(deletedIDs, issue.ID)
+	}
+
+	return &BurnResult{
+		Deleted:             deletedIDs,
+		DeletedCount:        len(deletedIDs),
+		DependenciesRemoved: depsRemoved,
+		EventsRemoved:       eventsRemoved,
+		LabelsRemoved:       0,
+		OrphanedIssues:      nil,
+		ReferencesUpdated:   0,
+	}, nil
 }
 
 // burnIssue removes a single issue. Ephemeral issues are hard-deleted with no

@@ -254,8 +254,6 @@ func extractPourResult(jsonOutput string) (pourResult, error) {
 // sections where beads-lite intentionally differs. Applied after -update
 // generates the expected file from the reference binary.
 func patchMeowExpected(s string) string {
-	// Patches will be added once we see what the reference output looks like
-	// with --no-daemon and what beads-lite produces differently.
 	return s
 }
 

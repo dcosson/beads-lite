@@ -56,7 +56,7 @@ func TestBurn_PersistentMolecule(t *testing.T) {
 		}
 	}
 
-	if err := Burn(ctx, s, root.ID); err != nil {
+	if _, err := Burn(ctx, s, root.ID); err != nil {
 		t.Fatalf("Burn: %v", err)
 	}
 
@@ -86,7 +86,7 @@ func TestBurn_EphemeralWisp(t *testing.T) {
 		}
 	}
 
-	if err := Burn(ctx, s, root.ID); err != nil {
+	if _, err := Burn(ctx, s, root.ID); err != nil {
 		t.Fatalf("Burn: %v", err)
 	}
 
@@ -122,7 +122,7 @@ func TestBurn_WithExternalDeps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Burn(ctx, s, root.ID); err != nil {
+	if _, err := Burn(ctx, s, root.ID); err != nil {
 		t.Fatalf("Burn: %v", err)
 	}
 
@@ -160,7 +160,7 @@ func TestBurn_MixedEphemeralPersistent(t *testing.T) {
 		}
 	}
 
-	if err := Burn(ctx, s, root.ID); err != nil {
+	if _, err := Burn(ctx, s, root.ID); err != nil {
 		t.Fatalf("Burn: %v", err)
 	}
 
@@ -193,7 +193,7 @@ func TestBurn_NonExistent(t *testing.T) {
 	ctx := context.Background()
 	s := newBurnStore(t)
 
-	err := Burn(ctx, s, "nonexistent-mol")
+	_, err := Burn(ctx, s, "nonexistent-mol")
 	if err == nil {
 		t.Fatal("expected error for non-existent molecule")
 	}

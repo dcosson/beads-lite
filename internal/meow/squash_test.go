@@ -112,8 +112,8 @@ func TestSquash_KeepChildren(t *testing.T) {
 	if result == nil {
 		t.Fatal("expected non-nil result")
 	}
-	if !result.KeepChildren {
-		t.Error("result.KeepChildren should be true")
+	if !result.KeptChildren {
+		t.Error("result.KeptChildren should be true")
 	}
 
 	// Children should still exist and be promoted to persistent.
