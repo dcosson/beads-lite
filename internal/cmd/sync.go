@@ -34,5 +34,7 @@ compatibility but performs no action.`,
 		},
 	}
 
+	cmd.Flags().Bool("import-only", false, "Only import changes (no-op in beads-lite)")
+
 	return cmd
 }
