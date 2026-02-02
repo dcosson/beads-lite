@@ -16,6 +16,7 @@ func newListCmd(provider *AppProvider) *cobra.Command {
 		status    string
 		priority  string
 		issueType string
+		molType   string
 		labels    []string
 		parent    string
 		assignee  string
@@ -89,6 +90,14 @@ Examples:
 			if issueType != "" {
 				t := issuestorage.IssueType(issueType)
 				filter.Type = &t
+			}
+
+			if molType != "" {
+				if !issuestorage.ValidateMolType(molType) {
+					return fmt.Errorf("invalid mol-type %q: must be one of swarm, patrol, work", molType)
+				}
+				mt := issuestorage.MolType(molType)
+				filter.MolType = &mt
 			}
 
 			if len(labels) > 0 {
@@ -168,6 +177,7 @@ Examples:
 	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status (open, in-progress, blocked, deferred, closed)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
 	cmd.Flags().StringVarP(&issueType, "type", "t", "", "Filter by type (task, bug, feature, epic, chore)")
+	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
 	cmd.Flags().StringSliceVarP(&labels, "labels", "l", nil, "Filter by labels (comma-separated, must have all)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Filter by parent issue ID")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee")

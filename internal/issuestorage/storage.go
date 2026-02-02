@@ -70,6 +70,7 @@ type Issue struct {
 	Status      Status    `json:"status"`
 	Priority    Priority  `json:"priority"`
 	Type        IssueType `json:"type"`
+	MolType     MolType   `json:"mol_type,omitempty"`
 
 	// Hierarchy convenience field (set automatically with parent-child deps)
 	Parent string `json:"parent,omitempty"`
@@ -218,11 +219,31 @@ const (
 	TypeGate    IssueType = "gate"
 )
 
+// MolType represents the molecule type of an issue.
+type MolType string
+
+const (
+	MolTypeSwarm  MolType = "swarm"
+	MolTypePatrol MolType = "patrol"
+	MolTypeWork   MolType = "work"
+)
+
+// ValidateMolType returns true if the given value is a valid MolType.
+// Empty string is treated as equivalent to MolTypeWork.
+func ValidateMolType(s string) bool {
+	switch s {
+	case "", string(MolTypeSwarm), string(MolTypePatrol), string(MolTypeWork):
+		return true
+	}
+	return false
+}
+
 // ListFilter specifies criteria for listing issues.
 type ListFilter struct {
 	Status          *Status    // nil means any
 	Priority        *Priority  // nil means any
 	Type            *IssueType // nil means any
+	MolType         *MolType   // nil means any
 	Parent          *string    // nil means any, empty string means root only
 	Labels          []string   // issues must have all these labels
 	Assignee        *string    // nil means any

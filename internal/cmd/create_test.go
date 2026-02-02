@@ -817,3 +817,64 @@ func TestCreateRequireDescription_NotSet(t *testing.T) {
 		t.Fatalf("create should succeed when config not set: %v", err)
 	}
 }
+
+func TestCreateWithMolType(t *testing.T) {
+	tests := []struct {
+		molType  string
+		expected issuestorage.MolType
+	}{
+		{"swarm", issuestorage.MolTypeSwarm},
+		{"patrol", issuestorage.MolTypePatrol},
+		{"work", issuestorage.MolTypeWork},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.molType, func(t *testing.T) {
+			app, store := setupTestApp(t)
+			out := app.Out.(*bytes.Buffer)
+
+			cmd := newCreateCmd(NewTestProvider(app))
+			cmd.SetArgs([]string{"Test issue", "--mol-type", tt.molType})
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("create failed: %v", err)
+			}
+
+			id := extractCreatedID(out.String())
+			issue, _ := store.Get(context.Background(), id)
+			if issue.MolType != tt.expected {
+				t.Errorf("expected mol_type %q, got %q", tt.expected, issue.MolType)
+			}
+		})
+	}
+}
+
+func TestCreateWithMolTypeDefault(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if issue.MolType != "" {
+		t.Errorf("expected empty mol_type by default, got %q", issue.MolType)
+	}
+}
+
+func TestCreateWithMolTypeInvalid(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--mol-type", "invalid"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for invalid mol-type")
+	}
+	if !strings.Contains(err.Error(), "invalid mol-type") {
+		t.Errorf("expected error about invalid mol-type, got: %v", err)
+	}
+}

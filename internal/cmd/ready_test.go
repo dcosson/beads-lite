@@ -346,6 +346,77 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	}
 }
 
+func TestReadyMolTypeFilter(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create issues with different mol_types
+	swarmID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Swarm issue",
+		Priority: issuestorage.PriorityHigh,
+		MolType:  issuestorage.MolTypeSwarm,
+	})
+	if err != nil {
+		t.Fatalf("failed to create swarm issue: %v", err)
+	}
+
+	patrolID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Patrol issue",
+		Priority: issuestorage.PriorityHigh,
+		MolType:  issuestorage.MolTypePatrol,
+	})
+	if err != nil {
+		t.Fatalf("failed to create patrol issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+	}
+
+	// Filter by swarm
+	cmd := newReadyCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--mol-type", "swarm"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("ready command failed: %v", err)
+	}
+
+	output := out.String()
+	if !bytes.Contains([]byte(output), []byte(swarmID)) {
+		t.Errorf("expected output to contain swarm issue %s, got: %s", swarmID, output)
+	}
+	if bytes.Contains([]byte(output), []byte(patrolID)) {
+		t.Errorf("expected output NOT to contain patrol issue %s, got: %s", patrolID, output)
+	}
+}
+
+func TestReadyMolTypeInvalid(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+	}
+
+	cmd := newReadyCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--mol-type", "invalid"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for invalid mol-type")
+	}
+}
+
 func TestReadyJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()

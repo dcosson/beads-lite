@@ -1565,3 +1565,109 @@ func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 		t.Errorf("Lock file should be cleaned up after AddDependency, but %s still exists", lockPath2)
 	}
 }
+
+// TestListMolTypeFilter verifies that MolType filtering works correctly,
+// including the empty/"work" equivalence.
+func TestListMolTypeFilter(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create issues with different mol_types
+	swarmID, err := s.Create(ctx, &issuestorage.Issue{
+		Title:   "Swarm issue",
+		MolType: issuestorage.MolTypeSwarm,
+	})
+	if err != nil {
+		t.Fatalf("Create swarm issue failed: %v", err)
+	}
+
+	patrolID, err := s.Create(ctx, &issuestorage.Issue{
+		Title:   "Patrol issue",
+		MolType: issuestorage.MolTypePatrol,
+	})
+	if err != nil {
+		t.Fatalf("Create patrol issue failed: %v", err)
+	}
+
+	workID, err := s.Create(ctx, &issuestorage.Issue{
+		Title:   "Work issue",
+		MolType: issuestorage.MolTypeWork,
+	})
+	if err != nil {
+		t.Fatalf("Create work issue failed: %v", err)
+	}
+
+	emptyID, err := s.Create(ctx, &issuestorage.Issue{
+		Title: "Empty mol_type issue",
+		// MolType left as zero value (empty string)
+	})
+	if err != nil {
+		t.Fatalf("Create empty mol_type issue failed: %v", err)
+	}
+
+	// Filter by swarm
+	swarmType := issuestorage.MolTypeSwarm
+	result, err := s.List(ctx, &issuestorage.ListFilter{MolType: &swarmType})
+	if err != nil {
+		t.Fatalf("List with swarm filter failed: %v", err)
+	}
+	if len(result) != 1 || result[0].ID != swarmID {
+		t.Errorf("Swarm filter: expected [%s], got %v", swarmID, issueIDs(result))
+	}
+
+	// Filter by patrol
+	patrolType := issuestorage.MolTypePatrol
+	result, err = s.List(ctx, &issuestorage.ListFilter{MolType: &patrolType})
+	if err != nil {
+		t.Fatalf("List with patrol filter failed: %v", err)
+	}
+	if len(result) != 1 || result[0].ID != patrolID {
+		t.Errorf("Patrol filter: expected [%s], got %v", patrolID, issueIDs(result))
+	}
+
+	// Filter by work — should match both "work" and empty
+	workType := issuestorage.MolTypeWork
+	result, err = s.List(ctx, &issuestorage.ListFilter{MolType: &workType})
+	if err != nil {
+		t.Fatalf("List with work filter failed: %v", err)
+	}
+	ids := issueIDs(result)
+	if len(result) != 2 {
+		t.Fatalf("Work filter: expected 2 issues, got %d: %v", len(result), ids)
+	}
+	idSet := make(map[string]bool)
+	for _, issue := range result {
+		idSet[issue.ID] = true
+	}
+	if !idSet[workID] || !idSet[emptyID] {
+		t.Errorf("Work filter: expected [%s, %s], got %v", workID, emptyID, ids)
+	}
+
+	// Filter by empty string — should also match both "work" and empty
+	emptyType := issuestorage.MolType("")
+	result, err = s.List(ctx, &issuestorage.ListFilter{MolType: &emptyType})
+	if err != nil {
+		t.Fatalf("List with empty filter failed: %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("Empty filter: expected 2 issues, got %d: %v", len(result), issueIDs(result))
+	}
+
+	// No filter — should return all 4 issues
+	result, err = s.List(ctx, &issuestorage.ListFilter{})
+	if err != nil {
+		t.Fatalf("List without filter failed: %v", err)
+	}
+	if len(result) != 4 {
+		t.Errorf("No filter: expected 4 issues, got %d", len(result))
+	}
+}
+
+// issueIDs extracts issue IDs from a slice for diagnostic output.
+func issueIDs(issues []*issuestorage.Issue) []string {
+	ids := make([]string, len(issues))
+	for i, issue := range issues {
+		ids[i] = issue.ID
+	}
+	return ids
+}

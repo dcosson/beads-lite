@@ -26,6 +26,7 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		assignee    string
 		description string
 		titleFlag   string
+		molType     string
 	)
 
 	cmd := &cobra.Command{
@@ -109,6 +110,15 @@ Examples:
 				}
 			}
 
+			// Parse and validate mol_type
+			var issueMolType issuestorage.MolType
+			if molType != "" {
+				if !issuestorage.ValidateMolType(molType) {
+					return fmt.Errorf("invalid mol-type %q: must be one of swarm, patrol, work", molType)
+				}
+				issueMolType = issuestorage.MolType(molType)
+			}
+
 			// Resolve actor identity for created_by/owner
 			actor, _ := resolveActor(app)
 			owner := resolveOwner()
@@ -118,6 +128,7 @@ Examples:
 				Title:       title,
 				Description: desc,
 				Type:        issueType,
+				MolType:     issueMolType,
 				Priority:    issuePriority,
 				CreatedBy:   actor,
 				Owner:       owner,
@@ -196,6 +207,7 @@ Examples:
 	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Add label (can repeat)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user")
 	cmd.Flags().StringVar(&description, "description", "", "Full description (use - for stdin)")
+	cmd.Flags().StringVar(&molType, "mol-type", "", "Molecule type (swarm, patrol, work)")
 
 	return cmd
 }

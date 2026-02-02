@@ -626,3 +626,87 @@ func TestListCommand_NoIssues(t *testing.T) {
 		t.Errorf("expected 'No issues found' message, got: %s", output)
 	}
 }
+
+func TestListCommand_MolTypeFilter(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	swarmID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:   "Swarm issue",
+		MolType: issuestorage.MolTypeSwarm,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	patrolID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:   "Patrol issue",
+		MolType: issuestorage.MolTypePatrol,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	workID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:   "Work issue",
+		MolType: issuestorage.MolTypeWork,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	// Filter by swarm
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--mol-type=swarm"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, swarmID) {
+		t.Errorf("expected output to contain swarm issue %s, got: %s", swarmID, output)
+	}
+	if strings.Contains(output, patrolID) {
+		t.Errorf("expected output NOT to contain patrol issue %s, got: %s", patrolID, output)
+	}
+	if strings.Contains(output, workID) {
+		t.Errorf("expected output NOT to contain work issue %s, got: %s", workID, output)
+	}
+}
+
+func TestListCommand_MolTypeInvalid(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--mol-type=invalid"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for invalid mol-type")
+	}
+	if !strings.Contains(err.Error(), "invalid mol-type") {
+		t.Errorf("expected error about invalid mol-type, got: %v", err)
+	}
+}

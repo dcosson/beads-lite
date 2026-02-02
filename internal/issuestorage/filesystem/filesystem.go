@@ -512,6 +512,18 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 	if filter.Type != nil && issue.Type != *filter.Type {
 		return false
 	}
+	if filter.MolType != nil {
+		filterMT := *filter.MolType
+		issueMT := issue.MolType
+		// Treat empty and "work" as equivalent
+		if filterMT == "" || filterMT == issuestorage.MolTypeWork {
+			if issueMT != "" && issueMT != issuestorage.MolTypeWork {
+				return false
+			}
+		} else if issueMT != filterMT {
+			return false
+		}
+	}
 	if filter.Assignee != nil && issue.Assignee != *filter.Assignee {
 		return false
 	}

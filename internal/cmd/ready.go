@@ -14,6 +14,7 @@ func newReadyCmd(provider *AppProvider) *cobra.Command {
 	var (
 		priority string
 		molID    string
+		molType  string
 		assignee string
 		limit    int
 	)
@@ -54,6 +55,15 @@ are shown, along with parallel group info.`,
 			// Apply assignee filter if specified
 			if assignee != "" {
 				filter.Assignee = &assignee
+			}
+
+			// Apply mol-type filter if specified
+			if molType != "" {
+				if !issuestorage.ValidateMolType(molType) {
+					return fmt.Errorf("invalid mol-type %q: must be one of swarm, patrol, work", molType)
+				}
+				mt := issuestorage.MolType(molType)
+				filter.MolType = &mt
 			}
 
 			// When --mol is specified, scope to children of that molecule
@@ -139,6 +149,7 @@ are shown, along with parallel group info.`,
 
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
 	cmd.Flags().StringVar(&molID, "mol", "", "Restrict to ready steps within a molecule")
+	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee")
 	cmd.Flags().IntVar(&limit, "limit", 0, "Maximum number of issues to show")
 
