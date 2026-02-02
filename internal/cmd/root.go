@@ -185,6 +185,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newCookCmd(provider))
 	rootCmd.AddCommand(newFormulaCmd(provider))
 	rootCmd.AddCommand(newSyncCmd(provider))
+	rootCmd.AddCommand(newPrimeCmd(provider))
 
 	return rootCmd
 }
