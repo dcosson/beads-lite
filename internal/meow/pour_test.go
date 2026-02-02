@@ -14,7 +14,7 @@ import (
 func newTestStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 func TestChildrenCommand(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -90,7 +90,7 @@ func TestChildrenCommand(t *testing.T) {
 func TestChildrenNoChildren(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -129,7 +129,7 @@ func TestChildrenNoChildren(t *testing.T) {
 func TestChildrenTreeFlag(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -202,7 +202,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 func TestChildrenJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -260,7 +260,7 @@ func TestChildrenJSON(t *testing.T) {
 func TestChildrenTreeJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -335,7 +335,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 func TestChildrenPrefixMatch(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -392,7 +392,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 func TestChildrenNotFound(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -423,7 +423,7 @@ func TestChildrenNotFound(t *testing.T) {
 func TestChildrenEmptyJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

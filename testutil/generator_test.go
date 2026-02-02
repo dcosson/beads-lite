@@ -11,7 +11,7 @@ import (
 func setupTestStorage(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}

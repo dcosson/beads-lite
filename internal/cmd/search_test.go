@@ -13,7 +13,7 @@ import (
 
 func TestSearchCmd_NoArgs(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -33,7 +33,7 @@ func TestSearchCmd_NoArgs(t *testing.T) {
 
 func TestSearchCmd_NoMatches(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -61,7 +61,7 @@ func TestSearchCmd_NoMatches(t *testing.T) {
 
 func TestSearchCmd_MatchTitle(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -94,7 +94,7 @@ func TestSearchCmd_MatchTitle(t *testing.T) {
 
 func TestSearchCmd_MatchDescription(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -129,7 +129,7 @@ func TestSearchCmd_MatchDescription(t *testing.T) {
 
 func TestSearchCmd_TitleOnly(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -168,7 +168,7 @@ func TestSearchCmd_TitleOnly(t *testing.T) {
 
 func TestSearchCmd_StatusFilter(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -234,7 +234,7 @@ func TestSearchCmd_StatusFilter(t *testing.T) {
 
 func TestSearchCmd_CaseInsensitive(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -261,7 +261,7 @@ func TestSearchCmd_CaseInsensitive(t *testing.T) {
 
 func TestSearchCmd_JSON(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

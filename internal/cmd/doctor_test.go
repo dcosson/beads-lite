@@ -13,7 +13,7 @@ import (
 
 func TestDoctorCmd_NoProblems(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestDoctorCmd_NoProblems(t *testing.T) {
 
 func TestDoctorCmd_WithProblems(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestDoctorCmd_WithProblems(t *testing.T) {
 
 func TestDoctorCmd_JSON(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestDoctorCmd_JSON(t *testing.T) {
 
 func TestDoctorCmd_Fix(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}

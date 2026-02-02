@@ -43,7 +43,7 @@ func (a *App) StorageFor(ctx context.Context, id string) (issuestorage.IssueStor
 		return a.Storage, nil
 	}
 
-	return filesystem.New(paths.DataDir), nil
+	return filesystem.New(paths.DataDir, "bd-"), nil
 }
 
 // SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,

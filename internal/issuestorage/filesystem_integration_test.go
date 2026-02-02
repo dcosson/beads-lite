@@ -12,7 +12,7 @@ import (
 func TestFilesystemContract(t *testing.T) {
 	factory := func() issuestorage.IssueStore {
 		dir := t.TempDir()
-		fs := filesystem.New(dir)
+		fs := filesystem.New(dir, "bd-")
 		if err := fs.Init(context.Background()); err != nil {
 			t.Fatalf("Init failed: %v", err)
 		}
@@ -26,7 +26,7 @@ func TestFilesystemConcurrent(t *testing.T) {
 	suite := &issuestorage.ConcurrentTestSuite{
 		NewStorage: func(t *testing.T) issuestorage.IssueStore {
 			dir := t.TempDir()
-			fs := filesystem.New(dir)
+			fs := filesystem.New(dir, "bd-")
 			if err := fs.Init(context.Background()); err != nil {
 				t.Fatalf("Init failed: %v", err)
 			}

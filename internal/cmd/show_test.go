@@ -14,7 +14,7 @@ import (
 func TestShowCommand(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -75,7 +75,7 @@ func TestShowCommand(t *testing.T) {
 func TestShowPrefixMatch(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -118,7 +118,7 @@ func TestShowPrefixMatch(t *testing.T) {
 func TestShowAmbiguousPrefix(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -169,7 +169,7 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 func TestShowNotFound(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -200,7 +200,7 @@ func TestShowNotFound(t *testing.T) {
 func TestShowJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -253,7 +253,7 @@ func TestShowJSON(t *testing.T) {
 func TestShowClosedIssue(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -299,7 +299,7 @@ func TestShowClosedIssue(t *testing.T) {
 func TestShowWithDependencies(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -354,7 +354,7 @@ func TestShowWithDependencies(t *testing.T) {
 func TestShowWithComments(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

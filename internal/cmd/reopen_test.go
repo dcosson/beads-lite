@@ -13,7 +13,7 @@ import (
 func TestReopenCommand(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -84,7 +84,7 @@ func TestReopenCommand(t *testing.T) {
 func TestReopenNonExistent(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -110,7 +110,7 @@ func TestReopenNonExistent(t *testing.T) {
 func TestReopenJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

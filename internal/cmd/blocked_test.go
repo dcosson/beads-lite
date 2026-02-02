@@ -12,7 +12,7 @@ import (
 func TestBlockedCommand(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -78,7 +78,7 @@ func TestBlockedCommand(t *testing.T) {
 func TestBlockedByRelationship(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -132,7 +132,7 @@ func TestBlockedByRelationship(t *testing.T) {
 func TestBlockedNoBlockedIssues(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -178,7 +178,7 @@ func TestBlockedNoBlockedIssues(t *testing.T) {
 func TestBlockedClosedDependency(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -232,7 +232,7 @@ func TestBlockedClosedDependency(t *testing.T) {
 func TestBlockedJSONOutput(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -290,7 +290,7 @@ func TestBlockedJSONOutput(t *testing.T) {
 func TestBlockedMultipleDependencies(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -337,7 +337,7 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 
 func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -400,7 +400,7 @@ func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 
 func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
