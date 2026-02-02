@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"beads-lite/internal/idgen"
 	"beads-lite/internal/issuestorage"
 )
 
@@ -23,6 +23,7 @@ import (
 type FilesystemStorage struct {
 	root              string // path to .beads directory
 	maxHierarchyDepth int
+	prefix            string // ID prefix (default "bd-")
 }
 
 // Option configures a FilesystemStorage instance.
@@ -35,11 +36,19 @@ func WithMaxHierarchyDepth(n int) Option {
 	}
 }
 
+// WithPrefix sets the ID prefix (e.g., "bd-", "test-").
+func WithPrefix(prefix string) Option {
+	return func(fs *FilesystemStorage) {
+		fs.prefix = prefix
+	}
+}
+
 // New creates a new FilesystemStorage rooted at the given directory.
 func New(root string, opts ...Option) *FilesystemStorage {
 	fs := &FilesystemStorage{
 		root:              root,
 		maxHierarchyDepth: issuestorage.DefaultMaxHierarchyDepth,
+		prefix:            "bd-",
 	}
 	for _, opt := range opts {
 		opt(fs)
@@ -169,12 +178,24 @@ func releaseLocks(locks []*issueLock) {
 	}
 }
 
-func generateID() (string, error) {
-	bytes := make([]byte, 2) // 16 bits = 4 hex chars
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+// countAllIssues returns the total number of JSON issue files across all directories.
+func (fs *FilesystemStorage) countAllIssues() (int, error) {
+	count := 0
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		entries, err := os.ReadDir(filepath.Join(fs.root, dir))
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			return 0, err
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" && !strings.Contains(entry.Name(), ".tmp.") {
+				count++
+			}
+		}
 	}
-	return fmt.Sprintf("bd-%s", hex.EncodeToString(bytes)), nil
+	return count, nil
 }
 
 func atomicWriteJSON(path string, data interface{}) error {
@@ -216,7 +237,7 @@ func atomicWriteJSON(path string, data interface{}) error {
 
 // Create creates a new issue and returns its ID.
 // If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
-// Otherwise, a random ID is generated.
+// Otherwise, a deterministic content-based ID is generated using SHA256 + base36.
 func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Issue) (string, error) {
 	if issue.ID != "" {
 		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
@@ -262,39 +283,48 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		return issue.ID, nil
 	}
 
-	for attempts := 0; attempts < 3; attempts++ {
-		id, err := generateID()
-		if err != nil {
-			return "", err
-		}
-
-		path := fs.issuePath(id, false)
-
-		// O_EXCL fails if file exists - collision detection
-		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
-		if os.IsExist(err) {
-			continue // Collision, retry with new ID
-		}
-		if err != nil {
-			return "", err
-		}
-		f.Close()
-
-		issue.ID = id
-		issue.CreatedAt = time.Now()
-		issue.UpdatedAt = issue.CreatedAt
-		if issue.Status == "" {
-			issue.Status = issuestorage.StatusOpen
-		}
-
-		if err := atomicWriteJSON(path, issue); err != nil {
-			os.Remove(path)
-			return "", err
-		}
-
-		return id, nil
+	// Deterministic content-based ID generation.
+	// Count existing issues for adaptive length scaling.
+	count, err := fs.countAllIssues()
+	if err != nil {
+		return "", fmt.Errorf("counting issues for adaptive length: %w", err)
 	}
-	return "", errors.New("failed to generate unique ID after 3 attempts")
+
+	baseLength := idgen.AdaptiveLength(count)
+	now := time.Now()
+
+	// Collision resolution: try nonces 0-9 at each length, then increase length.
+	for length := baseLength; length <= idgen.MaxLength; length++ {
+		for nonce := 0; nonce <= idgen.MaxNonce; nonce++ {
+			id := idgen.HashID(fs.prefix, issue.Title, issue.Description, issue.CreatedBy, now, nonce, length)
+			path := fs.issuePath(id, false)
+
+			// O_EXCL fails if file exists - collision detection
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+			if os.IsExist(err) {
+				continue // Collision, try next nonce
+			}
+			if err != nil {
+				return "", err
+			}
+			f.Close()
+
+			issue.ID = id
+			issue.CreatedAt = now
+			issue.UpdatedAt = now
+			if issue.Status == "" {
+				issue.Status = issuestorage.StatusOpen
+			}
+
+			if err := atomicWriteJSON(path, issue); err != nil {
+				os.Remove(path)
+				return "", err
+			}
+
+			return id, nil
+		}
+	}
+	return "", fmt.Errorf("failed to generate unique ID: all nonces exhausted at all lengths up to %d", idgen.MaxLength)
 }
 
 // Get retrieves an issue by ID.

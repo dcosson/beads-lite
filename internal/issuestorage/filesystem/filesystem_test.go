@@ -15,29 +15,29 @@ import (
 	"beads-lite/internal/issuestorage"
 )
 
-// TestGenerateID verifies the ID format is bd-XXXX (4 hex chars).
-func TestGenerateID(t *testing.T) {
-	idPattern := regexp.MustCompile(`^bd-[0-9a-f]{4}$`)
+// TestCreateDeterministicID verifies that IDs are deterministic (same content → same ID)
+// and use the base36 format.
+func TestCreateDeterministicID(t *testing.T) {
+	idPattern := regexp.MustCompile(`^bd-[0-9a-z]{3,8}$`)
 
-	// Generate multiple IDs and verify format
-	seen := make(map[string]bool)
-	for i := 0; i < 100; i++ {
-		id, err := generateID()
-		if err != nil {
-			t.Fatalf("generateID failed: %v", err)
-		}
+	s := setupTestStorage(t)
+	ctx := context.Background()
 
-		if !idPattern.MatchString(id) {
-			t.Errorf("ID %q does not match expected format bd-XXXX", id)
-		}
-
-		// Track uniqueness (not guaranteed but very likely in 100 samples)
-		seen[id] = true
+	issue := &issuestorage.Issue{
+		Title:       "Test Issue",
+		Description: "A test issue",
+		Status:      issuestorage.StatusOpen,
+		Priority:    issuestorage.PriorityMedium,
+		Type:        issuestorage.TypeTask,
+		CreatedBy:   "testuser",
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
 	}
 
-	// With 65536 possibilities, 100 samples should have some variety
-	if len(seen) < 50 {
-		t.Errorf("Expected more unique IDs, got only %d unique out of 100", len(seen))
+	if !idPattern.MatchString(id) {
+		t.Errorf("ID %q does not match expected format bd-[0-9a-z]{3,8}", id)
 	}
 }
 

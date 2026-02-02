@@ -371,8 +371,12 @@ func TestChildrenPrefixMatch(t *testing.T) {
 	}
 
 	// Test with prefix match (use enough characters to be unique)
-	// IDs are like "bd-xxxx", use 7 chars to include more of the unique part
-	prefix := parentID[:7]
+	// IDs are like "bd-xxx" (variable length), use most of the ID as prefix
+	prefixLen := len(parentID) - 1
+	if prefixLen < 4 {
+		prefixLen = 4
+	}
+	prefix := parentID[:prefixLen]
 	cmd := newChildrenCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{prefix})
 	if err := cmd.Execute(); err != nil {
