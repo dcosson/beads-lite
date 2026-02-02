@@ -56,15 +56,22 @@
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
+      "depends_on_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
       "type": "parent-child"
     },
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_4",
+      "issue_id": "ISSUE_3",
       "type": "parent-child"
     },
     {
@@ -78,15 +85,8 @@
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_2",
+      "issue_id": "ISSUE_4",
       "type": "parent-child"
-    },
-    {
-      "created_at": "TIMESTAMP",
-      "created_by": "testuser",
-      "depends_on_id": "ISSUE_3",
-      "issue_id": "ISSUE_2",
-      "type": "blocks"
     }
   ],
   "is_compound": false,
@@ -162,6 +162,19 @@
         "is_current": false,
         "issue": {
           "created_at": "TIMESTAMP",
+          "id": "ISSUE_2",
+          "issue_type": "task",
+          "priority": 2,
+          "status": "open",
+          "title": "Build",
+          "updated_at": "TIMESTAMP"
+        },
+        "status": "pending"
+      },
+      {
+        "is_current": false,
+        "issue": {
+          "created_at": "TIMESTAMP",
           "id": "ISSUE_3",
           "issue_type": "task",
           "priority": 2,
@@ -183,19 +196,6 @@
           "updated_at": "TIMESTAMP"
         },
         "status": "pending"
-      },
-      {
-        "is_current": false,
-        "issue": {
-          "created_at": "TIMESTAMP",
-          "id": "ISSUE_2",
-          "issue_type": "task",
-          "priority": 2,
-          "status": "open",
-          "title": "Build",
-          "updated_at": "TIMESTAMP"
-        },
-        "status": "pending"
       }
     ],
     "total": 3
@@ -207,6 +207,7 @@
   {
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
+    "created_by": "testuser",
     "description": "Test workflow",
     "id": "ISSUE_1",
     "issue_type": "epic",
@@ -222,6 +223,7 @@
   {
     "assignee": "testuser",
     "created_at": "TIMESTAMP",
+    "created_by": "testuser",
     "id": "ISSUE_3",
     "issue_type": "task",
     "priority": 2,
@@ -239,8 +241,10 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
+      "created_by": "testuser",
       "id": "ISSUE_3",
       "issue_type": "task",
+      "parent": "ISSUE_1",
       "priority": 2,
       "status": "closed",
       "title": "Setup demo",
@@ -268,7 +272,7 @@
       "id": "ISSUE_2",
       "issue_type": "task",
       "priority": 2,
-      "status": "open",
+      "status": "in_progress",
       "title": "Build",
       "updated_at": "TIMESTAMP"
     }
@@ -282,15 +286,22 @@
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
+      "depends_on_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
       "type": "parent-child"
     },
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_4",
+      "issue_id": "ISSUE_3",
       "type": "parent-child"
     },
     {
@@ -304,15 +315,8 @@
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_2",
+      "issue_id": "ISSUE_4",
       "type": "parent-child"
-    },
-    {
-      "created_at": "TIMESTAMP",
-      "created_by": "testuser",
-      "depends_on_id": "ISSUE_3",
-      "issue_id": "ISSUE_2",
-      "type": "blocks"
     }
   ],
   "is_compound": false,
@@ -328,6 +332,7 @@
     },
     {
       "assignee": "testuser",
+      "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
       "id": "ISSUE_3",
@@ -379,8 +384,10 @@
       "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
+      "created_by": "testuser",
       "id": "ISSUE_2",
       "issue_type": "task",
+      "parent": "ISSUE_1",
       "priority": 2,
       "status": "closed",
       "title": "Build",
@@ -407,7 +414,7 @@
       "id": "ISSUE_4",
       "issue_type": "task",
       "priority": 2,
-      "status": "open",
+      "status": "in_progress",
       "title": "Test",
       "updated_at": "TIMESTAMP"
     }
@@ -420,8 +427,10 @@
     "close_reason": "Closed",
     "closed_at": "TIMESTAMP",
     "created_at": "TIMESTAMP",
+    "created_by": "testuser",
     "id": "ISSUE_4",
     "issue_type": "task",
+    "parent": "ISSUE_1",
     "priority": 2,
     "status": "closed",
     "title": "Test",
@@ -436,15 +445,22 @@
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
+      "depends_on_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
+      "type": "blocks"
+    },
+    {
+      "created_at": "TIMESTAMP",
+      "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_3",
+      "issue_id": "ISSUE_2",
       "type": "parent-child"
     },
     {
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_4",
+      "issue_id": "ISSUE_3",
       "type": "parent-child"
     },
     {
@@ -458,20 +474,14 @@
       "created_at": "TIMESTAMP",
       "created_by": "testuser",
       "depends_on_id": "ISSUE_1",
-      "issue_id": "ISSUE_2",
+      "issue_id": "ISSUE_4",
       "type": "parent-child"
-    },
-    {
-      "created_at": "TIMESTAMP",
-      "created_by": "testuser",
-      "depends_on_id": "ISSUE_3",
-      "issue_id": "ISSUE_2",
-      "type": "blocks"
     }
   ],
   "is_compound": false,
   "issues": [
     {
+      "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
       "id": "ISSUE_2",
@@ -483,6 +493,7 @@
     },
     {
       "assignee": "testuser",
+      "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
       "id": "ISSUE_3",
@@ -493,6 +504,7 @@
       "updated_at": "TIMESTAMP"
     },
     {
+      "close_reason": "Closed",
       "closed_at": "TIMESTAMP",
       "created_at": "TIMESTAMP",
       "id": "ISSUE_4",
@@ -558,14 +570,14 @@
 === burn molecule ===
 {
   "deleted": [
-    "ISSUE_5",
-    "ISSUE_7",
+    "ISSUE_8",
     "ISSUE_6",
-    "ISSUE_8"
+    "ISSUE_7",
+    "ISSUE_5"
   ],
   "deleted_count": 4,
   "dependencies_removed": 5,
-  "events_removed": 9,
+  "events_removed": 4,
   "labels_removed": 0,
   "orphaned_issues": null,
   "references_updated": 0
@@ -573,14 +585,15 @@
 
 === wisp molecule ===
 {
+  "attached": 0,
   "created": 4,
   "id_mapping": {
-    "test-workflow": "ISSUE_9p-yf9",
-    "test-workflow.build": "ISSUE_9p-2jr",
-    "test-workflow.setup": "ISSUE_9p-5au",
-    "test-workflow.test": "ISSUE_9p-tfq"
+    "test-workflow": "ISSUE_9",
+    "test-workflow.build": "ISSUE_10",
+    "test-workflow.setup": "ISSUE_11",
+    "test-workflow.test": "ISSUE_12"
   },
-  "new_epic_id": "ISSUE_9p-yf9",
+  "new_epic_id": "ISSUE_9",
   "phase": "vapor"
 }
 
@@ -590,14 +603,14 @@
 === squash wisp ===
 {
   "deleted_count": 3,
-  "digest_id": "ISSUE_10",
+  "digest_id": "ISSUE_13",
   "kept_children": false,
-  "molecule_id": "ISSUE_9p-yf9",
+  "molecule_id": "ISSUE_9",
   "squashed_count": 3,
   "squashed_ids": [
-    "ISSUE_9p-2jr",
-    "ISSUE_9p-5au",
-    "ISSUE_9p-tfq"
+    "ISSUE_11",
+    "ISSUE_10",
+    "ISSUE_12"
   ]
 }
 
@@ -610,10 +623,11 @@
     "dependencies": [
       {
         "created_at": "TIMESTAMP",
+        "created_by": "testuser",
         "dependency_type": "parent-child",
         "description": "Test workflow",
         "ephemeral": true,
-        "id": "ISSUE_9p-yf9",
+        "id": "ISSUE_9",
         "issue_type": "epic",
         "priority": 2,
         "status": "open",
@@ -622,9 +636,9 @@
       }
     ],
     "description": "Test summary",
-    "id": "ISSUE_10",
+    "id": "ISSUE_13",
     "issue_type": "task",
-    "parent": "ISSUE_9p-yf9",
+    "parent": "ISSUE_9",
     "priority": 2,
     "status": "closed",
     "title": "Digest: test-workflow",

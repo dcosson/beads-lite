@@ -14,6 +14,7 @@ import (
 type Normalizer struct {
 	issueIDs    map[string]string // "bd-a1f3" -> "ISSUE_1"
 	commentIDs  map[string]string // "c-ab12" -> "COMMENT_1"
+	issueTitles map[string]string // issue ID -> title (for stable sorting)
 	issueSeq    int
 	commentSeq  int
 	sandboxPath string // if set, replaced with SANDBOX_PATH in output
@@ -22,8 +23,9 @@ type Normalizer struct {
 // NewNormalizer creates a new Normalizer with empty state.
 func NewNormalizer() *Normalizer {
 	return &Normalizer{
-		issueIDs:   make(map[string]string),
-		commentIDs: make(map[string]string),
+		issueIDs:    make(map[string]string),
+		commentIDs:  make(map[string]string),
+		issueTitles: make(map[string]string),
 	}
 }
 
@@ -46,7 +48,7 @@ var (
 	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
 	// The (-[0-9a-z]+)? captures the extra ID suffix the reference binary adds
 	// in non-daemon mode (e.g., beads-sandbox-XXXXXXXX-abc-43c).
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
@@ -153,6 +155,10 @@ var floatKeys = map[string]bool{
 func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 	switch val := v.(type) {
 	case map[string]interface{}:
+		if issues, ok := val["issues"].([]interface{}); ok {
+			n.captureIssueTitles(issues)
+		}
+
 		// Sort keys to ensure deterministic first-seen ID ordering
 		keys := make([]string, 0, len(val))
 		for k := range val {
@@ -171,17 +177,15 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 		return result
 
 	case []interface{}:
-		// Sort arrays of objects by "title" for deterministic ordering.
+		// Sort arrays of objects by stable keys for deterministic ordering.
 		// Sort BEFORE normalization so IDs are encountered in deterministic order.
 		sort.SliceStable(val, func(i, j int) bool {
-			mi, oki := val[i].(map[string]interface{})
-			mj, okj := val[j].(map[string]interface{})
-			if !oki || !okj {
+			keyI, okI := n.objectSortKey(val[i])
+			keyJ, okJ := n.objectSortKey(val[j])
+			if !okI || !okJ {
 				return false
 			}
-			ti, _ := mi["title"].(string)
-			tj, _ := mj["title"].(string)
-			return ti < tj
+			return keyI < keyJ
 		})
 		result := make([]interface{}, len(val))
 		for i, v := range val {
@@ -195,6 +199,48 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 	default:
 		return val
 	}
+}
+
+// captureIssueTitles records issue ID -> title mappings for stable sorting.
+func (n *Normalizer) captureIssueTitles(issues []interface{}) {
+	for _, item := range issues {
+		m, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		id, _ := m["id"].(string)
+		title, _ := m["title"].(string)
+		if id != "" && title != "" {
+			n.issueTitles[id] = title
+		}
+	}
+}
+
+// objectSortKey returns a stable sort key for objects when available.
+func (n *Normalizer) objectSortKey(v interface{}) (string, bool) {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return "", false
+	}
+	if title, ok := m["title"].(string); ok && title != "" {
+		return "title:" + title, true
+	}
+	if issue, ok := m["issue"].(map[string]interface{}); ok {
+		if title, ok := issue["title"].(string); ok && title != "" {
+			return "issue.title:" + title, true
+		}
+	}
+	issueID, _ := m["issue_id"].(string)
+	dependsOnID, _ := m["depends_on_id"].(string)
+	if issueID != "" || dependsOnID != "" {
+		issueTitle := n.issueTitles[issueID]
+		dependsTitle := n.issueTitles[dependsOnID]
+		if issueTitle != "" || dependsTitle != "" {
+			depType, _ := m["type"].(string)
+			return fmt.Sprintf("dep:%s|%s|%s", issueTitle, dependsTitle, depType), true
+		}
+	}
+	return "", false
 }
 
 // normalizeStringValue replaces IDs and timestamps in a string value.
