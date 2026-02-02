@@ -13,7 +13,7 @@ import (
 
 func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -62,7 +62,7 @@ func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 
 func TestListCommand_AllFlag(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -112,7 +112,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 
 func TestListCommand_ClosedFlag(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -162,7 +162,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 
 func TestListCommand_StatusFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -215,7 +215,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 
 func TestListCommand_PriorityFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -261,7 +261,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 
 func TestListCommand_TypeFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -309,7 +309,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 
 func TestListCommand_LabelsFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -356,7 +356,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 
 func TestListCommand_AssigneeFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -404,7 +404,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 
 func TestListCommand_ParentFilter(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -463,7 +463,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 
 func TestListCommand_RootsFlag(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -514,7 +514,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 func TestListCommand_FormatIsNoop(t *testing.T) {
 	// --format flag is accepted but not implemented (matching original beads)
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -554,7 +554,7 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 
 func TestListCommand_JSON(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -603,7 +603,7 @@ func TestListCommand_JSON(t *testing.T) {
 
 func TestListCommand_NoIssues(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

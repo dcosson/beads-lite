@@ -13,7 +13,7 @@ import (
 
 func TestStatsCmd_Empty(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestStatsCmd_Empty(t *testing.T) {
 
 func TestStatsCmd_WithIssues(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -116,7 +116,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 
 func TestStatsCmd_JSON(t *testing.T) {
 	dir := t.TempDir()
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

@@ -12,7 +12,7 @@ import (
 func TestReadyCommand(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -95,7 +95,7 @@ func TestReadyCommand(t *testing.T) {
 func TestReadyWithClosedDependency(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -162,7 +162,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 
 func TestReadyExcludesEphemeral(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -209,7 +209,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 
 func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -288,7 +288,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 
 func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -349,7 +349,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 func TestReadyJSON(t *testing.T) {
 	// Setup test storage
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

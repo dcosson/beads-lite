@@ -16,7 +16,7 @@ import (
 func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
 	t.Helper()
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
@@ -648,7 +648,7 @@ func (m *mapConfigStore) All() map[string]string {
 func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	dir := t.TempDir()
 	// Set max depth to 1 via the option (simulating config propagation)
-	store := filesystem.New(dir, filesystem.WithMaxHierarchyDepth(1))
+	store := filesystem.New(dir, "bd-", filesystem.WithMaxHierarchyDepth(1))
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}

@@ -14,7 +14,7 @@ import (
 
 func TestGateShowCommand(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -72,7 +72,7 @@ func TestGateShowCommand(t *testing.T) {
 
 func TestGateShowNotGateType(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -107,7 +107,7 @@ func TestGateShowNotGateType(t *testing.T) {
 
 func TestGateShowNotFound(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -133,7 +133,7 @@ func TestGateShowNotFound(t *testing.T) {
 
 func TestGateShowPrefixMatch(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -172,7 +172,7 @@ func TestGateShowPrefixMatch(t *testing.T) {
 
 func TestGateShowJSON(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -238,7 +238,7 @@ func TestGateShowJSON(t *testing.T) {
 
 func TestGateShowMinimalFields(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -466,7 +466,7 @@ func TestGateAddWaiterMultiple(t *testing.T) {
 
 func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -536,7 +536,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 
 func TestGateListCommand_AllFlag(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -590,7 +590,7 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 
 func TestGateListCommand_NoGates(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -626,7 +626,7 @@ func TestGateListCommand_NoGates(t *testing.T) {
 
 func TestGateListCommand_JSON(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
@@ -684,7 +684,7 @@ func TestGateListCommand_JSON(t *testing.T) {
 
 func TestGateListCommand_TextTableOutput(t *testing.T) {
 	dir := t.TempDir()
-	store := filesystem.New(dir)
+	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)

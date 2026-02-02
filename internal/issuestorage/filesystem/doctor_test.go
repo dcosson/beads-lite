@@ -13,7 +13,7 @@ import (
 
 func TestDoctorOrphanedLockFiles(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -64,7 +64,7 @@ func TestDoctorOrphanedLockFiles(t *testing.T) {
 
 func TestDoctorOrphanedTempFiles(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -101,7 +101,7 @@ func TestDoctorOrphanedTempFiles(t *testing.T) {
 
 func TestDoctorDuplicateIssue(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -166,7 +166,7 @@ func TestDoctorDuplicateIssue(t *testing.T) {
 
 func TestDoctorStatusLocationMismatch(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -216,7 +216,7 @@ func TestDoctorStatusLocationMismatch(t *testing.T) {
 
 func TestDoctorBrokenDependencyReference(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -267,7 +267,7 @@ func TestDoctorBrokenDependencyReference(t *testing.T) {
 
 func TestDoctorAsymmetricDependency(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -328,7 +328,7 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 
 func TestDoctorBrokenParentReference(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -378,7 +378,7 @@ func TestDoctorBrokenParentReference(t *testing.T) {
 
 func TestDoctorMalformedJSON(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -417,7 +417,7 @@ func TestDoctorMalformedJSON(t *testing.T) {
 
 func TestDoctorCleanStorage(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -459,7 +459,7 @@ func TestDoctorCleanStorage(t *testing.T) {
 
 func TestDoctorAsymmetricBlocks(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {
@@ -520,7 +520,7 @@ func TestDoctorAsymmetricBlocks(t *testing.T) {
 
 func TestDoctorAsymmetricParentChild(t *testing.T) {
 	dir := t.TempDir()
-	fs := New(dir)
+	fs := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := fs.Init(ctx); err != nil {

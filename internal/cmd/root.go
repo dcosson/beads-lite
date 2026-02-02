@@ -72,11 +72,12 @@ func (p *AppProvider) init() (*App, error) {
 			fsOpts = append(fsOpts, filesystem.WithMaxHierarchyDepth(n))
 		}
 	}
+	prefix := "bd-"
 	if v, ok := configStore.Get("id.prefix"); ok {
-		fsOpts = append(fsOpts, filesystem.WithPrefix(v))
+		prefix = v
 	}
 
-	store := filesystem.New(paths.DataDir, fsOpts...)
+	store := filesystem.New(paths.DataDir, prefix, fsOpts...)
 	store.CleanupStaleLocks()
 
 	router, err := routing.New(paths.ConfigDir)

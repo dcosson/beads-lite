@@ -99,13 +99,8 @@ func runInit(force bool, projectName string) error {
 
 	dataPath := filepath.Join(beadsPath, projectName)
 
-	var fsOpts []filesystem.Option
-	if prefix != "" {
-		fsOpts = append(fsOpts, filesystem.WithPrefix(prefix))
-	}
-
 	// Create the issue storage
-	issueStore := filesystem.New(dataPath, fsOpts...)
+	issueStore := filesystem.New(dataPath, prefix)
 	if err := issueStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
 	}

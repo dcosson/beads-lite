@@ -14,7 +14,7 @@ import (
 func newSquashStore(t *testing.T) issuestorage.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
-	s := filesystem.New(dir)
+	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}

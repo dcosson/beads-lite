@@ -44,7 +44,7 @@ func TestCreateDeterministicID(t *testing.T) {
 // TestCreate_IDCollisionRetry verifies that Create retries on ID collision.
 func TestCreate_IDCollisionRetry(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {
@@ -75,7 +75,7 @@ func TestCreate_IDCollisionRetry(t *testing.T) {
 // TestCreate_ConcurrentIDGeneration verifies concurrent creates don't collide.
 func TestCreate_ConcurrentIDGeneration(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {
@@ -260,7 +260,7 @@ func TestAtomicWriteJSON_PreservesOriginalOnError(t *testing.T) {
 // TestFilesystemStorage_ConcurrentWrites tests that concurrent writes don't corrupt data.
 func TestFilesystemStorage_ConcurrentWrites(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {
@@ -322,7 +322,7 @@ func TestFilesystemStorage_ConcurrentWrites(t *testing.T) {
 func setupTestStorage(t *testing.T) *FilesystemStorage {
 	t.Helper()
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -451,7 +451,7 @@ func TestListFilteringSorting(t *testing.T) {
 func TestFilesystemContract(t *testing.T) {
 	factory := func() issuestorage.IssueStore {
 		dir := t.TempDir()
-		return New(dir)
+		return New(dir, "bd-")
 	}
 	issuestorage.RunContractTests(t, factory)
 }
@@ -871,7 +871,7 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 	ctx := context.Background()
 
 	// Create storage and a parent issue
-	s1 := New(dir)
+	s1 := New(dir, "bd-")
 	if err := s1.Init(ctx); err != nil {
 		t.Fatalf("Init 1 failed: %v", err)
 	}
@@ -889,7 +889,7 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 	}
 
 	// Create new storage instance on same directory
-	s2 := New(dir)
+	s2 := New(dir, "bd-")
 	if err := s2.Init(ctx); err != nil {
 		t.Fatalf("Init 2 failed: %v", err)
 	}
@@ -1373,7 +1373,7 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 // default depth limit for both GetNextChildID and explicit-ID Create paths.
 func TestWithMaxHierarchyDepth(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir, WithMaxHierarchyDepth(2))
+	s := New(dir, "bd-", WithMaxHierarchyDepth(2))
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -1420,7 +1420,7 @@ func TestWithMaxHierarchyDepth(t *testing.T) {
 // TestStaleLockCleanup verifies that stale lock files (with no active flock) are cleaned up.
 func TestStaleLockCleanup(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {
@@ -1484,7 +1484,7 @@ func TestStaleLockCleanupOnInit(t *testing.T) {
 	}
 
 	// Now call Init - it should clean up the stale lock
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -1499,7 +1499,7 @@ func TestStaleLockCleanupOnInit(t *testing.T) {
 // TestLockFileCleanupAfterUpdate verifies that lock files are removed after Update operations.
 func TestLockFileCleanupAfterUpdate(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {
@@ -1530,7 +1530,7 @@ func TestLockFileCleanupAfterUpdate(t *testing.T) {
 // TestLockFileCleanupAfterAddDependency verifies that lock files are removed after AddDependency.
 func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 	dir := t.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	ctx := context.Background()
 
 	if err := s.Init(ctx); err != nil {

@@ -28,7 +28,7 @@ const MaxIDRetries = 20
 type FilesystemStorage struct {
 	root              string // path to .beads directory
 	maxHierarchyDepth int
-	prefix            string // ID prefix (default "bd-")
+	prefix            string // ID prefix (e.g., "bd-", "bl-")
 }
 
 // Option configures a FilesystemStorage instance.
@@ -41,19 +41,13 @@ func WithMaxHierarchyDepth(n int) Option {
 	}
 }
 
-// WithPrefix sets the ID prefix (e.g., "bd-", "test-").
-func WithPrefix(prefix string) Option {
-	return func(fs *FilesystemStorage) {
-		fs.prefix = prefix
-	}
-}
-
 // New creates a new FilesystemStorage rooted at the given directory.
-func New(root string, opts ...Option) *FilesystemStorage {
+// The prefix is prepended to generated IDs (e.g., "bd-", "bl-").
+func New(root, prefix string, opts ...Option) *FilesystemStorage {
 	fs := &FilesystemStorage{
 		root:              root,
 		maxHierarchyDepth: issuestorage.DefaultMaxHierarchyDepth,
-		prefix:            "bd-",
+		prefix:            prefix,
 	}
 	for _, opt := range opts {
 		opt(fs)
