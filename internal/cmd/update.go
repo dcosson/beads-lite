@@ -60,70 +60,26 @@ Examples:
 				return fmt.Errorf("routing issue %s: %w", issueID, err)
 			}
 
-			// Fetch the existing issue
-			issue, err := store.Get(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("getting issue %s: %w", issueID, err)
-			}
-
-			// Track if any changes were made
-			changed := false
-
-			// Handle --claim flag (check original state before other modifications)
-			if cmd.Flags().Changed("claim") && claim {
-				actor, err := resolveActor(app)
-				if err != nil {
-					return fmt.Errorf("claiming issue: %w", err)
-				}
-				if issue.Assignee != "" {
-					return fmt.Errorf("cannot claim %s: already assigned to %q", issueID, issue.Assignee)
-				}
-				issue.Assignee = actor
-				issue.Status = issuestorage.StatusInProgress
-				changed = true
-			}
-
-			// Update title if specified
-			if cmd.Flags().Changed("title") {
-				issue.Title = title
-				changed = true
-			}
-
-			// Update description if specified
-			if cmd.Flags().Changed("description") {
-				desc := description
-				if description == "-" {
-					data, err := io.ReadAll(bufio.NewReader(os.Stdin))
-					if err != nil {
-						return fmt.Errorf("reading description from stdin: %w", err)
-					}
-					desc = strings.TrimSpace(string(data))
-				}
-				issue.Description = desc
-				changed = true
-			}
-
-			// Update priority if specified
+			// Pre-parse flags that can fail before taking the lock.
+			var parsedPriority issuestorage.Priority
 			if cmd.Flags().Changed("priority") {
 				p, err := parsePriority(priority)
 				if err != nil {
 					return err
 				}
-				issue.Priority = p
-				changed = true
+				parsedPriority = p
 			}
 
-			// Update type if specified
+			var parsedType issuestorage.IssueType
 			if cmd.Flags().Changed("type") {
 				t, err := parseType(typeFlag)
 				if err != nil {
 					return err
 				}
-				issue.Type = t
-				changed = true
+				parsedType = t
 			}
 
-			// Update status if specified
+			var parsedStatus issuestorage.Status
 			if cmd.Flags().Changed("status") {
 				s, err := parseStatus(status)
 				if err != nil {
@@ -134,18 +90,38 @@ Examples:
 					}
 					return err
 				}
-				issue.Status = s
-				changed = true
+				parsedStatus = s
 			}
 
-			// Update assignee if specified (including empty string to unassign)
-			if cmd.Flags().Changed("assignee") {
-				issue.Assignee = assignee
-				changed = true
+			var desc string
+			if cmd.Flags().Changed("description") {
+				desc = description
+				if description == "-" {
+					data, err := io.ReadAll(bufio.NewReader(os.Stdin))
+					if err != nil {
+						return fmt.Errorf("reading description from stdin: %w", err)
+					}
+					desc = strings.TrimSpace(string(data))
+				}
 			}
 
-			// Update parent if specified
+			var actor string
+			if cmd.Flags().Changed("claim") && claim {
+				a, err := resolveActor(app)
+				if err != nil {
+					return fmt.Errorf("claiming issue: %w", err)
+				}
+				actor = a
+			}
+
+			// Handle parent changes first — AddDependency/RemoveDependency
+			// have their own locking.
 			if cmd.Flags().Changed("parent") {
+				// Need current issue to check existing parent for removal.
+				issue, err := store.Get(ctx, issueID)
+				if err != nil {
+					return fmt.Errorf("getting issue %s: %w", issueID, err)
+				}
 				if parent == "" {
 					// Remove parent
 					if issue.Parent != "" {
@@ -168,45 +144,69 @@ Examples:
 						return fmt.Errorf("setting parent: %w", err)
 					}
 				}
-				// Re-fetch issue since AddDependency/RemoveDependency modify storage directly
-				issue, err = store.Get(ctx, issueID)
-				if err != nil {
-					return fmt.Errorf("re-fetching issue after parent update: %w", err)
-				}
-				changed = true
 			}
 
-			// Handle label modifications
-			if len(addLabels) > 0 || len(removeLabels) > 0 {
-				labels := issue.Labels
-				if labels == nil {
-					labels = []string{}
-				}
+			// Check if there are any non-parent field changes.
+			hasFieldChanges := cmd.Flags().Changed("title") ||
+				cmd.Flags().Changed("description") ||
+				cmd.Flags().Changed("priority") ||
+				cmd.Flags().Changed("type") ||
+				cmd.Flags().Changed("status") ||
+				cmd.Flags().Changed("assignee") ||
+				(cmd.Flags().Changed("claim") && claim) ||
+				len(addLabels) > 0 || len(removeLabels) > 0
 
-				// Remove labels first
-				for _, toRemove := range removeLabels {
-					labels = removeFromSlice(labels, toRemove)
-				}
-
-				// Then add new labels (avoiding duplicates)
-				for _, toAdd := range addLabels {
-					if !contains(labels, toAdd) {
-						labels = append(labels, toAdd)
-					}
-				}
-
-				issue.Labels = labels
-				changed = true
-			}
-
-			// Only update if something changed
-			if !changed {
+			if !hasFieldChanges && !cmd.Flags().Changed("parent") {
 				return fmt.Errorf("no changes specified")
 			}
 
-			// Save the updated issue
-			if err := store.Update(ctx, issue); err != nil {
-				return fmt.Errorf("updating issue: %w", err)
+			// Apply all non-parent field changes atomically.
+			if hasFieldChanges {
+				if err := store.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+					if cmd.Flags().Changed("claim") && claim {
+						if issue.Assignee != "" {
+							return fmt.Errorf("cannot claim %s: already assigned to %q", issueID, issue.Assignee)
+						}
+						issue.Assignee = actor
+						issue.Status = issuestorage.StatusInProgress
+					}
+					if cmd.Flags().Changed("title") {
+						issue.Title = title
+					}
+					if cmd.Flags().Changed("description") {
+						issue.Description = desc
+					}
+					if cmd.Flags().Changed("priority") {
+						issue.Priority = parsedPriority
+					}
+					if cmd.Flags().Changed("type") {
+						issue.Type = parsedType
+					}
+					if cmd.Flags().Changed("status") {
+						issue.Status = parsedStatus
+					}
+					if cmd.Flags().Changed("assignee") {
+						issue.Assignee = assignee
+					}
+					if len(addLabels) > 0 || len(removeLabels) > 0 {
+						labels := issue.Labels
+						if labels == nil {
+							labels = []string{}
+						}
+						for _, toRemove := range removeLabels {
+							labels = removeFromSlice(labels, toRemove)
+						}
+						for _, toAdd := range addLabels {
+							if !contains(labels, toAdd) {
+								labels = append(labels, toAdd)
+							}
+						}
+						issue.Labels = labels
+					}
+					return nil
+				}); err != nil {
+					return fmt.Errorf("updating issue: %w", err)
+				}
 			}
 
 			// Output the result

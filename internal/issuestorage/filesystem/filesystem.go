@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -66,9 +67,33 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirDeleted), 0755); err != nil {
 		return err
 	}
+	// Recover any .backup files left by a crashed Modify.
+	fs.recoverBackups()
 	// Clean up any stale lock files from previous crashed processes
 	fs.CleanupStaleLocks()
 	return nil
+}
+
+// recoverBackups restores .json.backup files left by a Modify that
+// crashed between creating the backup and completing the write.
+func (fs *FilesystemStorage) recoverBackups() {
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		dirPath := filepath.Join(fs.root, dir)
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".json.backup") {
+				continue
+			}
+			backupPath := filepath.Join(dirPath, name)
+			jsonPath := filepath.Join(dirPath, strings.TrimSuffix(name, ".backup"))
+			// Restore the backup over the (potentially corrupt) json file.
+			os.Rename(backupPath, jsonPath)
+		}
+	}
 }
 
 // CleanupStaleLocks removes lock files that don't have an active flock.
@@ -381,6 +406,83 @@ func (fs *FilesystemStorage) Update(ctx context.Context, issue *issuestorage.Iss
 
 	issue.UpdatedAt = time.Now()
 	return atomicWriteJSON(path, issue)
+}
+
+// Modify atomically reads an issue, applies fn, and writes it back.
+// It flocks the issue JSON file itself (not a separate lock file),
+// so there is no flock+unlink race. A .backup copy is created before
+// the in-place write for crash recovery.
+func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
+	// Find the issue file.
+	path := fs.issuePath(id, false)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		path = fs.issuePath(id, true)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			path = fs.issuePathInDir(id, issuestorage.DirDeleted)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return issuestorage.ErrNotFound
+			}
+		}
+	}
+
+	f, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("opening issue file: %w", err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("locking issue file: %w", err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	// Read the current issue from the locked fd.
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("reading issue file: %w", err)
+	}
+
+	var issue issuestorage.Issue
+	if err := json.Unmarshal(data, &issue); err != nil {
+		return fmt.Errorf("parsing issue file: %w", err)
+	}
+
+	if err := fn(&issue); err != nil {
+		return err
+	}
+
+	issue.UpdatedAt = time.Now()
+
+	newData, err := json.MarshalIndent(&issue, "", "  ")
+	if err != nil {
+		return fmt.Errorf("encoding issue: %w", err)
+	}
+	newData = append(newData, '\n')
+
+	// Create backup before in-place write; recovered by Init if we crash.
+	backupPath := path + ".backup"
+	if err := os.WriteFile(backupPath, data, 0644); err != nil {
+		return fmt.Errorf("writing backup: %w", err)
+	}
+
+	// Write in-place to the same inode (preserving the flock).
+	if _, err := f.Seek(0, 0); err != nil {
+		return fmt.Errorf("seeking issue file: %w", err)
+	}
+	if err := f.Truncate(0); err != nil {
+		return fmt.Errorf("truncating issue file: %w", err)
+	}
+	if _, err := f.Write(newData); err != nil {
+		return fmt.Errorf("writing issue file: %w", err)
+	}
+	if err := f.Sync(); err != nil {
+		return fmt.Errorf("syncing issue file: %w", err)
+	}
+
+	// Write complete — remove the backup.
+	os.Remove(backupPath)
+
+	return nil
 }
 
 // Delete permanently removes an issue.

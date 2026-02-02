@@ -267,6 +267,11 @@ type IssueStore interface {
 	// Returns ErrNotFound if the issue doesn't exist.
 	Update(ctx context.Context, issue *Issue) error
 
+	// Modify atomically reads an issue, applies fn to it, and writes it back.
+	// fn receives the current issue from disk (under lock) and should mutate it.
+	// Returns ErrNotFound if the issue doesn't exist.
+	Modify(ctx context.Context, id string, fn func(*Issue) error) error
+
 	// Delete permanently removes an issue.
 	// Returns ErrNotFound if the issue doesn't exist.
 	Delete(ctx context.Context, id string) error

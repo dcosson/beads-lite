@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"beads-lite/internal/issuestorage"
+
 	"github.com/spf13/cobra"
 )
 
@@ -59,17 +61,18 @@ Examples:
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			labels := issue.Labels
-			if labels == nil {
-				labels = []string{}
-			}
-
-			if !contains(labels, label) {
-				labels = append(labels, label)
-				issue.Labels = labels
-				if err := store.Update(ctx, issue); err != nil {
-					return fmt.Errorf("updating issue: %w", err)
+			if err := store.Modify(ctx, issue.ID, func(issue *issuestorage.Issue) error {
+				labels := issue.Labels
+				if labels == nil {
+					labels = []string{}
 				}
+				if !contains(labels, label) {
+					labels = append(labels, label)
+					issue.Labels = labels
+				}
+				return nil
+			}); err != nil {
+				return fmt.Errorf("updating issue: %w", err)
 			}
 
 			if app.JSON {
@@ -82,6 +85,8 @@ Examples:
 				return json.NewEncoder(app.Out).Encode([]IssueJSON{result})
 			}
 
+			// Re-read for display output.
+			issue, _ = store.Get(ctx, issue.ID)
 			fmt.Fprintf(app.Out, "%s Added label %q to %s\n", app.SuccessColor("✓"), label, issue.ID)
 			fmt.Fprintf(app.Out, "  Labels: %s\n", formatLabelList(issue.Labels))
 			return nil
@@ -122,8 +127,10 @@ Examples:
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			issue.Labels = removeFromSlice(issue.Labels, label)
-			if err := store.Update(ctx, issue); err != nil {
+			if err := store.Modify(ctx, issue.ID, func(issue *issuestorage.Issue) error {
+				issue.Labels = removeFromSlice(issue.Labels, label)
+				return nil
+			}); err != nil {
 				return fmt.Errorf("updating issue: %w", err)
 			}
 
@@ -137,6 +144,8 @@ Examples:
 				return json.NewEncoder(app.Out).Encode([]IssueJSON{result})
 			}
 
+			// Re-read for display output.
+			issue, _ = store.Get(ctx, issue.ID)
 			fmt.Fprintf(app.Out, "%s Removed label %q from %s\n", app.SuccessColor("✓"), label, issue.ID)
 			fmt.Fprintf(app.Out, "  Labels: %s\n", formatLabelList(issue.Labels))
 			return nil
