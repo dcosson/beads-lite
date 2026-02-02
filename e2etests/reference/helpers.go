@@ -31,7 +31,7 @@ var testCases = []TestCase{
 	{Name: "11_search", Fn: caseSearch},
 	{Name: "12_stats", Fn: caseStats},
 	{Name: "13_config", Fn: caseConfig},
-	{Name: "15_meow", Fn: caseMeow, PostUpdate: patchMeowExpected},
+	{Name: "14_meow", Fn: caseMeow, PostUpdate: patchMeowExpected},
 }
 
 // section writes a section header and normalized JSON content to the builder.

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// 15: Full MEOW lifecycle — cook, pour, mol current, claim, close --continue, burn, wisp, squash.
+// 14: Full MEOW lifecycle — cook, pour, mol current, claim, close --continue, burn, wisp, squash.
 func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	var out strings.Builder
 

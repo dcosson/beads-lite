@@ -33,7 +33,7 @@ make build
 make test-e2e
 
 # Run a specific test case
-BD_CMD=./bd go test ./e2etests -v -count=1 -run TestE2E/16_meow
+BD_CMD=./bd go test ./e2etests -v -count=1 -run TestE2E/14_meow
 
 # Run all tests (unit + E2E)
 make test
@@ -41,7 +41,7 @@ make test
 
 ## Generating Expected Output
 
-Standard test cases (01-15) use the **reference beads binary** — the original `beads` CLI (not beads-lite) — to generate golden output. This ensures beads-lite produces output identical to the original implementation.
+Standard test cases (01-14) use the **reference beads binary** — the original `beads` CLI (not beads-lite) — to generate golden output. This ensures beads-lite produces output identical to the original implementation.
 
 The `BD_REF_CMD` environment variable specifies the path to the reference binary. If unset, the Makefile assumes `beads` is available in your `PATH`.
 
@@ -53,11 +53,7 @@ make update-e2e
 BD_REF_CMD=/path/to/beads make update-e2e
 ```
 
-Beads-lite-specific test cases (e.g., 16_meow for MEOW commands) use a dedicated generator since the reference binary doesn't have these commands:
-
-```bash
-BD_CMD=./bd go test ./e2etests -run TestGenerateMeowExpected -v -count=1
-```
+The meow test case (`14_meow`) also uses the reference binary — the reference `beads` CLI supports MEOW commands.
 
 ## Writing a New Test Case
 
