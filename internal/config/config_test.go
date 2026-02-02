@@ -12,7 +12,6 @@ func TestDefaultValues(t *testing.T) {
 		"defaults.priority":          "medium",
 		"defaults.type":              "task",
 		"id.prefix":                  "bd-",
-		"id.length":                  "3",
 		"actor":                      "${USER}",
 		"project.name":               "issues",
 		"hierarchy.max_depth":        "3",
@@ -65,7 +64,6 @@ func TestApplyDefaults_AllPresent(t *testing.T) {
 		"defaults.priority": "high",
 		"defaults.type":     "bug",
 		"id.prefix":         "x-",
-		"id.length":         "8",
 		"actor":             "bob",
 		"project.name":      "work",
 	}}

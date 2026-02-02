@@ -90,7 +90,7 @@ func setupBeadsDir(t *testing.T, parentDir string) string {
 		t.Fatal(err)
 	}
 	// Write flat key-value config
-	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.length: \"4\"\nid.prefix: bd-\nproject.name: issues\n"
+	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.prefix: bd-\nproject.name: issues\n"
 	if err := os.WriteFile(filepath.Join(beadsDir, "config.yaml"), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}

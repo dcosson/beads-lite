@@ -624,7 +624,7 @@ func TestFindGitWorktreeRoot_NotWorktree(t *testing.T) {
 // writeDefaultConfig writes a flat key-value config file with default values.
 func writeDefaultConfig(t *testing.T, path string) {
 	t.Helper()
-	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.length: \"3\"\nid.prefix: bd-\nproject.name: issues\n"
+	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nid.prefix: bd-\nproject.name: issues\n"
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		t.Fatal(err)
 	}

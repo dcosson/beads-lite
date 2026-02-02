@@ -350,7 +350,6 @@ func TestConfigValidate_Clean(t *testing.T) {
 		"actor":             "alice",
 		"defaults.priority": "high",
 		"defaults.type":     "task",
-		"id.length":         "4",
 	})
 
 	cmd := newConfigValidateCmd(NewTestProvider(app))
@@ -381,7 +380,6 @@ func TestConfigValidate_Errors(t *testing.T) {
 	seedConfigStore(t, app.ConfigDir, map[string]string{
 		"defaults.priority": "invalid_priority",
 		"defaults.type":     "invalid_type",
-		"id.length":         "abc",
 	})
 
 	cmd := newConfigValidateCmd(NewTestProvider(app))
@@ -389,8 +387,8 @@ func TestConfigValidate_Errors(t *testing.T) {
 	if err == nil {
 		t.Fatal("config validate should have failed")
 	}
-	if !strings.Contains(err.Error(), "3 error(s)") {
-		t.Errorf("expected 3 errors, got: %v", err)
+	if !strings.Contains(err.Error(), "2 error(s)") {
+		t.Errorf("expected 2 errors, got: %v", err)
 	}
 }
 

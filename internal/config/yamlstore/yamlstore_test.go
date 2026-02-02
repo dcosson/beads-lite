@@ -231,7 +231,6 @@ func TestRoundTrip(t *testing.T) {
 		"actor":             "alice",
 		"defaults.priority": "high",
 		"defaults.type":     "bug",
-		"id.length":         "6",
 		"id.prefix":         "test-",
 		"project.name":      "myproject",
 	}

@@ -67,7 +67,7 @@ func TestRouting(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(hqBeads, "issues", "open"))
 	mustMkdirAll(t, filepath.Join(hqBeads, "issues", "closed"))
 	mustWriteFile(t, filepath.Join(hqBeads, "config.yaml"),
-		"actor: test\nproject.name: issues\nid.prefix: hq-\nid.length: \"4\"\ndefaults.priority: medium\ndefaults.type: task\n")
+		"actor: test\nproject.name: issues\nid.prefix: hq-\ndefaults.priority: medium\ndefaults.type: task\n")
 	mustWriteFile(t, filepath.Join(hqBeads, "routes.json"),
 		`{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "crew/misc"}}}`)
 
@@ -76,7 +76,7 @@ func TestRouting(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(rigBeads, "issues", "open"))
 	mustMkdirAll(t, filepath.Join(rigBeads, "issues", "closed"))
 	mustWriteFile(t, filepath.Join(rigBeads, "config.yaml"),
-		"actor: test\nproject.name: issues\nid.prefix: bl-\nid.length: \"4\"\ndefaults.priority: medium\ndefaults.type: task\n")
+		"actor: test\nproject.name: issues\nid.prefix: bl-\ndefaults.priority: medium\ndefaults.type: task\n")
 
 	// Seed issues with correct prefixes
 	hqID := "hq-0001"
@@ -140,7 +140,7 @@ func TestRouting(t *testing.T) {
 		mustMkdirAll(t, filepath.Join(noRoutesBeads, "issues", "open"))
 		mustMkdirAll(t, filepath.Join(noRoutesBeads, "issues", "closed"))
 		mustWriteFile(t, filepath.Join(noRoutesBeads, "config.yaml"),
-			"actor: test\nproject.name: issues\nid.prefix: xx-\nid.length: \"4\"\ndefaults.priority: medium\ndefaults.type: task\n")
+			"actor: test\nproject.name: issues\nid.prefix: xx-\ndefaults.priority: medium\ndefaults.type: task\n")
 
 		result := r.Run(noRoutesBeads, "show", hqID)
 		// Non-JSON show returns non-zero exit for not-found
@@ -159,7 +159,7 @@ func TestRouting(t *testing.T) {
 		mustMkdirAll(t, filepath.Join(rdHQBeads, "issues", "open"))
 		mustMkdirAll(t, filepath.Join(rdHQBeads, "issues", "closed"))
 		mustWriteFile(t, filepath.Join(rdHQBeads, "config.yaml"),
-			"actor: test\nproject.name: issues\nid.prefix: hq-\nid.length: \"4\"\ndefaults.priority: medium\ndefaults.type: task\n")
+			"actor: test\nproject.name: issues\nid.prefix: hq-\ndefaults.priority: medium\ndefaults.type: task\n")
 		mustWriteFile(t, filepath.Join(rdHQBeads, "routes.json"),
 			`{"prefix_routes": {"hq-": {"path": "."}, "rd-": {"path": "rig"}}}`)
 
@@ -169,7 +169,7 @@ func TestRouting(t *testing.T) {
 		mustMkdirAll(t, filepath.Join(actualBeads, "issues", "open"))
 		mustMkdirAll(t, filepath.Join(actualBeads, "issues", "closed"))
 		mustWriteFile(t, filepath.Join(actualBeads, "config.yaml"),
-			"actor: test\nproject.name: issues\nid.prefix: rd-\nid.length: \"4\"\ndefaults.priority: medium\ndefaults.type: task\n")
+			"actor: test\nproject.name: issues\nid.prefix: rd-\ndefaults.priority: medium\ndefaults.type: task\n")
 
 		// Seed an issue in the actual location
 		rdID := "rd-0003"

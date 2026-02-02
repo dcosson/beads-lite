@@ -203,7 +203,7 @@ func TestInit(t *testing.T) {
 		}
 
 		// Verify all default keys are present as flat key-value pairs
-		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "id.prefix", "id.length", "project.name"} {
+		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "id.prefix", "project.name"} {
 			if _, ok := store.Get(key); !ok {
 				t.Errorf("config missing key %q", key)
 			}
