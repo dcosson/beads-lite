@@ -13,6 +13,7 @@ import (
 // setupConfigTestApp creates an App with a fresh YAMLStore for config testing.
 func setupConfigTestApp(t *testing.T) (*App, *bytes.Buffer) {
 	t.Helper()
+	t.Setenv("BD_ACTOR", "")
 	dir := t.TempDir()
 	var out bytes.Buffer
 	app := &App{
