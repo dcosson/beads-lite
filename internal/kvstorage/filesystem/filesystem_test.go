@@ -94,11 +94,11 @@ func TestSet_FailIfExists(t *testing.T) {
 	s := newTestStore(t, "test")
 	ctx := context.Background()
 
-	if err := s.Set(ctx, "k", []byte("v1"), kvstorage.SetOptions{Exists: kvstorage.FailIfExists}); err != nil {
+	if err := s.Set(ctx, "k", []byte("v1"), kvstorage.SetOptions{FailIfExists: true}); err != nil {
 		t.Fatalf("Set first: %v", err)
 	}
 
-	err := s.Set(ctx, "k", []byte("v2"), kvstorage.SetOptions{Exists: kvstorage.FailIfExists})
+	err := s.Set(ctx, "k", []byte("v2"), kvstorage.SetOptions{FailIfExists: true})
 	if err == nil {
 		t.Fatal("Set with FailIfExists should fail for existing key")
 	}
@@ -126,15 +126,15 @@ func TestGet_NotFound(t *testing.T) {
 	}
 }
 
-func TestSet_FailIfNotExists(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	s := newTestStore(t, "test")
 	ctx := context.Background()
 
 	if err := s.Set(ctx, "k", []byte("v1"), kvstorage.SetOptions{}); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
-	if err := s.Set(ctx, "k", []byte("v2"), kvstorage.SetOptions{Exists: kvstorage.FailIfNotExists}); err != nil {
-		t.Fatalf("Set with FailIfNotExists: %v", err)
+	if err := s.Update(ctx, "k", []byte("v2")); err != nil {
+		t.Fatalf("Update: %v", err)
 	}
 
 	got, _ := s.Get(ctx, "k")
@@ -143,13 +143,13 @@ func TestSet_FailIfNotExists(t *testing.T) {
 	}
 }
 
-func TestSet_FailIfNotExists_NotFound(t *testing.T) {
+func TestUpdate_NotFound(t *testing.T) {
 	s := newTestStore(t, "test")
 	ctx := context.Background()
 
-	err := s.Set(ctx, "nonexistent", []byte("v"), kvstorage.SetOptions{Exists: kvstorage.FailIfNotExists})
+	err := s.Update(ctx, "nonexistent", []byte("v"))
 	if err == nil {
-		t.Fatal("Set with FailIfNotExists on nonexistent key should fail")
+		t.Fatal("Update nonexistent should fail")
 	}
 	if !errors.Is(err, kvstorage.ErrKeyNotFound) {
 		t.Errorf("error = %v, want ErrKeyNotFound", err)
