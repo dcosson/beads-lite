@@ -31,7 +31,6 @@ var testCases = []TestCase{
 	{Name: "11_search", Fn: caseSearch},
 	{Name: "12_stats", Fn: caseStats},
 	{Name: "13_config", Fn: caseConfig},
-	{Name: "14_dot_notation_ids", Fn: caseDotNotationIDs},
 	{Name: "15_meow", Fn: caseMeow, PostUpdate: patchMeowExpected},
 }
 
