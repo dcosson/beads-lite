@@ -13,7 +13,6 @@ func DefaultValues() map[string]string {
 		"defaults.priority":          "medium",
 		"defaults.type":              "task",
 		"id.prefix":                  "bd-",
-		"id.length":                  "3",
 		"actor":                      "${USER}",
 		"project.name":               "issues",
 		"hierarchy.max_depth":        strconv.Itoa(issuestorage.DefaultMaxHierarchyDepth),

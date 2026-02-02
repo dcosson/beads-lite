@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"beads-lite/internal/config"
@@ -296,13 +295,6 @@ var configValidators = map[string]func(string) string{
 		if !validTypes[v] {
 			keys := sortedKeys(validTypes)
 			return fmt.Sprintf("defaults.type: invalid value %q (valid: %s)", v, strings.Join(keys, ", "))
-		}
-		return ""
-	},
-	"id.length": func(v string) string {
-		n, err := strconv.Atoi(v)
-		if err != nil || n < 1 {
-			return fmt.Sprintf("id.length: must be a positive integer, got %q", v)
 		}
 		return ""
 	},
