@@ -116,7 +116,6 @@ Known config keys used:
 ### `list`
 - `--status=<status>` - Filter by status (open, in_progress, hooked, etc.)
 - `--type=<type>` - Filter by type
-- `--tag=<tag>` - Filter by tag
 - `--json` - JSON output
 
 ### `update`

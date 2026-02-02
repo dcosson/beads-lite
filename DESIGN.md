@@ -1712,7 +1712,6 @@ Commands and flags required by Gas Town (see `GAS_TOWN_REQUIREMENTS.md`). Checke
 - [x] `show` — Show bead details (with `--json` via global flag)
 - [x] `list` — List beads/issues
   - [x] `--status`, `--type`, `--json`
-  - [ ] `--tag=<tag>` — Filter by tag (Gas Town uses `--tag`, we have `--labels`)
 - [x] `update` — Update bead status/properties
   - [x] `--status`, `--assignee`
 - [x] `close` — Close beads
