@@ -217,6 +217,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newImportCmd(provider))
 	rootCmd.AddCommand(newGateCmd(provider))
 	rootCmd.AddCommand(newSlotCmd(provider))
+	rootCmd.AddCommand(newLabelCmd(provider))
 
 	return rootCmd
 }
