@@ -232,7 +232,7 @@ Examples:
 	cmd.Flags().StringVar(&description, "description", "", "New description (use - for stdin)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "New priority (0-4 or P0-P4)")
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore, gate)")
-	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, closed)")
+	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, hooked, closed)")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user (empty string to unassign)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Set parent issue (empty string to remove parent)")
 	cmd.Flags().StringSliceVar(&addLabels, "add-label", nil, "Add label (can repeat)")
@@ -288,12 +288,14 @@ func parseStatus(s string) (issuestorage.Status, error) {
 		return issuestorage.StatusBlocked, nil
 	case "deferred":
 		return issuestorage.StatusDeferred, nil
+	case "hooked":
+		return issuestorage.StatusHooked, nil
 	case "closed":
 		return issuestorage.StatusClosed, nil
 	case "tombstone":
 		return "", fmt.Errorf("cannot set status to tombstone directly; use 'bd delete' instead")
 	default:
-		return "", fmt.Errorf("invalid status %q: must be one of open, in-progress, blocked, deferred, closed", s)
+		return "", fmt.Errorf("invalid status %q: must be one of open, in-progress, blocked, deferred, hooked, closed", s)
 	}
 }
 

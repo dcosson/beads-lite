@@ -172,6 +172,7 @@ const (
 	StatusInProgress Status = "in_progress"
 	StatusBlocked    Status = "blocked"
 	StatusDeferred   Status = "deferred"
+	StatusHooked     Status = "hooked"
 	StatusClosed     Status = "closed"
 	StatusTombstone  Status = "tombstone"
 )

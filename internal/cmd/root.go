@@ -2,6 +2,7 @@
 package cmd
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	kvfs "beads-lite/internal/kvstorage/filesystem"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
 	"beads-lite/internal/issuestorage/filesystem"
@@ -80,6 +82,11 @@ func (p *AppProvider) init() (*App, error) {
 	store := filesystem.New(paths.DataDir, prefix, fsOpts...)
 	store.CleanupStaleLocks()
 
+	slotStore, err := kvfs.New(paths.DataDir, "slots")
+	if err != nil {
+		return nil, fmt.Errorf("creating slot store: %w", err)
+	}
+
 	router, err := routing.New(paths.ConfigDir)
 	if err != nil {
 		return nil, err
@@ -96,6 +103,7 @@ func (p *AppProvider) init() (*App, error) {
 
 	return &App{
 		Storage:     store,
+		SlotStore:   slotStore,
 		Router:      router,
 		ConfigStore: configStore,
 		ConfigDir:   paths.ConfigDir,
@@ -194,6 +202,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newPrimeCmd(provider))
 	rootCmd.AddCommand(newImportCmd(provider))
 	rootCmd.AddCommand(newGateCmd(provider))
+	rootCmd.AddCommand(newSlotCmd(provider))
 
 	return rootCmd
 }

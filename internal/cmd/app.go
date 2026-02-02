@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/kvstorage"
 	"beads-lite/internal/meow"
 	"beads-lite/internal/routing"
 	"beads-lite/internal/issuestorage"
@@ -18,6 +19,7 @@ import (
 // App holds application state shared across commands.
 type App struct {
 	Storage     issuestorage.IssueStore
+	SlotStore   kvstorage.KVStore
 	Router      *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory

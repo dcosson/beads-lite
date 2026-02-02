@@ -11,6 +11,7 @@ import (
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
 	"beads-lite/internal/issuestorage/filesystem"
+	kvfs "beads-lite/internal/kvstorage/filesystem"
 
 	"github.com/spf13/cobra"
 )
@@ -103,6 +104,15 @@ func runInit(force bool, projectName string) error {
 	issueStore := filesystem.New(dataPath, prefix)
 	if err := issueStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
+	}
+
+	// Create the slot KV store
+	slotStore, err := kvfs.New(dataPath, "slots")
+	if err != nil {
+		return fmt.Errorf("creating slot store: %w", err)
+	}
+	if err := slotStore.Init(context.Background()); err != nil {
+		return fmt.Errorf("initializing slot store: %w", err)
 	}
 
 	fmt.Printf("Initialized beads-lite repository at %s\n", beadsPath)
