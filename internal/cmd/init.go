@@ -140,6 +140,15 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 		return fmt.Errorf("initializing agent store: %w", err)
 	}
 
+	// Create the merge-slot KV store
+	mergeSlotStore, err := kvfs.New(dataPath, "merge-slot")
+	if err != nil {
+		return fmt.Errorf("creating merge-slot store: %w", err)
+	}
+	if err := mergeSlotStore.Init(context.Background()); err != nil {
+		return fmt.Errorf("initializing merge-slot store: %w", err)
+	}
+
 	fmt.Fprintf(out, "Initialized beads-lite repository at %s\n", beadsPath)
 	return nil
 }

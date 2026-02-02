@@ -93,6 +93,11 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, fmt.Errorf("creating agent store: %w", err)
 	}
 
+	mergeSlotStore, err := kvfs.New(paths.DataDir, "merge-slot")
+	if err != nil {
+		return nil, fmt.Errorf("creating merge-slot store: %w", err)
+	}
+
 	router, err := routing.New(paths.ConfigDir)
 	if err != nil {
 		return nil, err
@@ -108,9 +113,10 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage:    store,
-		SlotStore:  slotStore,
-		AgentStore: agentStore,
+		Storage:        store,
+		SlotStore:      slotStore,
+		AgentStore:     agentStore,
+		MergeSlotStore: mergeSlotStore,
 		Router:     router,
 		ConfigStore: configStore,
 		ConfigDir:   paths.ConfigDir,
@@ -227,6 +233,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newLabelCmd(provider))
 	rootCmd.AddCommand(newEditCmd(provider))
 	rootCmd.AddCommand(newSwarmCmd(provider))
+	rootCmd.AddCommand(newMergeSlotCmd(provider))
 
 	return rootCmd
 }

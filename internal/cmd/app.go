@@ -19,8 +19,9 @@ import (
 // App holds application state shared across commands.
 type App struct {
 	Storage    issuestorage.IssueStore
-	SlotStore  kvstorage.KVStore
-	AgentStore kvstorage.KVStore
+	SlotStore      kvstorage.KVStore
+	AgentStore     kvstorage.KVStore
+	MergeSlotStore kvstorage.KVStore
 	Router     *routing.Router // nil if no routes.json
 	ConfigStore config.Store
 	ConfigDir   string // path to .beads directory
