@@ -7,9 +7,12 @@
 package yamlstore
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"beads-lite/internal/config"
 
@@ -61,14 +64,16 @@ func (s *YAMLStore) Get(key string) (string, bool) {
 
 // Set writes key=value and persists to disk.
 func (s *YAMLStore) Set(key, value string) error {
-	s.data[key] = value
-	return s.save()
+	return s.withLock(func() {
+		s.data[key] = value
+	})
 }
 
 // Unset removes key and persists to disk.
 func (s *YAMLStore) Unset(key string) error {
-	delete(s.data, key)
-	return s.save()
+	return s.withLock(func() {
+		delete(s.data, key)
+	})
 }
 
 // All returns a copy of all key-value pairs.
@@ -80,20 +85,86 @@ func (s *YAMLStore) All() map[string]string {
 	return out
 }
 
-// save writes the current data to disk. It creates parent directories
-// as needed and uses yaml.Marshal for deterministic alphabetical ordering.
-func (s *YAMLStore) save() error {
+// lockPath returns the path to the lock file used for flock-based coordination.
+func (s *YAMLStore) lockPath() string {
+	return s.path + ".lock"
+}
+
+// withLock acquires an exclusive file lock, re-reads the config from disk
+// (picking up writes from other processes), calls fn to mutate s.data,
+// then atomically writes s.data back to disk.
+func (s *YAMLStore) withLock(fn func()) error {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+
+	f, err := os.OpenFile(s.lockPath(), os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return fmt.Errorf("opening config lock: %w", err)
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		return fmt.Errorf("acquiring config lock: %w", err)
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	// Re-read from disk to pick up changes from other processes.
+	if err := s.readFromDisk(); err != nil {
+		return err
+	}
+
+	fn()
+
 	raw, err := yaml.Marshal(s.data)
 	if err != nil {
 		return fmt.Errorf("encoding config: %w", err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(s.path), 0755); err != nil {
-		return fmt.Errorf("creating config directory: %w", err)
+	return atomicWrite(s.path, raw)
+}
+
+// readFromDisk reloads s.data from the config file on disk.
+func (s *YAMLStore) readFromDisk() error {
+	raw, err := os.ReadFile(s.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			s.data = make(map[string]string)
+			return nil
+		}
+		return fmt.Errorf("reading config file: %w", err)
 	}
 
-	if err := os.WriteFile(s.path, raw, 0644); err != nil {
-		return fmt.Errorf("writing config file: %w", err)
+	if len(raw) == 0 {
+		s.data = make(map[string]string)
+		return nil
+	}
+
+	fresh := make(map[string]string)
+	if err := yaml.Unmarshal(raw, &fresh); err != nil {
+		return fmt.Errorf("parsing config file: %w", err)
+	}
+	if fresh == nil {
+		fresh = make(map[string]string)
+	}
+	s.data = fresh
+	return nil
+}
+
+// atomicWrite writes data to a file atomically via a temporary file and rename.
+func atomicWrite(path string, data []byte) error {
+	randBytes := make([]byte, 8)
+	if _, err := rand.Read(randBytes); err != nil {
+		return fmt.Errorf("generating random suffix: %w", err)
+	}
+	tmp := path + ".tmp." + hex.EncodeToString(randBytes)
+
+	if err := os.WriteFile(tmp, data, 0644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		os.Remove(tmp) // best effort cleanup
+		return err
 	}
 	return nil
 }

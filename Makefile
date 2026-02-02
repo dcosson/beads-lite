@@ -6,7 +6,7 @@ BD_REF_CMD ?= $(shell which bd)
 test: test-unit test-e2e
 
 test-unit:
-	go test ./internal/... ./cmd/... $(ARGS)
+	go test -race ./internal/... ./cmd/... $(ARGS)
 
 test-e2e: build
 	@test -x "$(BD_LITE_CMD)" || (echo "error: bd binary not found at $(BD_LITE_CMD)" && echo "Run 'make build' first or set BD_LITE_CMD" && exit 1)

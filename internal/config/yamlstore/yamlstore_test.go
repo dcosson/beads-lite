@@ -1,8 +1,10 @@
 package yamlstore
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -304,6 +306,96 @@ func TestSetCreatesParentDirs(t *testing.T) {
 
 	if _, err := os.Stat(path); err != nil {
 		t.Errorf("config file not created: %v", err)
+	}
+}
+
+func TestConcurrentSet(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	const n = 20
+	var wg sync.WaitGroup
+	errs := make([]error, n)
+
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			s, err := New(path)
+			if err != nil {
+				errs[i] = err
+				return
+			}
+			errs[i] = s.Set(fmt.Sprintf("key%d", i), fmt.Sprintf("val%d", i))
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i, err := range errs {
+		if err != nil {
+			t.Fatalf("goroutine %d: %v", i, err)
+		}
+	}
+
+	// Reload and verify all keys present.
+	s, err := New(path)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+
+	for i := 0; i < n; i++ {
+		key := fmt.Sprintf("key%d", i)
+		val, ok := s.Get(key)
+		if !ok {
+			t.Errorf("key %q missing after concurrent writes", key)
+		} else if val != fmt.Sprintf("val%d", i) {
+			t.Errorf("key %q = %q, want %q", key, val, fmt.Sprintf("val%d", i))
+		}
+	}
+}
+
+func TestUnsetSurvivesMerge(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+
+	s1, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s1.Set("keep", "yes"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s1.Set("remove", "yes"); err != nil {
+		t.Fatal(err)
+	}
+
+	// A second store writes a third key (simulating another process).
+	s2, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s2.Set("other", "val"); err != nil {
+		t.Fatal(err)
+	}
+
+	// First store unsets "remove" — should re-read disk (seeing "other")
+	// and delete "remove".
+	if err := s1.Unset("remove"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Reload and verify.
+	s3, err := New(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := s3.Get("remove"); ok {
+		t.Error("key 'remove' should not exist after Unset")
+	}
+	if v, ok := s3.Get("keep"); !ok || v != "yes" {
+		t.Errorf("Get(keep) = %q, %v; want 'yes', true", v, ok)
+	}
+	if v, ok := s3.Get("other"); !ok || v != "val" {
+		t.Errorf("Get(other) = %q, %v; want 'val', true", v, ok)
 	}
 }
 
