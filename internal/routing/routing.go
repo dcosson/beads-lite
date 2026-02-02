@@ -57,22 +57,23 @@ func New(beadsDir string) (*Router, error) {
 }
 
 // Resolve returns the Paths for the rig that owns the given issue ID.
-// Returns (zeroPaths, false, nil) if the router is nil or no route matches.
+// Returns (zeroPaths, "", false, nil) if the router is nil or no route matches.
+// The prefix return value is the matched ID prefix (e.g. "hq-").
 // The isRemote return value is true when the resolved path differs from
 // the local .beads directory.
-func (r *Router) Resolve(issueID string) (config.Paths, bool, error) {
+func (r *Router) Resolve(issueID string) (config.Paths, string, bool, error) {
 	if r == nil {
-		return config.Paths{}, false, nil
+		return config.Paths{}, "", false, nil
 	}
 
 	prefix := ExtractPrefix(issueID)
 	if prefix == "" {
-		return config.Paths{}, false, nil
+		return config.Paths{}, "", false, nil
 	}
 
 	route, ok := r.routes[prefix]
 	if !ok {
-		return config.Paths{}, false, nil
+		return config.Paths{}, "", false, nil
 	}
 
 	targetBeads := filepath.Join(r.townRoot, route.Path, ".beads")
@@ -80,14 +81,14 @@ func (r *Router) Resolve(issueID string) (config.Paths, bool, error) {
 
 	paths, err := config.ResolveFromBase(targetBeads)
 	if err != nil {
-		return config.Paths{}, false, err
+		return config.Paths{}, "", false, err
 	}
 
 	// Detect self-routing: if resolved path is the local .beads, it's not remote.
 	resolvedAbs, _ := filepath.Abs(paths.ConfigDir)
 	isRemote := resolvedAbs != r.localBeads
 
-	return paths, isRemote, nil
+	return paths, prefix, isRemote, nil
 }
 
 // findRoutesFile walks up from beadsDir looking for .beads/routes.json.

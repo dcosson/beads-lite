@@ -215,9 +215,12 @@ func TestResolve_LocalPrefix(t *testing.T) {
 	}
 
 	// Resolve a bl- ID (local to rig)
-	paths, isRemote, err := router.Resolve("bl-1234")
+	paths, prefix, isRemote, err := router.Resolve("bl-1234")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
+	}
+	if prefix != "bl-" {
+		t.Errorf("prefix = %q, want %q", prefix, "bl-")
 	}
 	if isRemote {
 		t.Error("expected isRemote=false for local prefix")
@@ -246,9 +249,12 @@ func TestResolve_RemotePrefix(t *testing.T) {
 	}
 
 	// Resolve an hq- ID (remote, lives at town root)
-	paths, isRemote, err := router.Resolve("hq-abc")
+	paths, prefix, isRemote, err := router.Resolve("hq-abc")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
+	}
+	if prefix != "hq-" {
+		t.Errorf("prefix = %q, want %q", prefix, "hq-")
 	}
 	if !isRemote {
 		t.Error("expected isRemote=true for remote prefix")
@@ -272,9 +278,12 @@ func TestResolve_UnknownPrefix(t *testing.T) {
 		t.Fatalf("New error: %v", err)
 	}
 
-	paths, isRemote, err := router.Resolve("xx-unknown")
+	paths, prefix, isRemote, err := router.Resolve("xx-unknown")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
+	}
+	if prefix != "" {
+		t.Errorf("prefix = %q, want empty for unknown prefix", prefix)
 	}
 	if isRemote {
 		t.Error("expected isRemote=false for unknown prefix")
@@ -286,9 +295,12 @@ func TestResolve_UnknownPrefix(t *testing.T) {
 
 func TestResolve_NilRouter(t *testing.T) {
 	var r *Router
-	paths, isRemote, err := r.Resolve("bl-1234")
+	paths, prefix, isRemote, err := r.Resolve("bl-1234")
 	if err != nil {
 		t.Fatalf("Resolve on nil Router should not error: %v", err)
+	}
+	if prefix != "" {
+		t.Errorf("prefix = %q, want empty for nil Router", prefix)
 	}
 	if isRemote {
 		t.Error("expected isRemote=false for nil Router")
@@ -331,9 +343,12 @@ func TestResolve_FollowsRedirect(t *testing.T) {
 		t.Fatalf("New error: %v", err)
 	}
 
-	paths, isRemote, err := router.Resolve("bl-1234")
+	paths, prefix, isRemote, err := router.Resolve("bl-1234")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
+	}
+	if prefix != "bl-" {
+		t.Errorf("prefix = %q, want %q", prefix, "bl-")
 	}
 	if !isRemote {
 		t.Error("expected isRemote=true for redirected remote prefix")
@@ -362,9 +377,12 @@ func TestResolve_SelfRouting(t *testing.T) {
 		t.Fatalf("New error: %v", err)
 	}
 
-	paths, isRemote, err := router.Resolve("hq-abc")
+	paths, prefix, isRemote, err := router.Resolve("hq-abc")
 	if err != nil {
 		t.Fatalf("Resolve error: %v", err)
+	}
+	if prefix != "hq-" {
+		t.Errorf("prefix = %q, want %q", prefix, "hq-")
 	}
 	if isRemote {
 		t.Error("expected isRemote=false for self-routing (prefix maps to own .beads)")

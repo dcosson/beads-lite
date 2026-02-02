@@ -35,7 +35,7 @@ func (a *App) StorageFor(ctx context.Context, id string) (issuestorage.IssueStor
 		return a.Storage, nil
 	}
 
-	paths, isRemote, err := a.Router.Resolve(id)
+	paths, prefix, isRemote, err := a.Router.Resolve(id)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (a *App) StorageFor(ctx context.Context, id string) (issuestorage.IssueStor
 		return a.Storage, nil
 	}
 
-	return filesystem.New(paths.DataDir), nil
+	return filesystem.New(paths.DataDir, filesystem.WithPrefix(prefix)), nil
 }
 
 // SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,
