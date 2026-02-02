@@ -65,7 +65,6 @@ Examples:
 	return cmd
 }
 
-
 // outputIssue formats and outputs the issue details.
 func outputIssue(app *App, ctx context.Context, issue *storage.Issue) error {
 	if app.JSON {

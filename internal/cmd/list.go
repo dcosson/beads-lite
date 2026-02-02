@@ -13,16 +13,16 @@ import (
 // newListCmd creates the list command.
 func newListCmd(provider *AppProvider) *cobra.Command {
 	var (
-		status   string
-		priority string
+		status    string
+		priority  string
 		issueType string
-		labels   []string
-		parent   string
-		assignee string
-		all      bool
-		closed   bool
-		roots    bool
-		format   string
+		labels    []string
+		parent    string
+		assignee  string
+		all       bool
+		closed    bool
+		roots     bool
+		format    string
 	)
 
 	cmd := &cobra.Command{

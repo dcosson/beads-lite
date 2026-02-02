@@ -30,30 +30,30 @@ var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted}
 type DependencyType string
 
 const (
-	DepTypeBlocks        DependencyType = "blocks"
-	DepTypeTracks        DependencyType = "tracks"
-	DepTypeRelated       DependencyType = "related"
-	DepTypeParentChild   DependencyType = "parent-child"
+	DepTypeBlocks         DependencyType = "blocks"
+	DepTypeTracks         DependencyType = "tracks"
+	DepTypeRelated        DependencyType = "related"
+	DepTypeParentChild    DependencyType = "parent-child"
 	DepTypeDiscoveredFrom DependencyType = "discovered-from"
-	DepTypeUntil         DependencyType = "until"
-	DepTypeCausedBy      DependencyType = "caused-by"
-	DepTypeValidates     DependencyType = "validates"
-	DepTypeRelatesTo     DependencyType = "relates-to"
-	DepTypeSupersedes    DependencyType = "supersedes"
+	DepTypeUntil          DependencyType = "until"
+	DepTypeCausedBy       DependencyType = "caused-by"
+	DepTypeValidates      DependencyType = "validates"
+	DepTypeRelatesTo      DependencyType = "relates-to"
+	DepTypeSupersedes     DependencyType = "supersedes"
 )
 
 // ValidDependencyTypes is the set of all valid dependency types.
 var ValidDependencyTypes = map[DependencyType]bool{
-	DepTypeBlocks:        true,
-	DepTypeTracks:        true,
-	DepTypeRelated:       true,
-	DepTypeParentChild:   true,
+	DepTypeBlocks:         true,
+	DepTypeTracks:         true,
+	DepTypeRelated:        true,
+	DepTypeParentChild:    true,
 	DepTypeDiscoveredFrom: true,
-	DepTypeUntil:         true,
-	DepTypeCausedBy:      true,
-	DepTypeValidates:     true,
-	DepTypeRelatesTo:     true,
-	DepTypeSupersedes:    true,
+	DepTypeUntil:          true,
+	DepTypeCausedBy:       true,
+	DepTypeValidates:      true,
+	DepTypeRelatesTo:      true,
+	DepTypeSupersedes:     true,
 }
 
 // Dependency represents a typed dependency between two issues.
@@ -81,10 +81,10 @@ type Issue struct {
 	CreatedBy string `json:"created_by,omitempty"`
 	Owner     string `json:"owner,omitempty"`
 
-	Labels    []string  `json:"labels,omitempty"`
-	Assignee  string    `json:"assignee,omitempty"`
-	Ephemeral bool      `json:"ephemeral,omitempty"` // If true, not exported to JSONL
-	Comments  []Comment `json:"comments,omitempty"`
+	Labels      []string   `json:"labels,omitempty"`
+	Assignee    string     `json:"assignee,omitempty"`
+	Ephemeral   bool       `json:"ephemeral,omitempty"` // If true, not exported to JSONL
+	Comments    []Comment  `json:"comments,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	ClosedAt    *time.Time `json:"closed_at,omitempty"`

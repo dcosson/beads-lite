@@ -143,14 +143,14 @@ making them easy to review, diff, and track alongside your code.`,
 	// Compatibility flags — accepted for compatibility with the reference
 	// implementation but not used by beads-lite.
 	var (
-		noDaemon    bool
-		noAutoFlush bool
+		noDaemon     bool
+		noAutoFlush  bool
 		noAutoImport bool
-		noDB        bool
-		lockTimeout string
-		sandbox     bool
-		readOnly    bool
-		allowStale  bool
+		noDB         bool
+		lockTimeout  string
+		sandbox      bool
+		readOnly     bool
+		allowStale   bool
 	)
 	rootCmd.PersistentFlags().BoolVar(&noDaemon, "no-daemon", false, "Accepted for compatibility (no-op)")
 	rootCmd.PersistentFlags().BoolVar(&noAutoFlush, "no-auto-flush", false, "Accepted for compatibility (no-op)")

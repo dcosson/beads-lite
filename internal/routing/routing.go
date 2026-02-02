@@ -21,9 +21,9 @@ type RoutesFile struct {
 
 // Router resolves issue IDs to the correct storage location.
 type Router struct {
-	townRoot   string            // absolute path to town root
-	localBeads string            // absolute path to local .beads dir
-	routes     map[string]Route  // prefix → route
+	townRoot   string           // absolute path to town root
+	localBeads string           // absolute path to local .beads dir
+	routes     map[string]Route // prefix → route
 }
 
 // New creates a Router by discovering routes.json from the given .beads dir.

@@ -400,4 +400,3 @@ func TestDepPrefixMatching(t *testing.T) {
 		t.Errorf("expected A.Dependencies to contain B; got %v", gotA.Dependencies)
 	}
 }
-

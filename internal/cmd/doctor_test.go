@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage/filesystem"
 	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 )
 
 func TestDoctorCmd_NoProblems(t *testing.T) {

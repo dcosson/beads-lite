@@ -10,17 +10,17 @@ import (
 
 // StatsSummary represents the summary stats matching original beads format.
 type StatsSummary struct {
-	AverageLeadTimeHours     float64 `json:"average_lead_time_hours"`
-	BlockedIssues            int     `json:"blocked_issues"`
-	ClosedIssues             int     `json:"closed_issues"`
-	DeferredIssues           int     `json:"deferred_issues"`
-	EpicsEligibleForClosure  int     `json:"epics_eligible_for_closure"`
-	InProgressIssues         int     `json:"in_progress_issues"`
-	OpenIssues               int     `json:"open_issues"`
-	PinnedIssues             int     `json:"pinned_issues"`
-	ReadyIssues              int     `json:"ready_issues"`
-	TombstoneIssues          int     `json:"tombstone_issues"`
-	TotalIssues              int     `json:"total_issues"`
+	AverageLeadTimeHours    float64 `json:"average_lead_time_hours"`
+	BlockedIssues           int     `json:"blocked_issues"`
+	ClosedIssues            int     `json:"closed_issues"`
+	DeferredIssues          int     `json:"deferred_issues"`
+	EpicsEligibleForClosure int     `json:"epics_eligible_for_closure"`
+	InProgressIssues        int     `json:"in_progress_issues"`
+	OpenIssues              int     `json:"open_issues"`
+	PinnedIssues            int     `json:"pinned_issues"`
+	ReadyIssues             int     `json:"ready_issues"`
+	TombstoneIssues         int     `json:"tombstone_issues"`
+	TotalIssues             int     `json:"total_issues"`
 }
 
 // StatsResult wraps the summary in a top-level object.

@@ -10,9 +10,9 @@ type TestCase struct {
 	Name string
 	Fn   func(r *Runner, n *Normalizer, sandbox string) (string, error)
 	// PostUpdate optionally transforms the expected output after generating
-  // it from the reference binary. Used when we can't or don't want our
-  // implementation to perfectly match the reference implementation due to a
-  // bug or confusing behavior.
+	// it from the reference binary. Used when we can't or don't want our
+	// implementation to perfectly match the reference implementation due to a
+	// bug or confusing behavior.
 	PostUpdate func(string) string
 }
 

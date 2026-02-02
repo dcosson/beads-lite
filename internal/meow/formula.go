@@ -12,17 +12,17 @@ const (
 
 // Formula is the top-level MEOW formula definition.
 type Formula struct {
-	Formula     string              `json:"formula" toml:"formula"`
-	Description string              `json:"description" toml:"description"`
-	Version     int                 `json:"version" toml:"version"`
-	Type        FormulaType         `json:"type" toml:"type"`
-	Extends     []string            `json:"extends,omitempty" toml:"extends"`
-	Vars        map[string]*VarDef  `json:"vars,omitempty" toml:"vars"`
-	Steps       []*Step             `json:"steps,omitempty" toml:"steps"`
-	Template    []*Step             `json:"template,omitempty" toml:"template"`
-	Compose     *ComposeRules       `json:"compose,omitempty" toml:"compose"`
-	Advice      []*AdviceRule       `json:"advice,omitempty" toml:"advice"`
-	Phase       string              `json:"phase,omitempty" toml:"phase"`
+	Formula     string             `json:"formula" toml:"formula"`
+	Description string             `json:"description" toml:"description"`
+	Version     int                `json:"version" toml:"version"`
+	Type        FormulaType        `json:"type" toml:"type"`
+	Extends     []string           `json:"extends,omitempty" toml:"extends"`
+	Vars        map[string]*VarDef `json:"vars,omitempty" toml:"vars"`
+	Steps       []*Step            `json:"steps,omitempty" toml:"steps"`
+	Template    []*Step            `json:"template,omitempty" toml:"template"`
+	Compose     *ComposeRules      `json:"compose,omitempty" toml:"compose"`
+	Advice      []*AdviceRule      `json:"advice,omitempty" toml:"advice"`
+	Phase       string             `json:"phase,omitempty" toml:"phase"`
 }
 
 // VarDef defines a variable that can be substituted into a formula.

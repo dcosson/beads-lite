@@ -11,9 +11,9 @@ import (
 
 // Runner executes bd commands against a sandbox directory.
 type Runner struct {
-	BdCmd        string   // path to bd binary
-	KillDaemons  bool     // kill reference binary daemons between sandboxes
-	ExtraArgs    []string // extra args prepended to every command (e.g. --no-daemon)
+	BdCmd       string   // path to bd binary
+	KillDaemons bool     // kill reference binary daemons between sandboxes
+	ExtraArgs   []string // extra args prepended to every command (e.g. --no-daemon)
 }
 
 // SetupSandbox creates a fresh beads sandbox directory by running the setup script.

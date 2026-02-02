@@ -228,12 +228,12 @@ func TestRoundTrip(t *testing.T) {
 	}
 
 	keys := map[string]string{
-		"actor":              "alice",
-		"defaults.priority":  "high",
-		"defaults.type":      "bug",
-		"id.length":          "6",
-		"id.prefix":          "test-",
-		"project.name":       "myproject",
+		"actor":             "alice",
+		"defaults.priority": "high",
+		"defaults.type":     "bug",
+		"id.length":         "6",
+		"id.prefix":         "test-",
+		"project.name":      "myproject",
 	}
 	for k, v := range keys {
 		if err := s.Set(k, v); err != nil {
