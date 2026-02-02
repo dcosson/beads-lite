@@ -188,6 +188,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newMigrateCmd(provider))
 	rootCmd.AddCommand(newVersionCmd(provider))
 	rootCmd.AddCommand(newPrimeCmd(provider))
+	rootCmd.AddCommand(newImportCmd(provider))
 
 	return rootCmd
 }
