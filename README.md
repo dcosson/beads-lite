@@ -152,5 +152,28 @@ This table tracks implementation status across major feature areas.
 make test          # run all tests (unit + e2e)
 make test-unit     # unit tests only
 make test-e2e      # e2e tests against local ./bd build
-make e2e-update    # regenerate expected e2e outputs from reference bd
+make update-e2e    # regenerate expected e2e outputs from reference bd
+make bench-e2e     # benchmark beads-lite (also included in test-e2e)
+make bench-comparison-e2e  # benchmark against reference bd (requires bd in PATH)
+```
+
+### Benchmark
+
+`make test-e2e` includes a happy-path benchmark that exercises create, list, show,
+update, and close across 20 issues. `make bench-comparison-e2e` runs the same
+workflow against the reference `bd` binary for a side-by-side comparison.
+
+Sample `make bench-comparison-e2e` output:
+
+```
+Phase                    beads-lite bd (reference)       diff
+──────────────────────────────────────────────────────────────
+create (20)                   0.23s          2.41s     -90.5%
+list (10x)                    0.07s          0.87s     -91.5%
+show (100x)                   0.71s          8.95s     -92.1%
+update (20)                   0.21s          1.61s     -86.7%
+close (20)                    0.21s          1.83s     -88.4%
+final list                    0.01s          0.07s     -92.7%
+──────────────────────────────────────────────────────────────
+TOTAL                         1.44s         15.74s     -90.9%
 ```
