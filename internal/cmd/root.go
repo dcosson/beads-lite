@@ -186,6 +186,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newFormulaCmd(provider))
 	rootCmd.AddCommand(newSyncCmd(provider))
 	rootCmd.AddCommand(newMigrateCmd(provider))
+	rootCmd.AddCommand(newVersionCmd(provider))
 
 	return rootCmd
 }
