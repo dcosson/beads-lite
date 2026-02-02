@@ -72,6 +72,9 @@ func (p *AppProvider) init() (*App, error) {
 			fsOpts = append(fsOpts, filesystem.WithMaxHierarchyDepth(n))
 		}
 	}
+	if v, ok := configStore.Get("id.prefix"); ok {
+		fsOpts = append(fsOpts, filesystem.WithPrefix(v))
+	}
 
 	store := filesystem.New(paths.DataDir, fsOpts...)
 	store.CleanupStaleLocks()
