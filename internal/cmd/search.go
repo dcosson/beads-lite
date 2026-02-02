@@ -9,18 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// SearchResult represents a single search result.
-type SearchResult struct {
-	ID     string `json:"id"`
-	Title  string `json:"title"`
-	Status string `json:"status"`
-}
-
 // newSearchCmd creates the search command.
 func newSearchCmd(provider *AppProvider) *cobra.Command {
 	var (
-		all       bool
 		titleOnly bool
+		status    string
 	)
 
 	cmd := &cobra.Command{
@@ -28,8 +21,8 @@ func newSearchCmd(provider *AppProvider) *cobra.Command {
 		Short: "Search issue titles and descriptions",
 		Long: `Search for issues matching the given query.
 
-By default, searches only open issues in both title and description.
-Use --all to include closed issues.
+By default, searches both open and closed issues in title and description.
+Use --status to filter by a specific status.
 Use --title-only to search only in titles.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,42 +35,43 @@ Use --title-only to search only in titles.`,
 			query := strings.ToLower(args[0])
 
 			var matches []*storage.Issue
+			var issues []*storage.Issue
 
-			// Get open issues
-			openIssues, err := app.Storage.List(ctx, nil)
-			if err != nil {
-				return fmt.Errorf("listing open issues: %w", err)
-			}
-
-			for _, issue := range openIssues {
-				if matchesQuery(issue, query, titleOnly) {
-					matches = append(matches, issue)
+			if status != "" {
+				s, err := parseStatus(status)
+				if err != nil {
+					return err
 				}
-			}
+				filter := &storage.ListFilter{Status: &s}
+				issues, err = app.Storage.List(ctx, filter)
+				if err != nil {
+					return fmt.Errorf("listing issues: %w", err)
+				}
+			} else {
+				openIssues, err := app.Storage.List(ctx, nil)
+				if err != nil {
+					return fmt.Errorf("listing open issues: %w", err)
+				}
+				issues = append(issues, openIssues...)
 
-			// Get closed issues if --all flag is set
-			if all {
 				closedStatus := storage.StatusClosed
 				closedIssues, err := app.Storage.List(ctx, &storage.ListFilter{Status: &closedStatus})
 				if err != nil {
 					return fmt.Errorf("listing closed issues: %w", err)
 				}
+				issues = append(issues, closedIssues...)
+			}
 
-				for _, issue := range closedIssues {
-					if matchesQuery(issue, query, titleOnly) {
-						matches = append(matches, issue)
-					}
+			for _, issue := range issues {
+				if matchesQuery(issue, query, titleOnly) {
+					matches = append(matches, issue)
 				}
 			}
 
 			if app.JSON {
-				results := make([]SearchResult, len(matches))
+				results := make([]IssueListJSON, len(matches))
 				for i, issue := range matches {
-					results[i] = SearchResult{
-						ID:     issue.ID,
-						Title:  issue.Title,
-						Status: string(issue.Status),
-					}
+					results[i] = ToIssueListJSON(issue)
 				}
 				return json.NewEncoder(app.Out).Encode(results)
 			}
@@ -100,7 +94,7 @@ Use --title-only to search only in titles.`,
 		},
 	}
 
-	cmd.Flags().BoolVarP(&all, "all", "a", false, "Include closed issues")
+	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status (open, in-progress, blocked, deferred, closed)")
 	cmd.Flags().BoolVar(&titleOnly, "title-only", false, "Only search titles")
 
 	return cmd

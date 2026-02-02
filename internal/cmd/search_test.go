@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/storage/filesystem"
 	"beads-lite/internal/storage"
+	"beads-lite/internal/storage/filesystem"
 )
 
 func TestSearchCmd_NoArgs(t *testing.T) {
@@ -166,7 +166,7 @@ func TestSearchCmd_TitleOnly(t *testing.T) {
 	}
 }
 
-func TestSearchCmd_IncludeClosed(t *testing.T) {
+func TestSearchCmd_StatusFilter(t *testing.T) {
 	dir := t.TempDir()
 	s := filesystem.New(dir)
 	ctx := context.Background()
@@ -178,7 +178,7 @@ func TestSearchCmd_IncludeClosed(t *testing.T) {
 	closedID, _ := s.Create(ctx, &storage.Issue{Title: "Closed auth issue"})
 	s.Close(ctx, closedID)
 
-	// First, search without --all (should not find closed)
+	// Default search includes closed issues.
 	var out bytes.Buffer
 	app := &App{
 		Storage: s,
@@ -192,27 +192,43 @@ func TestSearchCmd_IncludeClosed(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "Found 1 matches") {
-		t.Errorf("expected 'Found 1 matches', got: %s", output)
+	if !strings.Contains(output, "Found 2 matches") {
+		t.Errorf("expected 'Found 2 matches', got: %s", output)
 	}
-	if strings.Contains(output, "Closed auth issue") {
-		t.Errorf("should not find closed issue without --all, got: %s", output)
+	if !strings.Contains(output, "Closed auth issue") {
+		t.Errorf("expected to find closed issue by default, got: %s", output)
 	}
 
-	// Now search with --all
+	// Now search with --status open
 	out.Reset()
 	cmd = newSearchCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"auth", "--all"})
+	cmd.SetArgs([]string{"auth", "--status", "open"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("search command failed: %v", err)
 	}
 
 	output = out.String()
-	if !strings.Contains(output, "Found 2 matches") {
-		t.Errorf("expected 'Found 2 matches', got: %s", output)
+	if !strings.Contains(output, "Found 1 matches") {
+		t.Errorf("expected 'Found 1 matches', got: %s", output)
+	}
+	if strings.Contains(output, "Closed auth issue") {
+		t.Errorf("should not find closed issue with --status open, got: %s", output)
+	}
+
+	// Search with --status closed
+	out.Reset()
+	cmd = newSearchCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"auth", "--status", "closed"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("search command failed: %v", err)
+	}
+
+	output = out.String()
+	if !strings.Contains(output, "Found 1 matches") {
+		t.Errorf("expected 'Found 1 matches', got: %s", output)
 	}
 	if !strings.Contains(output, "Closed auth issue") {
-		t.Errorf("expected to find 'Closed auth issue' with --all, got: %s", output)
+		t.Errorf("expected to find 'Closed auth issue' with --status closed, got: %s", output)
 	}
 }
 
@@ -268,7 +284,7 @@ func TestSearchCmd_JSON(t *testing.T) {
 		t.Fatalf("search command failed: %v", err)
 	}
 
-	var results []SearchResult
+	var results []IssueListJSON
 	if err := json.Unmarshal(out.Bytes(), &results); err != nil {
 		t.Fatalf("failed to parse JSON output: %v", err)
 	}
