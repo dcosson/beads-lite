@@ -172,6 +172,61 @@ func TestAppProvider_Get_BD_JSON(t *testing.T) {
 	}
 }
 
+func TestQuietFlag_SuppressesOutput(t *testing.T) {
+	tmpDir := t.TempDir()
+	beadsDir := setupBeadsDir(t, tmpDir)
+	t.Setenv("BEADS_DIR", beadsDir)
+
+	var out, errOut bytes.Buffer
+	provider := &AppProvider{
+		Out: &out,
+		Err: &errOut,
+	}
+
+	rootCmd := newRootCmd(provider)
+	rootCmd.SetArgs([]string{"--quiet", "version"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&errOut)
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("command with --quiet should not error, got: %v", err)
+	}
+
+	if out.Len() != 0 {
+		t.Errorf("--quiet should suppress output, got: %q", out.String())
+	}
+}
+
+func TestBD_QUIET_EnvVar(t *testing.T) {
+	tmpDir := t.TempDir()
+	beadsDir := setupBeadsDir(t, tmpDir)
+	t.Setenv("BEADS_DIR", beadsDir)
+	t.Setenv("BD_QUIET", "1")
+
+	var out, errOut bytes.Buffer
+	provider := &AppProvider{
+		Out: &out,
+		Err: &errOut,
+	}
+
+	rootCmd := newRootCmd(provider)
+	rootCmd.SetArgs([]string{"version"})
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&errOut)
+
+	if err := rootCmd.Execute(); err != nil {
+		t.Fatalf("command with BD_QUIET=1 should not error, got: %v", err)
+	}
+
+	if !provider.Quiet {
+		t.Error("provider.Quiet should be true when BD_QUIET=1")
+	}
+
+	if out.Len() != 0 {
+		t.Errorf("BD_QUIET=1 should suppress output, got: %q", out.String())
+	}
+}
+
 func TestCompatibilityFlags_Accepted(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := setupBeadsDir(t, tmpDir)

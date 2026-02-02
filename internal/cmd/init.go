@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,11 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 		Short: "Initialize a new beads-lite repository",
 		Long:  `Initialize a new beads-lite repository in the current directory.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInit(force, projectName, prefix)
+			out := provider.Out
+			if out == nil {
+				out = os.Stdout
+			}
+			return runInit(out, force, projectName, prefix)
 		},
 	}
 
@@ -42,7 +47,7 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 	return cmd
 }
 
-func runInit(force bool, projectName, prefix string) error {
+func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	if projectName == "" {
 		return errors.New("project name cannot be empty")
 	}
@@ -126,6 +131,6 @@ func runInit(force bool, projectName, prefix string) error {
 		return fmt.Errorf("initializing slot store: %w", err)
 	}
 
-	fmt.Printf("Initialized beads-lite repository at %s\n", beadsPath)
+	fmt.Fprintf(out, "Initialized beads-lite repository at %s\n", beadsPath)
 	return nil
 }

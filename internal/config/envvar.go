@@ -8,6 +8,7 @@ const (
 	EnvActor    = "BD_ACTOR"   // Override actor name
 	EnvProject  = "BD_PROJECT" // Override project name
 	EnvJSON     = "BD_JSON"    // Enable JSON output ("1" or "true")
+	EnvQuiet    = "BD_QUIET"   // Suppress non-error output ("1" or "true")
 )
 
 // ApplyEnvOverrides checks BD_ACTOR and BD_PROJECT env vars

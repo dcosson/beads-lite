@@ -27,6 +27,7 @@ type AppProvider struct {
 
 	// Config captured from flags before Execute()
 	JSONOutput bool
+	Quiet      bool
 	Out        io.Writer
 	Err        io.Writer
 }
@@ -145,12 +146,25 @@ making them easy to review, diff, and track alongside your code.`,
 					}
 				}
 			}
+			// Apply BD_QUIET env var if --quiet flag was not explicitly passed
+			if !cmd.Flags().Changed("quiet") {
+				if envQuiet := os.Getenv(config.EnvQuiet); envQuiet != "" {
+					envQuiet = strings.ToLower(envQuiet)
+					if envQuiet == "1" || envQuiet == "true" {
+						provider.Quiet = true
+					}
+				}
+			}
+			if provider.Quiet {
+				provider.Out = io.Discard
+			}
 			return nil
 		},
 	}
 
 	// Global flags - these populate the provider config
 	rootCmd.PersistentFlags().BoolVar(&provider.JSONOutput, "json", false, "Output in JSON format (env: BD_JSON)")
+	rootCmd.PersistentFlags().BoolVarP(&provider.Quiet, "quiet", "q", false, "Suppress non-error output (env: BD_QUIET)")
 
 	// Compatibility flags — accepted for compatibility with the reference
 	// implementation but not used by beads-lite.

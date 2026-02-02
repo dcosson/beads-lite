@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -300,6 +301,43 @@ func TestInit(t *testing.T) {
 		}
 		if v, _ := store.Get("id.prefix"); v != "bd-" {
 			t.Errorf("config id.prefix = %q, want %q", v, "bd-")
+		}
+	})
+
+	t.Run("quiet flag suppresses output", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		var out bytes.Buffer
+		provider := &AppProvider{
+			Out: &out,
+		}
+
+		rootCmd := newRootCmd(provider)
+		rootCmd.SetArgs([]string{"--quiet", "init"})
+		rootCmd.SetOut(&out)
+
+		if err := rootCmd.Execute(); err != nil {
+			t.Fatalf("init command with --quiet failed: %v", err)
+		}
+
+		if out.Len() != 0 {
+			t.Errorf("--quiet should suppress output, got: %q", out.String())
+		}
+
+		// Verify .beads dir was still created
+		beadsPath := filepath.Join(tmpDir, ".beads")
+		if _, err := os.Stat(beadsPath); os.IsNotExist(err) {
+			t.Error(".beads directory was not created")
 		}
 	})
 
