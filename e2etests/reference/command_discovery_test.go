@@ -16,21 +16,12 @@ func TestCommandDiscovery(t *testing.T) {
 
 	runner := &Runner{BdCmd: bdCmd}
 
-	discovered, ignored, _, err := DiscoverCommands(runner)
+	discovered, _, _, err := DiscoverCommands(runner)
 	if err != nil {
 		t.Fatalf("command discovery failed: %v", err)
 	}
 
-	// Log discovered and ignored commands
-	t.Logf("Discovered %d commands from %s:", len(discovered), bdCmd)
-	for _, cmd := range discovered {
-		t.Logf("  %s", cmd)
-	}
-
-	t.Logf("Ignored %d commands:", len(ignored))
-	for _, cmd := range ignored {
-		t.Logf("  %s", cmd)
-	}
+	t.Logf("Discovered %d commands from %s", len(discovered), bdCmd)
 
 	expectedFile := filepath.Join("expected", "available_commands.txt")
 
