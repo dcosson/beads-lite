@@ -1,7 +1,7 @@
 BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= $(shell which bd)
 
-.PHONY: test test-unit test-e2e e2e-update build
+.PHONY: test test-unit test-e2e e2e-update build check fmt vet staticcheck
 
 test: test-unit test-e2e
 
@@ -20,3 +20,17 @@ update-e2e:
 
 build:
 	go build -o bd ./cmd
+
+check: fmt vet staticcheck
+
+fmt:
+	@echo "==> go fmt"
+	@test -z "$$(gofmt -l .)" || (gofmt -l . && echo "above files are not formatted" && exit 1)
+
+vet:
+	@echo "==> go vet"
+	go vet ./...
+
+staticcheck:
+	@echo "==> staticcheck"
+	staticcheck ./...
