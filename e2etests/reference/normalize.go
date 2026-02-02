@@ -48,7 +48,7 @@ var (
 	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
 	// The (-[0-9a-z]+)? captures the extra ID suffix the reference binary adds
 	// in non-daemon mode (e.g., beads-sandbox-XXXXXXXX-abc-43c).
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|ISSUE_[0-9A-Za-z]{2}-[0-9A-Za-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3,8}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|ISSUE_[0-9A-Za-z]{2}-[0-9A-Za-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3,8}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )

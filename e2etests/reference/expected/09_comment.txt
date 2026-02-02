@@ -57,7 +57,7 @@
     "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 2,
     "status": "open",
     "title": "Commentable task",

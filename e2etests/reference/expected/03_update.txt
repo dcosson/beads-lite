@@ -5,7 +5,7 @@
     "created_by": "testactor",
     "id": "ISSUE_1",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 2,
     "status": "open",
     "title": "Updated title",
@@ -21,7 +21,7 @@
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 2,
     "status": "open",
     "title": "Updated title",
@@ -37,7 +37,7 @@
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "task",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "open",
     "title": "Updated title",
@@ -53,7 +53,7 @@
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "open",
     "title": "Updated title",
@@ -69,7 +69,7 @@
     "description": "New description",
     "id": "ISSUE_1",
     "issue_type": "bug",
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "in_progress",
     "title": "Updated title",
@@ -89,7 +89,7 @@
       "urgent",
       "v2"
     ],
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "in_progress",
     "title": "Updated title",
@@ -108,7 +108,7 @@
     "labels": [
       "v2"
     ],
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "in_progress",
     "title": "Updated title",
@@ -128,7 +128,7 @@
     "labels": [
       "v2"
     ],
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "in_progress",
     "title": "Updated title",
@@ -148,7 +148,7 @@
     "labels": [
       "v2"
     ],
-    "owner": "dcosson@gmail.com",
+    "owner": "testactor@example.com",
     "priority": 0,
     "status": "in_progress",
     "title": "Updated title",
