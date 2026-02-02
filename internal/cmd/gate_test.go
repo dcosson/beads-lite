@@ -739,3 +739,189 @@ func TestGateListCommand_TextTableOutput(t *testing.T) {
 		t.Errorf("expected waiter count '2' in output, got: %s", output)
 	}
 }
+
+func TestGateResolveBasic(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	gate := &issuestorage.Issue{
+		Title:    "Wait for CI",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeGate,
+	}
+	id, err := store.Create(context.Background(), gate)
+	if err != nil {
+		t.Fatalf("failed to create gate: %v", err)
+	}
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("gate resolve failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Resolved gate "+id) {
+		t.Errorf("expected output to contain 'Resolved gate %s', got %q", id, output)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get gate: %v", err)
+	}
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusClosed, got.Status)
+	}
+	if got.ClosedAt == nil {
+		t.Error("expected ClosedAt to be set")
+	}
+}
+
+func TestGateResolveWithReason(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	gate := &issuestorage.Issue{
+		Title:    "Wait for approval",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeGate,
+	}
+	id, err := store.Create(context.Background(), gate)
+	if err != nil {
+		t.Fatalf("failed to create gate: %v", err)
+	}
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", "--reason", "CI passed", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("gate resolve --reason failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Resolved gate "+id) {
+		t.Errorf("expected output to contain 'Resolved gate %s', got %q", id, output)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get gate: %v", err)
+	}
+	if got.CloseReason != "CI passed" {
+		t.Errorf("expected close_reason %q, got %q", "CI passed", got.CloseReason)
+	}
+}
+
+func TestGateResolveJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+
+	gate := &issuestorage.Issue{
+		Title:     "Wait for deploy",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeGate,
+		AwaitType: "gh:run",
+		AwaitID:   "12345",
+	}
+	id, err := store.Create(context.Background(), gate)
+	if err != nil {
+		t.Fatalf("failed to create gate: %v", err)
+	}
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", "--reason", "Deploy succeeded", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("gate resolve JSON failed: %v", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON output: %v", err)
+	}
+
+	if result["id"].(string) != id {
+		t.Errorf("expected id %q, got %q", id, result["id"])
+	}
+	if result["status"].(string) != "closed" {
+		t.Errorf("expected status %q, got %q", "closed", result["status"])
+	}
+}
+
+func TestGateResolveNotAGate(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issue := &issuestorage.Issue{
+		Title:    "Regular task",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", id})
+	err = cmd.Execute()
+	if err == nil {
+		t.Error("expected error when resolving a non-gate issue")
+	}
+	if !strings.Contains(err.Error(), "not a gate") {
+		t.Errorf("expected error to mention 'not a gate', got %q", err.Error())
+	}
+}
+
+func TestGateResolveAlreadyClosed(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	gate := &issuestorage.Issue{
+		Title:    "Already resolved gate",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeGate,
+	}
+	id, err := store.Create(context.Background(), gate)
+	if err != nil {
+		t.Fatalf("failed to create gate: %v", err)
+	}
+
+	if err := store.Close(context.Background(), id); err != nil {
+		t.Fatalf("failed to close gate: %v", err)
+	}
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", id})
+	err = cmd.Execute()
+	if err == nil {
+		t.Error("expected error when resolving already-closed gate")
+	}
+	if !strings.Contains(err.Error(), "already closed") {
+		t.Errorf("expected error to mention 'already closed', got %q", err.Error())
+	}
+}
+
+func TestGateResolveNonExistent(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve", "bd-nonexistent"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error for non-existent gate")
+	}
+}
+
+func TestGateResolveNoArgs(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	cmd := newGateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"resolve"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Error("expected error when no arguments provided")
+	}
+}

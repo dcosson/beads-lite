@@ -33,6 +33,7 @@ func newGateCmd(provider *AppProvider) *cobra.Command {
 	cmd.AddCommand(newGateListCmd(provider))
 	cmd.AddCommand(newGateWaitCmd(provider))
 	cmd.AddCommand(newGateAddWaiterCmd(provider))
+	cmd.AddCommand(newGateResolveCmd(provider))
 
 	return cmd
 }
@@ -335,4 +336,85 @@ func gateAddWaiter(provider *AppProvider, cmd *cobra.Command, gateID, waiter str
 
 	fmt.Fprintf(app.Out, "%s Added %s to waiters for %s\n", app.SuccessColor("✓"), waiter, gateID)
 	return nil
+}
+
+// newGateResolveCmd creates the "gate resolve" subcommand.
+func newGateResolveCmd(provider *AppProvider) *cobra.Command {
+	var reason string
+
+	cmd := &cobra.Command{
+		Use:   "resolve <gate-id>",
+		Short: "Resolve (close) a gate",
+		Long: `Resolve a gate by closing it. This is a convenience wrapper around
+the normal close path that validates the issue is a gate.
+
+Resolving a gate = closing it. If --reason is provided, the close reason
+is set on the gate before closing.
+
+Examples:
+  bd gate resolve bl-abc123
+  bd gate resolve bl-abc123 --reason "CI passed"`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			app, err := provider.Get()
+			if err != nil {
+				return err
+			}
+
+			ctx := cmd.Context()
+			gateID := args[0]
+
+			store, err := app.StorageFor(ctx, gateID)
+			if err != nil {
+				return fmt.Errorf("routing %s: %w", gateID, err)
+			}
+
+			// Load the gate issue and validate
+			issue, err := store.Get(ctx, gateID)
+			if err != nil {
+				return fmt.Errorf("getting %s: %w", gateID, err)
+			}
+
+			if issue.Type != issuestorage.TypeGate {
+				return fmt.Errorf("%s is not a gate (type is %q)", gateID, issue.Type)
+			}
+
+			if issue.Status == issuestorage.StatusClosed {
+				return fmt.Errorf("gate %s is already closed", gateID)
+			}
+
+			// Close the gate (same path as bd close)
+			if err := store.Close(ctx, gateID); err != nil {
+				return fmt.Errorf("closing gate %s: %w", gateID, err)
+			}
+
+			// If --reason was provided, update the close reason on the now-closed issue
+			if reason != "" {
+				closed, err := store.Get(ctx, gateID)
+				if err != nil {
+					return fmt.Errorf("updating close reason for %s: %w", gateID, err)
+				}
+				closed.CloseReason = reason
+				if err := store.Update(ctx, closed); err != nil {
+					return fmt.Errorf("updating close reason for %s: %w", gateID, err)
+				}
+			}
+
+			// Output
+			if app.JSON {
+				resolved, err := store.Get(ctx, gateID)
+				if err != nil {
+					return fmt.Errorf("reading closed gate %s: %w", gateID, err)
+				}
+				return json.NewEncoder(app.Out).Encode(ToIssueJSON(ctx, store, resolved, false, false))
+			}
+
+			fmt.Fprintf(app.Out, "Resolved gate %s\n", gateID)
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&reason, "reason", "", "Reason for resolving the gate")
+
+	return cmd
 }
