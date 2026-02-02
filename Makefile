@@ -1,7 +1,7 @@
 BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= $(shell which bd)
 
-.PHONY: test test-unit test-e2e e2e-update build check fmt vet staticcheck
+.PHONY: test test-unit test-e2e e2e-update build check check-ci fmt fmt-check vet staticcheck deps
 
 test: test-unit test-e2e
 
@@ -21,10 +21,19 @@ update-e2e:
 build:
 	go build -o bd ./cmd
 
+deps:
+	go install honnef.co/go/tools/cmd/staticcheck@latest
+
 check: fmt vet staticcheck
 
+check-ci: fmt-check vet staticcheck
+
 fmt:
-	@echo "==> go fmt"
+	@echo "==> gofmt"
+	gofmt -w .
+
+fmt-check:
+	@echo "==> gofmt (check)"
 	@test -z "$$(gofmt -l .)" || (gofmt -l . && echo "above files are not formatted" && exit 1)
 
 vet:
@@ -33,4 +42,4 @@ vet:
 
 staticcheck:
 	@echo "==> staticcheck"
-	staticcheck ./...
+	go run honnef.co/go/tools/cmd/staticcheck@latest ./...
