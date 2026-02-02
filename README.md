@@ -44,8 +44,8 @@ This table tracks implementation status across major feature areas.
 | `.beads/redirect` files | ✅ | ✅ | |
 | `bd config set/get/list/unset` | ✅ | ✅ | |
 | `bd config validate` | ✅ | ✅ | |
-| Custom status states (`status.custom`) | ✅ | ✅ | |
-| Custom types/priorities | ✅ | ⬜ | |
+| Custom types (`types.custom`) | ✅ | ⬜ | |
+| Custom statuses (`status.custom`) | ✅ | ⬜ | |
 
 ### Issue Tracking
 
@@ -53,7 +53,8 @@ This table tracks implementation status across major feature areas.
 |---------|:-----:|:----------:|-------|
 | Create / show / update / delete | ✅ | ✅ | |
 | List with filters (status, priority, type, label, assignee) | ✅ | ✅ | |
-| Issue types (task, bug, feature, epic, chore) | ✅ | ✅ | |
+| Issue types (task, bug, feature, epic, chore, molecule) | ✅ | ✅ | |
+| Molecule types (`mol_type`: swarm, patrol, work) | ✅ | ✅ | Filterable via `--mol-type` |
 | Priorities (P0-P4) | ✅ | ✅ | |
 | Statuses (open, in_progress, blocked, deferred, closed) | ✅ | ✅ | |
 | `hooked` status | ✅ | ✅ | For GUPP protocol (agent hook attachment) |
@@ -107,7 +108,7 @@ This table tracks implementation status across major feature areas.
 | `bd gate` (async coordination) | ✅ | ✅ | show, list, wait, add-waiter, resolve, check |
 | `bd swarm` (validate, create, status, list) | ✅ | ✅ | |
 | Seed patrol (formula seeding) | ✅ | ✅ | |
-| `bd merge-slot` (serialized conflict resolution) | ✅ | ⬜ | |
+| `bd merge-slot` (serialized conflict resolution) | ✅ | ✅ | Built on KV storage |
 | `bd audit` (append-only activity log) | ✅ | ⬜ | |
 | `bd set-state` / `bd state` | ✅ | ⬜ | |
 | `bd mail` | ✅ | ⬜ | Delegates to `gt mail` |
