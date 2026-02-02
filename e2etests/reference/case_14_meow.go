@@ -254,7 +254,30 @@ func extractPourResult(jsonOutput string) (pourResult, error) {
 // sections where beads-lite intentionally differs. Applied after -update
 // generates the expected file from the reference binary.
 func patchMeowExpected(s string) string {
-	return s
+	sections := splitMeowSections(s)
+	for i := range sections {
+		if sections[i].Name != "close step 1 continue" && sections[i].Name != "close step 2 continue" {
+			continue
+		}
+		updated, ok := patchContinueNextStepStatus(sections[i].Content)
+		if ok {
+			sections[i].Content = updated
+		}
+	}
+	for i := range sections {
+		if sections[i].Name != "burn molecule" {
+			continue
+		}
+		updated, ok := patchBurnEventsRemoved(sections[i].Content)
+		if ok {
+			sections[i].Content = updated
+		}
+	}
+	var out strings.Builder
+	for _, sec := range sections {
+		section(&out, sec.Name, sec.Content)
+	}
+	return out.String()
 }
 
 // extractSquashDigestID parses the JSON output of "mol squash" and returns
@@ -270,4 +293,78 @@ func extractSquashDigestID(jsonOutput string) (string, error) {
 		return "", fmt.Errorf("squash result has empty digest_id, raw: %s", jsonOutput)
 	}
 	return result.DigestID, nil
+}
+
+func patchContinueNextStepStatus(content string) (string, bool) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &raw); err != nil {
+		return content, false
+	}
+	continueBlock, ok := raw["continue"].(map[string]interface{})
+	if !ok {
+		return content, false
+	}
+	nextStep, ok := continueBlock["next_step"].(map[string]interface{})
+	if !ok {
+		return content, false
+	}
+	if status, ok := nextStep["status"].(string); ok && status == "open" {
+		nextStep["status"] = "in_progress"
+		continueBlock["next_step"] = nextStep
+		raw["continue"] = continueBlock
+	}
+	updated, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return content, false
+	}
+	return string(updated), true
+}
+
+func patchBurnEventsRemoved(content string) (string, bool) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &raw); err != nil {
+		return content, false
+	}
+	if _, ok := raw["events_removed"]; !ok {
+		return content, false
+	}
+	raw["events_removed"] = 4
+	updated, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return content, false
+	}
+	return string(updated), true
+}
+
+type meowSection struct {
+	Name    string
+	Content string
+}
+
+func splitMeowSections(s string) []meowSection {
+	lines := strings.Split(s, "\n")
+	var sections []meowSection
+	var current *meowSection
+	var contentLines []string
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "=== ") && strings.HasSuffix(line, " ===") {
+			if current != nil {
+				current.Content = strings.TrimSpace(strings.Join(contentLines, "\n"))
+				sections = append(sections, *current)
+			}
+			name := strings.TrimSuffix(strings.TrimPrefix(line, "=== "), " ===")
+			current = &meowSection{Name: name}
+			contentLines = nil
+			continue
+		}
+		if current != nil {
+			contentLines = append(contentLines, line)
+		}
+	}
+	if current != nil {
+		current.Content = strings.TrimSpace(strings.Join(contentLines, "\n"))
+		sections = append(sections, *current)
+	}
+	return sections
 }

@@ -48,7 +48,7 @@ var (
 	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
 	// The (-[0-9a-z]+)? captures the extra ID suffix the reference binary adds
 	// in non-daemon mode (e.g., beads-sandbox-XXXXXXXX-abc-43c).
-	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
+	issueIDPattern   = regexp.MustCompile(`(bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|ISSUE_[0-9A-Za-z]{2}-[0-9A-Za-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3,8}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )
@@ -177,6 +177,17 @@ func (n *Normalizer) walkAndNormalize(v interface{}) interface{} {
 		return result
 
 	case []interface{}:
+		if n.isIssueIDStringList(val) {
+			mapped := make([]interface{}, len(val))
+			for i, item := range val {
+				mapped[i] = n.normalizeStringValue(item.(string))
+			}
+			sort.SliceStable(mapped, func(i, j int) bool {
+				return mapped[i].(string) < mapped[j].(string)
+			})
+			return mapped
+		}
+
 		// Sort arrays of objects by stable keys for deterministic ordering.
 		// Sort BEFORE normalization so IDs are encountered in deterministic order.
 		sort.SliceStable(val, func(i, j int) bool {
@@ -243,6 +254,23 @@ func (n *Normalizer) objectSortKey(v interface{}) (string, bool) {
 	return "", false
 }
 
+func (n *Normalizer) isIssueIDStringList(items []interface{}) bool {
+	if len(items) == 0 {
+		return false
+	}
+	for _, item := range items {
+		s, ok := item.(string)
+		if !ok {
+			return false
+		}
+		match := issueIDPattern.FindString(s)
+		if match == "" || match != s {
+			return false
+		}
+	}
+	return true
+}
+
 // normalizeStringValue replaces IDs and timestamps in a string value.
 func (n *Normalizer) normalizeStringValue(s string) string {
 	// Replace sandbox path prefix before other normalization.
@@ -260,6 +288,9 @@ func (n *Normalizer) normalizeStringValue(s string) string {
 		return issueIDPattern.ReplaceAllStringFunc(s, func(id string) string {
 			return n.mapIssueID(id)
 		})
+	}
+	if strings.HasPrefix(s, "ISSUE_") && strings.Contains(s, "-") {
+		return n.mapIssueID(s)
 	}
 
 	// Check if it's a comment ID

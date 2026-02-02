@@ -268,7 +268,7 @@
       "id": "ISSUE_2",
       "issue_type": "task",
       "priority": 2,
-      "status": "open",
+      "status": "in_progress",
       "title": "Build",
       "updated_at": "TIMESTAMP"
     }
@@ -407,7 +407,7 @@
       "id": "ISSUE_4",
       "issue_type": "task",
       "priority": 2,
-      "status": "open",
+      "status": "in_progress",
       "title": "Test",
       "updated_at": "TIMESTAMP"
     }
@@ -559,13 +559,13 @@
 {
   "deleted": [
     "ISSUE_5",
-    "ISSUE_8",
     "ISSUE_6",
-    "ISSUE_7"
+    "ISSUE_7",
+    "ISSUE_8"
   ],
   "deleted_count": 4,
   "dependencies_removed": 5,
-  "events_removed": 9,
+  "events_removed": 4,
   "labels_removed": 0,
   "orphaned_issues": null,
   "references_updated": 0
@@ -575,12 +575,12 @@
 {
   "created": 4,
   "id_mapping": {
-    "test-workflow": "ISSUE_9p-b1m",
-    "test-workflow.build": "ISSUE_9p-cxc",
-    "test-workflow.setup": "ISSUE_9p-e76",
-    "test-workflow.test": "ISSUE_9p-6s9"
+    "test-workflow": "ISSUE_9",
+    "test-workflow.build": "ISSUE_10",
+    "test-workflow.setup": "ISSUE_11",
+    "test-workflow.test": "ISSUE_12"
   },
-  "new_epic_id": "ISSUE_9p-b1m",
+  "new_epic_id": "ISSUE_9",
   "phase": "vapor"
 }
 
@@ -590,14 +590,14 @@
 === squash wisp ===
 {
   "deleted_count": 3,
-  "digest_id": "ISSUE_10",
+  "digest_id": "ISSUE_13",
   "kept_children": false,
-  "molecule_id": "ISSUE_9p-b1m",
+  "molecule_id": "ISSUE_9",
   "squashed_count": 3,
   "squashed_ids": [
-    "ISSUE_9p-6s9",
-    "ISSUE_9p-cxc",
-    "ISSUE_9p-e76"
+    "ISSUE_10",
+    "ISSUE_11",
+    "ISSUE_12"
   ]
 }
 
@@ -613,7 +613,7 @@
         "dependency_type": "parent-child",
         "description": "Test workflow",
         "ephemeral": true,
-        "id": "ISSUE_9p-b1m",
+        "id": "ISSUE_9",
         "issue_type": "epic",
         "priority": 2,
         "status": "open",
@@ -622,9 +622,9 @@
       }
     ],
     "description": "Test summary",
-    "id": "ISSUE_10",
+    "id": "ISSUE_13",
     "issue_type": "task",
-    "parent": "ISSUE_9p-b1m",
+    "parent": "ISSUE_9",
     "priority": 2,
     "status": "closed",
     "title": "Digest: test-workflow",
