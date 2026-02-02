@@ -225,6 +225,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newSlotCmd(provider))
 	rootCmd.AddCommand(newAgentCmd(provider))
 	rootCmd.AddCommand(newLabelCmd(provider))
+	rootCmd.AddCommand(newEditCmd(provider))
 
 	return rootCmd
 }
