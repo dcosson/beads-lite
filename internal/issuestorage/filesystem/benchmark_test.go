@@ -11,7 +11,7 @@ import (
 func setupBenchmarkStorage(b *testing.B) *FilesystemStorage {
 	b.Helper()
 	dir := b.TempDir()
-	s := New(dir)
+	s := New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		b.Fatal(err)
 	}
