@@ -177,6 +177,13 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	wispRootID := wispResult.RootID
 
+	// Wisp create — alternate syntax (mol wisp create <formula>).
+	result, err = mustRun(r, sandbox, "mol", "wisp", "create", "test-workflow", "--var", "name=ephemeral2", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "wisp create molecule", n.NormalizeJSON([]byte(result.Stdout)))
+
 	// Ready — verify wisp steps excluded from ready output.
 	result, err = mustRun(r, sandbox, "ready", "--json")
 	if err != nil {

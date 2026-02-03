@@ -584,13 +584,26 @@
   "phase": "vapor"
 }
 
+=== wisp create molecule ===
+{
+  "created": 4,
+  "id_mapping": {
+    "test-workflow": "ISSUE_13",
+    "test-workflow.build": "ISSUE_14",
+    "test-workflow.setup": "ISSUE_15",
+    "test-workflow.test": "ISSUE_16"
+  },
+  "new_epic_id": "ISSUE_13",
+  "phase": "vapor"
+}
+
 === ready excludes wisp ===
 []
 
 === squash wisp ===
 {
   "deleted_count": 3,
-  "digest_id": "ISSUE_13",
+  "digest_id": "ISSUE_17",
   "kept_children": false,
   "molecule_id": "ISSUE_9",
   "squashed_count": 3,
@@ -622,7 +635,7 @@
       }
     ],
     "description": "Test summary",
-    "id": "ISSUE_13",
+    "id": "ISSUE_17",
     "issue_type": "task",
     "parent": "ISSUE_9",
     "priority": 2,

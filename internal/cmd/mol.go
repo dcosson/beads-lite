@@ -101,6 +101,33 @@ Examples:
 func newMolWispCmd(provider *AppProvider) *cobra.Command {
 	var vars []string
 
+	wispRunE := func(cmd *cobra.Command, args []string) error {
+		app, err := provider.Get()
+		if err != nil {
+			return err
+		}
+
+		opts := meow.PourOptions{
+			FormulaName: args[0],
+			Vars:        parseVarFlags(vars),
+			Ephemeral:   true,
+			SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
+		}
+
+		result, err := meow.Pour(cmd.Context(), app.Storage, opts)
+		if err != nil {
+			return fmt.Errorf("wisp %s: %w", args[0], err)
+		}
+
+		if app.JSON {
+			return json.NewEncoder(app.Out).Encode(result)
+		}
+
+		fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.NewEpicID)
+		fmt.Fprintf(app.Out, "  Children: %d\n", result.Created-1)
+		return nil
+	}
+
 	cmd := &cobra.Command{
 		Use:   "wisp <formula-name>",
 		Short: "Pour an ephemeral molecule (auto-cleaned by gc)",
@@ -109,35 +136,20 @@ Ephemeral molecules are automatically cleaned up by "bd mol gc".
 
 Examples:
   bd mol wisp scratch-pad
+  bd mol wisp create scratch-pad
   bd mol wisp spike --var topic=caching`,
 		Args: cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			app, err := provider.Get()
-			if err != nil {
-				return err
-			}
-
-			opts := meow.PourOptions{
-				FormulaName: args[0],
-				Vars:        parseVarFlags(vars),
-				Ephemeral:   true,
-				SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
-			}
-
-			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
-			if err != nil {
-				return fmt.Errorf("wisp %s: %w", args[0], err)
-			}
-
-			if app.JSON {
-				return json.NewEncoder(app.Out).Encode(result)
-			}
-
-			fmt.Fprintf(app.Out, "Poured ephemeral molecule: %s\n", result.NewEpicID)
-			fmt.Fprintf(app.Out, "  Children: %d\n", result.Created-1)
-			return nil
-		},
+		RunE: wispRunE,
 	}
+
+	createCmd := &cobra.Command{
+		Use:   "create <formula-name>",
+		Short: "Pour an ephemeral molecule (auto-cleaned by gc)",
+		Args:  cobra.ExactArgs(1),
+		RunE:  wispRunE,
+	}
+	createCmd.Flags().StringArrayVar(&vars, "var", nil, "Variable assignment (key=value, repeatable)")
+	cmd.AddCommand(createCmd)
 
 	cmd.Flags().StringArrayVar(&vars, "var", nil, "Variable assignment (key=value, repeatable)")
 
