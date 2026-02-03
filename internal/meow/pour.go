@@ -10,10 +10,11 @@ import (
 
 // PourOptions configures a Pour or Wisp operation.
 type PourOptions struct {
-	FormulaName string
-	Vars        map[string]string
-	Ephemeral   bool // false = pour (persistent), true = wisp (ephemeral)
-	SearchPath  FormulaSearchPath
+	FormulaName     string
+	Vars            map[string]string
+	Ephemeral       bool // false = pour (persistent), true = wisp (ephemeral)
+	PrefixAddition  string
+	SearchPath      FormulaSearchPath
 }
 
 // PourResult contains the issues created by a Pour or Wisp operation.
@@ -60,7 +61,7 @@ func Pour(ctx context.Context, store issuestorage.IssueStore, opts PourOptions) 
 		Ephemeral:   opts.Ephemeral,
 		CreatedBy:   actor,
 	}
-	rootID, err := store.Create(ctx, rootIssue)
+	rootID, err := store.Create(ctx, rootIssue, issuestorage.CreateOpts{PrefixAddition: opts.PrefixAddition})
 	if err != nil {
 		return nil, fmt.Errorf("creating root issue: %w", err)
 	}

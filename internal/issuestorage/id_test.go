@@ -164,6 +164,49 @@ func TestChildID(t *testing.T) {
 	}
 }
 
+func TestBuildPrefix(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     string
+		addition string
+		want     string
+	}{
+		// No addition — returns base with trailing dash
+		{"no_addition", "bd-", "", "bd-"},
+		{"no_addition_no_dash", "bd", "", "bd-"},
+
+		// Standard additions
+		{"mol", "bd-", "mol", "bd-mol-"},
+		{"wisp", "bd-", "wisp", "bd-wisp-"},
+
+		// Base without trailing dash
+		{"base_no_dash", "bd", "mol", "bd-mol-"},
+
+		// Addition with leading dash
+		{"addition_leading_dash", "bd-", "-mol", "bd-mol-"},
+		// Addition with trailing dash
+		{"addition_trailing_dash", "bd-", "mol-", "bd-mol-"},
+		// Addition with both leading and trailing dashes
+		{"addition_both_dashes", "bd-", "-mol-", "bd-mol-"},
+
+		// Base with multiple trailing dashes
+		{"base_multi_dash", "bd--", "mol", "bd-mol-"},
+
+		// Different prefix
+		{"alt_prefix", "bl-", "wisp", "bl-wisp-"},
+		{"alt_prefix_no_dash", "bl", "wisp", "bl-wisp-"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := BuildPrefix(tt.base, tt.addition)
+			if got != tt.want {
+				t.Errorf("BuildPrefix(%q, %q) = %q, want %q", tt.base, tt.addition, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCheckHierarchyDepth(t *testing.T) {
 	tests := []struct {
 		name     string

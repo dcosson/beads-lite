@@ -235,7 +235,7 @@ func atomicWriteJSON(path string, data interface{}) error {
 // Create creates a new issue and returns its ID.
 // If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
 // Otherwise, a deterministic content-based ID is generated using SHA256 + base36.
-func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Issue) (string, error) {
+func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Issue, opts ...issuestorage.CreateOpts) (string, error) {
 	if issue.ID != "" {
 		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
 
@@ -290,11 +290,18 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	length := idgen.AdaptiveLength(count)
 	now := time.Now()
 
+	// Compose the effective prefix, incorporating any PrefixAddition.
+	var prefixAddition string
+	if len(opts) > 0 {
+		prefixAddition = opts[0].PrefixAddition
+	}
+	effectivePrefix := issuestorage.BuildPrefix(fs.prefix, prefixAddition)
+
 	// Retry with fresh random IDs on collision.
 	// AdaptiveLength ensures ≤25% collision probability,
 	// so P(MaxIDRetries consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
 	for attempt := 0; attempt < MaxIDRetries; attempt++ {
-		id, err := idgen.RandomID(fs.prefix, length)
+		id, err := idgen.RandomID(effectivePrefix, length)
 		if err != nil {
 			return "", fmt.Errorf("generating random ID: %w", err)
 		}

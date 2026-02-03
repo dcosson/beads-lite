@@ -72,9 +72,10 @@ Examples:
 			}
 
 			opts := meow.PourOptions{
-				FormulaName: args[0],
-				Vars:        parseVarFlags(vars),
-				SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
+				FormulaName:    args[0],
+				Vars:           parseVarFlags(vars),
+				PrefixAddition: "mol",
+				SearchPath:     meow.DefaultSearchPath(app.ConfigDir),
 			}
 
 			result, err := meow.Pour(cmd.Context(), app.Storage, opts)
@@ -108,10 +109,11 @@ func newMolWispCmd(provider *AppProvider) *cobra.Command {
 		}
 
 		opts := meow.PourOptions{
-			FormulaName: args[0],
-			Vars:        parseVarFlags(vars),
-			Ephemeral:   true,
-			SearchPath:  meow.DefaultSearchPath(app.ConfigDir),
+			FormulaName:    args[0],
+			Vars:           parseVarFlags(vars),
+			Ephemeral:      true,
+			PrefixAddition: "wisp",
+			SearchPath:     meow.DefaultSearchPath(app.ConfigDir),
 		}
 
 		result, err := meow.Pour(cmd.Context(), app.Storage, opts)

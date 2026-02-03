@@ -279,13 +279,39 @@ type ListFilter struct {
 	IncludeChildren bool       // if true, include descendants of matching issues
 }
 
+// CreateOpts provides optional parameters for Create.
+type CreateOpts struct {
+	// PrefixAddition is inserted between the store's base prefix and the
+	// random suffix when generating a new ID (e.g. "mol" → "bd-mol-xxxx").
+	// Ignored when issue.ID is already set.
+	PrefixAddition string
+}
+
+// BuildPrefix composes a full ID prefix from a base prefix and an optional
+// addition. It normalises dashes so the result always ends with exactly one
+// dash and never contains double-dashes.
+//
+//	BuildPrefix("bd-", "")    → "bd-"
+//	BuildPrefix("bd-", "mol") → "bd-mol-"
+//	BuildPrefix("bd",  "mol") → "bd-mol-"
+//	BuildPrefix("bd-", "-mol-") → "bd-mol-"
+func BuildPrefix(base, addition string) string {
+	base = strings.TrimRight(base, "-")
+	addition = strings.Trim(addition, "-")
+	if addition == "" {
+		return base + "-"
+	}
+	return base + "-" + addition + "-"
+}
+
 // IssueStore defines the interface for issue persistence.
 // All storage engines must implement this interface.
 type IssueStore interface {
 	// Create creates a new issue and returns its ID.
 	// If issue.ID is already set, that ID is used directly (for hierarchical child IDs).
 	// Otherwise, a deterministic content-based ID is generated.
-	Create(ctx context.Context, issue *Issue) (string, error)
+	// An optional CreateOpts may be supplied to customise ID generation.
+	Create(ctx context.Context, issue *Issue, opts ...CreateOpts) (string, error)
 
 	// Get retrieves an issue by ID.
 	// Returns ErrNotFound if the issue doesn't exist.
