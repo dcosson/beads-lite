@@ -285,16 +285,16 @@ func TestInferMolecule_FindsEpicForActor(t *testing.T) {
 	}
 }
 
-func TestInferMolecule_NoEpicForActor(t *testing.T) {
+func TestInferMolecule_NothingFound(t *testing.T) {
 	ctx := context.Background()
 	s := newMolStore(t)
 
-	_, err := InferMolecule(ctx, s, "nobody")
-	if err == nil {
-		t.Fatal("expected error for actor with no molecule")
+	got, err := InferMolecule(ctx, s, "nobody")
+	if err != nil {
+		t.Fatalf("InferMolecule: unexpected error: %v", err)
 	}
-	if got := err.Error(); got == "" {
-		t.Error("expected descriptive error message")
+	if got != "" {
+		t.Errorf("expected empty string, got %q", got)
 	}
 }
 
@@ -337,6 +337,114 @@ func TestInferMolecule_IgnoresChildEpics(t *testing.T) {
 	}
 	if got != rootID {
 		t.Errorf("got %s, want root %s (not child %s)", got, rootID, childID)
+	}
+}
+
+func TestInferMolecule_FindsViaInProgressStep(t *testing.T) {
+	ctx := context.Background()
+	s := newMolStore(t)
+
+	// Create a molecule: root epic + child task.
+	root := createMolIssue(t, ctx, s, "My Molecule", issuestorage.TypeEpic)
+	child := createMolIssue(t, ctx, s, "Step 1", issuestorage.TypeTask)
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency parent-child: %v", err)
+	}
+
+	// Set child to in_progress and assign to actor.
+	if err := s.Modify(ctx, child.ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusInProgress
+		i.Assignee = "alice"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify child: %v", err)
+	}
+
+	got, err := InferMolecule(ctx, s, "alice")
+	if err != nil {
+		t.Fatalf("InferMolecule: %v", err)
+	}
+	if got != root.ID {
+		t.Errorf("got %s, want root %s", got, root.ID)
+	}
+}
+
+func TestInferMolecule_FindsViaHookedStep(t *testing.T) {
+	ctx := context.Background()
+	s := newMolStore(t)
+
+	// Create a molecule: root epic + child task.
+	root := createMolIssue(t, ctx, s, "My Molecule", issuestorage.TypeEpic)
+	child := createMolIssue(t, ctx, s, "Step 1", issuestorage.TypeTask)
+	if err := s.AddDependency(ctx, child.ID, root.ID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency parent-child: %v", err)
+	}
+
+	// Create a hooked issue that blocks the child step.
+	hooked := createMolIssue(t, ctx, s, "Hooked Gate", issuestorage.TypeGate)
+	if err := s.Modify(ctx, hooked.ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusHooked
+		i.Assignee = "bob"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify hooked: %v", err)
+	}
+	if err := s.AddDependency(ctx, hooked.ID, child.ID, issuestorage.DepTypeBlocks); err != nil {
+		t.Fatalf("AddDependency blocks: %v", err)
+	}
+
+	got, err := InferMolecule(ctx, s, "bob")
+	if err != nil {
+		t.Fatalf("InferMolecule: %v", err)
+	}
+	if got != root.ID {
+		t.Errorf("got %s, want root %s", got, root.ID)
+	}
+}
+
+func TestInferMolecule_InProgressTakesPrecedence(t *testing.T) {
+	ctx := context.Background()
+	s := newMolStore(t)
+
+	// Molecule A: root + in_progress child assigned to alice.
+	rootA := createMolIssue(t, ctx, s, "Molecule A", issuestorage.TypeEpic)
+	childA := createMolIssue(t, ctx, s, "Step A1", issuestorage.TypeTask)
+	if err := s.AddDependency(ctx, childA.ID, rootA.ID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency parent-child A: %v", err)
+	}
+	if err := s.Modify(ctx, childA.ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusInProgress
+		i.Assignee = "alice"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify childA: %v", err)
+	}
+
+	// Molecule B: root + child step, with hooked issue blocking it, assigned to alice.
+	rootB := createMolIssue(t, ctx, s, "Molecule B", issuestorage.TypeEpic)
+	childB := createMolIssue(t, ctx, s, "Step B1", issuestorage.TypeTask)
+	if err := s.AddDependency(ctx, childB.ID, rootB.ID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("AddDependency parent-child B: %v", err)
+	}
+	hooked := createMolIssue(t, ctx, s, "Hooked Gate", issuestorage.TypeGate)
+	if err := s.Modify(ctx, hooked.ID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusHooked
+		i.Assignee = "alice"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify hooked: %v", err)
+	}
+	if err := s.AddDependency(ctx, hooked.ID, childB.ID, issuestorage.DepTypeBlocks); err != nil {
+		t.Fatalf("AddDependency blocks: %v", err)
+	}
+
+	// In-progress should take precedence over hooked.
+	got, err := InferMolecule(ctx, s, "alice")
+	if err != nil {
+		t.Fatalf("InferMolecule: %v", err)
+	}
+	if got != rootA.ID {
+		t.Errorf("got %s, want rootA %s (in_progress should take precedence over hooked rootB %s)", got, rootA.ID, rootB.ID)
 	}
 }
 

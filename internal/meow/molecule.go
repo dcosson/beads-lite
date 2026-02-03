@@ -38,6 +38,7 @@ type ProgressStats struct {
 
 // Current returns the classified steps of a molecule.
 // If opts.MoleculeID is empty, InferMolecule is used to find the active molecule.
+// Returns (nil, nil) when inference finds no active molecule.
 func Current(ctx context.Context, store issuestorage.IssueStore, opts CurrentOptions) (*MoleculeView, error) {
 	molID := opts.MoleculeID
 	if molID == "" {
@@ -48,6 +49,9 @@ func Current(ctx context.Context, store issuestorage.IssueStore, opts CurrentOpt
 		inferred, err := InferMolecule(ctx, store, actor)
 		if err != nil {
 			return nil, fmt.Errorf("infer molecule: %w", err)
+		}
+		if inferred == "" {
+			return nil, nil
 		}
 		molID = inferred
 	}
@@ -192,32 +196,86 @@ func FindStaleSteps(ctx context.Context, store issuestorage.IssueStore, molID st
 	return stale, nil
 }
 
-// InferMolecule finds the active molecule for the given actor by looking for
-// an in_progress epic with no parent that is assigned to the actor.
+// InferMolecule finds the active molecule for the given actor using a two-step
+// fallback strategy:
+//  1. Find any in_progress issue assigned to the actor, walk up to the molecule root.
+//  2. Find any hooked issue assigned to the actor, check its blocks deps for molecule roots.
+//
+// Returns ("", nil) when no molecule is found — callers should treat empty string
+// as "nothing assigned" rather than an error.
 func InferMolecule(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
+	// Step 1: find via in_progress issues.
+	if molID, err := findInProgressMolecules(ctx, store, actor); err != nil {
+		return "", err
+	} else if molID != "" {
+		return molID, nil
+	}
+
+	// Step 2: fall back to hooked issues.
+	if molID, err := findHookedMolecules(ctx, store, actor); err != nil {
+		return "", err
+	} else if molID != "" {
+		return molID, nil
+	}
+
+	return "", nil
+}
+
+// findInProgressMolecules looks for in_progress issues assigned to the actor,
+// walks each up to its molecule root, and returns the first root found.
+func findInProgressMolecules(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
 	status := issuestorage.StatusInProgress
-	epicType := issuestorage.TypeEpic
 	issues, err := store.List(ctx, &issuestorage.ListFilter{
 		Status:   &status,
-		Type:     &epicType,
 		Assignee: &actor,
 	})
 	if err != nil {
-		return "", fmt.Errorf("list in_progress epics for %s: %w", actor, err)
+		return "", fmt.Errorf("list in_progress issues for %s: %w", actor, err)
 	}
 
-	// Filter to root epics (no parent).
-	var roots []*issuestorage.Issue
+	seen := make(map[string]bool)
 	for _, issue := range issues {
-		if issue.Parent == "" {
-			roots = append(roots, issue)
+		root, err := graph.FindMoleculeRoot(ctx, store, issue.ID)
+		if err != nil {
+			return "", fmt.Errorf("find molecule root for %s: %w", issue.ID, err)
+		}
+		if seen[root.ID] {
+			continue
+		}
+		seen[root.ID] = true
+		return root.ID, nil
+	}
+	return "", nil
+}
+
+// findHookedMolecules looks for hooked issues assigned to the actor, checks
+// their blocks dependencies to find molecule roots.
+func findHookedMolecules(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
+	status := issuestorage.StatusHooked
+	issues, err := store.List(ctx, &issuestorage.ListFilter{
+		Status:   &status,
+		Assignee: &actor,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list hooked issues for %s: %w", actor, err)
+	}
+
+	depType := issuestorage.DepTypeBlocks
+	seen := make(map[string]bool)
+	for _, issue := range issues {
+		for _, blocksID := range issue.DependencyIDs(&depType) {
+			root, err := graph.FindMoleculeRoot(ctx, store, blocksID)
+			if err != nil {
+				// The blocks target may not exist; skip it.
+				continue
+			}
+			if seen[root.ID] {
+				continue
+			}
+			seen[root.ID] = true
+			return root.ID, nil
 		}
 	}
-
-	if len(roots) == 0 {
-		return "", fmt.Errorf("no in_progress molecule found for actor %q", actor)
-	}
-
-	return roots[0].ID, nil
+	return "", nil
 }
 

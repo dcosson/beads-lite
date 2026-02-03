@@ -136,14 +136,18 @@ func TestMolCurrentWithFlags(t *testing.T) {
 	}
 }
 
-func TestMolCurrentMissingArg(t *testing.T) {
+func TestMolCurrentNoArg_ShowsHint(t *testing.T) {
 	app, _ := setupTestApp(t)
 
 	cmd := newMolCurrentCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{})
 	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error for missing arg, got nil")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	out := app.Out.(*bytes.Buffer).String()
+	if !strings.Contains(out, "No molecules in progress") {
+		t.Errorf("expected hint message, got %q", out)
 	}
 }
 

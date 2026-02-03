@@ -274,7 +274,7 @@ Examples:
   bd mol current bd-a1b2
   bd mol current bd-a1b2 --for alice --limit 10
   bd mol current bd-a1b2 --range step1-step5`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -282,9 +282,21 @@ Examples:
 			}
 
 			opts := meow.CurrentOptions{
-				MoleculeID: args[0],
-				Actor:      actor,
-				Limit:      limit,
+				Actor: actor,
+				Limit: limit,
+			}
+
+			if len(args) == 1 {
+				opts.MoleculeID = args[0]
+			} else {
+				// No arg: resolve actor for inference.
+				resolvedActor, err := resolveActor(app)
+				if err != nil {
+					return err
+				}
+				if opts.Actor == "" {
+					opts.Actor = resolvedActor
+				}
 			}
 
 			if rangeFlag != "" {
@@ -298,6 +310,12 @@ Examples:
 			result, err := meow.Current(cmd.Context(), app.Storage, opts)
 			if err != nil {
 				return fmt.Errorf("current: %w", err)
+			}
+
+			if result == nil {
+				fmt.Fprintln(app.Out, "No molecules in progress.")
+				fmt.Fprintln(app.Out, "Hint: use `bd mol pour` to create one, or `bd update --status in_progress` to start a step.")
+				return nil
 			}
 
 			if app.JSON {
