@@ -174,33 +174,6 @@ func (fs *FilesystemStorage) acquireLock(id string) (*issueLock, error) {
 	return &issueLock{file: f, path: lockPath}, nil
 }
 
-// acquireLocksOrdered acquires locks on multiple issues in sorted order to prevent deadlocks.
-func (fs *FilesystemStorage) acquireLocksOrdered(ids []string) ([]*issueLock, error) {
-	sorted := make([]string, len(ids))
-	copy(sorted, ids)
-	sort.Strings(sorted)
-
-	locks := make([]*issueLock, 0, len(sorted))
-	for _, id := range sorted {
-		lock, err := fs.acquireLock(id)
-		if err != nil {
-			// Release already-acquired locks
-			for _, l := range locks {
-				l.release()
-			}
-			return nil, err
-		}
-		locks = append(locks, lock)
-	}
-
-	return locks, nil
-}
-
-func releaseLocks(locks []*issueLock) {
-	for i := len(locks) - 1; i >= 0; i-- {
-		locks[i].release()
-	}
-}
 
 // countAllIssues returns the total number of JSON issue files across all directories.
 func (fs *FilesystemStorage) countAllIssues() (int, error) {
@@ -719,7 +692,7 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, depends
 		return fs.addParentChildDep(ctx, issueID, dependsOnID)
 	}
 
-	// Check for cycle before acquiring locks
+	// Optimistic cycle check before locking
 	hasCycle, err := fs.hasDependencyCycle(ctx, issueID, dependsOnID)
 	if err != nil {
 		return err
@@ -728,52 +701,29 @@ func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, depends
 		return issuestorage.ErrCycle
 	}
 
-	locks, err := fs.acquireLocksOrdered([]string{issueID, dependsOnID})
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	issue, err := fs.Get(ctx, issueID)
-	if err != nil {
-		return err
-	}
-	dependsOn, err := fs.Get(ctx, dependsOnID)
-	if err != nil {
+	// Add dependency to the source issue
+	if err := fs.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		if !issue.HasDependency(dependsOnID) {
+			issue.Dependencies = append(issue.Dependencies, issuestorage.Dependency{ID: dependsOnID, Type: depType})
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	// Re-check for cycle after acquiring locks (data may have changed)
-	hasCycle, err = fs.hasDependencyCycle(ctx, issueID, dependsOnID)
-	if err != nil {
-		return err
-	}
-	if hasCycle {
-		return issuestorage.ErrCycle
-	}
-
-	// Add to issue's dependencies
-	if !issue.HasDependency(dependsOnID) {
-		issue.Dependencies = append(issue.Dependencies, issuestorage.Dependency{ID: dependsOnID, Type: depType})
-	}
-	// Add to dependsOn's dependents
-	if !dependsOn.HasDependent(issueID) {
-		dependsOn.Dependents = append(dependsOn.Dependents, issuestorage.Dependency{ID: issueID, Type: depType})
-	}
-
-	issue.UpdatedAt = time.Now()
-	dependsOn.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == issuestorage.StatusClosed), issue); err != nil {
-		return err
-	}
-	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == issuestorage.StatusClosed), dependsOn)
+	// Add inverse dependent to the target issue
+	return fs.Modify(ctx, dependsOnID, func(dep *issuestorage.Issue) error {
+		if !dep.HasDependent(issueID) {
+			dep.Dependents = append(dep.Dependents, issuestorage.Dependency{ID: issueID, Type: depType})
+		}
+		return nil
+	})
 }
 
 // addParentChildDep handles AddDependency with parent-child type.
 // Sets the Parent field and handles reparenting (removing old parent).
 func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, parentID string) error {
-	// Check for hierarchy cycle before acquiring locks
+	// Optimistic cycle check before locking
 	hasCycle, err := fs.hasHierarchyCycle(ctx, childID, parentID)
 	if err != nil {
 		return err
@@ -782,141 +732,84 @@ func (fs *FilesystemStorage) addParentChildDep(ctx context.Context, childID, par
 		return issuestorage.ErrCycle
 	}
 
-	// Get the current child to check for old parent
-	child, err := fs.Get(ctx, childID)
-	if err != nil {
-		return err
-	}
-
-	ids := []string{childID, parentID}
-	if child.Parent != "" && child.Parent != parentID {
-		ids = append(ids, child.Parent)
-	}
-
-	locks, err := fs.acquireLocksOrdered(ids)
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	// Re-read after locking
-	child, err = fs.Get(ctx, childID)
-	if err != nil {
-		return err
-	}
-	parent, err := fs.Get(ctx, parentID)
-	if err != nil {
-		return err
-	}
-
-	// Re-check for cycle after acquiring locks
-	hasCycle, err = fs.hasHierarchyCycle(ctx, childID, parentID)
-	if err != nil {
-		return err
-	}
-	if hasCycle {
-		return issuestorage.ErrCycle
-	}
-
-	// Remove from old parent if exists
-	if child.Parent != "" && child.Parent != parentID {
-		oldParent, err := fs.Get(ctx, child.Parent)
-		if err == nil {
-			oldParent.Dependents = removeDep(oldParent.Dependents, childID)
-			oldParent.UpdatedAt = time.Now()
-			atomicWriteJSON(fs.issuePath(child.Parent, oldParent.Status == issuestorage.StatusClosed), oldParent)
+	// Modify the child: set parent, remove old parent dep, add new parent dep
+	var oldParentID string
+	if err := fs.Modify(ctx, childID, func(child *issuestorage.Issue) error {
+		// Remove from old parent's dependency list on the child side
+		if child.Parent != "" && child.Parent != parentID {
+			oldParentID = child.Parent
+			child.Dependencies = removeDep(child.Dependencies, child.Parent)
 		}
-		child.Dependencies = removeDep(child.Dependencies, child.Parent)
-	}
 
-	child.Parent = parentID
-
-	// Add parent-child typed dependency
-	if !child.HasDependency(parentID) {
-		child.Dependencies = append(child.Dependencies, issuestorage.Dependency{ID: parentID, Type: issuestorage.DepTypeParentChild})
-	}
-	if !parent.HasDependent(childID) {
-		parent.Dependents = append(parent.Dependents, issuestorage.Dependency{ID: childID, Type: issuestorage.DepTypeParentChild})
-	}
-
-	child.UpdatedAt = time.Now()
-	parent.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(childID, child.Status == issuestorage.StatusClosed), child); err != nil {
+		child.Parent = parentID
+		if !child.HasDependency(parentID) {
+			child.Dependencies = append(child.Dependencies, issuestorage.Dependency{ID: parentID, Type: issuestorage.DepTypeParentChild})
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(parentID, parent.Status == issuestorage.StatusClosed), parent)
+
+	// Remove child from old parent's dependents
+	if oldParentID != "" {
+		_ = fs.Modify(ctx, oldParentID, func(oldParent *issuestorage.Issue) error {
+			oldParent.Dependents = removeDep(oldParent.Dependents, childID)
+			return nil
+		})
+	}
+
+	// Add child to new parent's dependents
+	return fs.Modify(ctx, parentID, func(parent *issuestorage.Issue) error {
+		if !parent.HasDependent(childID) {
+			parent.Dependents = append(parent.Dependents, issuestorage.Dependency{ID: childID, Type: issuestorage.DepTypeParentChild})
+		}
+		return nil
+	})
 }
 
 // RemoveDependency removes a dependency relationship by ID from both sides.
 // If the removed dep was parent-child, also clears issueID.Parent.
 func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, issueID, dependsOnID string) error {
-	locks, err := fs.acquireLocksOrdered([]string{issueID, dependsOnID})
-	if err != nil {
-		return err
-	}
-	defer releaseLocks(locks)
-
-	issue, err := fs.Get(ctx, issueID)
-	if err != nil {
-		return err
-	}
-	dependsOn, err := fs.Get(ctx, dependsOnID)
-	if err != nil {
-		return err
-	}
-
-	// Check if this is a parent-child dep — clear Parent field
-	for _, dep := range issue.Dependencies {
-		if dep.ID == dependsOnID && dep.Type == issuestorage.DepTypeParentChild {
-			issue.Parent = ""
-			break
+	// Remove dependency from the source issue
+	if err := fs.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		// Check if this is a parent-child dep — clear Parent field
+		for _, dep := range issue.Dependencies {
+			if dep.ID == dependsOnID && dep.Type == issuestorage.DepTypeParentChild {
+				issue.Parent = ""
+				break
+			}
 		}
-	}
-
-	issue.Dependencies = removeDep(issue.Dependencies, dependsOnID)
-	dependsOn.Dependents = removeDep(dependsOn.Dependents, issueID)
-
-	issue.UpdatedAt = time.Now()
-	dependsOn.UpdatedAt = time.Now()
-
-	if err := atomicWriteJSON(fs.issuePath(issueID, issue.Status == issuestorage.StatusClosed), issue); err != nil {
+		issue.Dependencies = removeDep(issue.Dependencies, dependsOnID)
+		return nil
+	}); err != nil {
 		return err
 	}
-	return atomicWriteJSON(fs.issuePath(dependsOnID, dependsOn.Status == issuestorage.StatusClosed), dependsOn)
+
+	// Remove inverse dependent from the target issue
+	return fs.Modify(ctx, dependsOnID, func(dep *issuestorage.Issue) error {
+		dep.Dependents = removeDep(dep.Dependents, issueID)
+		return nil
+	})
 }
 
 // AddComment adds a comment to an issue.
 func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, comment *issuestorage.Comment) error {
-	lock, err := fs.acquireLock(issueID)
-	if err != nil {
-		return err
-	}
-	defer lock.release()
-
-	issue, err := fs.Get(ctx, issueID)
-	if err != nil {
-		return err
-	}
-
-	if comment.ID == 0 {
-		maxID := 0
-		for _, c := range issue.Comments {
-			if c.ID > maxID {
-				maxID = c.ID
+	return fs.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		if comment.ID == 0 {
+			maxID := 0
+			for _, c := range issue.Comments {
+				if c.ID > maxID {
+					maxID = c.ID
+				}
 			}
+			comment.ID = maxID + 1
 		}
-		comment.ID = maxID + 1
-	}
-	if comment.CreatedAt.IsZero() {
-		comment.CreatedAt = time.Now()
-	}
-
-	issue.Comments = append(issue.Comments, *comment)
-	issue.UpdatedAt = time.Now()
-
-	isClosed := issue.Status == issuestorage.StatusClosed
-	return atomicWriteJSON(fs.issuePath(issueID, isClosed), issue)
+		if comment.CreatedAt.IsZero() {
+			comment.CreatedAt = time.Now()
+		}
+		issue.Comments = append(issue.Comments, *comment)
+		return nil
+	})
 }
 
 // Doctor checks for and optionally fixes inconsistencies.
