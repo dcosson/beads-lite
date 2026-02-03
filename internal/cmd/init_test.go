@@ -204,14 +204,14 @@ func TestInit(t *testing.T) {
 		}
 
 		// Verify all default keys are present as flat key-value pairs
-		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "id.prefix", "project.name"} {
+		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "issue_prefix", "project.name"} {
 			if _, ok := store.Get(key); !ok {
 				t.Errorf("config missing key %q", key)
 			}
 		}
 	})
 
-	t.Run("uses prefix flag for id.prefix config", func(t *testing.T) {
+	t.Run("uses prefix flag for issue_prefix config", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		oldWd, err := os.Getwd()
@@ -237,8 +237,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("id.prefix"); v != "myp-" {
-			t.Errorf("config id.prefix = %q, want %q", v, "myp-")
+		if v, _ := store.Get("issue_prefix"); v != "myp-" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
 		}
 	})
 
@@ -268,8 +268,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("id.prefix"); v != "myp-" {
-			t.Errorf("config id.prefix = %q, want %q", v, "myp-")
+		if v, _ := store.Get("issue_prefix"); v != "myp-" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
 		}
 	})
 
@@ -299,8 +299,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("id.prefix"); v != "bd-" {
-			t.Errorf("config id.prefix = %q, want %q", v, "bd-")
+		if v, _ := store.Get("issue_prefix"); v != "bd-" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "bd-")
 		}
 	})
 

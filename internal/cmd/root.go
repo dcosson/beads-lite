@@ -72,7 +72,7 @@ func (p *AppProvider) init() (*App, error) {
 		}
 	}
 	prefix := "bd-"
-	if v, ok := configStore.Get("id.prefix"); ok {
+	if v, ok := configStore.Get("issue_prefix"); ok {
 		prefix = v
 	}
 

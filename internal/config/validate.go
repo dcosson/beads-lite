@@ -11,7 +11,7 @@ import (
 var validValues = map[string][]string{
 	"defaults.priority":   {"critical", "high", "medium", "low", "backlog"},
 	"defaults.type":       {"task", "bug", "feature", "epic", "chore"},
-	"id.prefix":           {},
+	"issue_prefix":        {},
 	"actor":               {},
 	"project.name":        {},
 	"hierarchy.max_depth": {},

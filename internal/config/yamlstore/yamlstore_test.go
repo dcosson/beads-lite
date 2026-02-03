@@ -233,7 +233,7 @@ func TestRoundTrip(t *testing.T) {
 		"actor":             "alice",
 		"defaults.priority": "high",
 		"defaults.type":     "bug",
-		"id.prefix":         "test-",
+		"issue_prefix":         "test-",
 		"project.name":      "myproject",
 	}
 	for k, v := range keys {

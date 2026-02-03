@@ -22,7 +22,7 @@ func newConfigCmd(provider *AppProvider) *cobra.Command {
 		Long: `Manage beads configuration settings.
 
 Configuration is stored as flat key-value pairs. Both core keys
-(actor, defaults.priority, id.prefix, etc.) and custom keys are supported.
+(actor, defaults.priority, issue_prefix, etc.) and custom keys are supported.
 
 Subcommands:
   get       Get a configuration value
@@ -404,7 +404,7 @@ func issuePrefixFromConfigDir(configDir string) string {
 	parent := filepath.Dir(configDir)
 	base := filepath.Base(parent)
 	if base == "." || base == string(filepath.Separator) || base == "" {
-		return "beads-sandbox"
+		return "id-"
 	}
 	return base
 }

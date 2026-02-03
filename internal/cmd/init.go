@@ -109,12 +109,12 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 		if !strings.HasSuffix(prefix, "-") {
 			prefix += "-"
 		}
-		if err := store.Set("id.prefix", prefix); err != nil {
+		if err := store.Set("issue_prefix", prefix); err != nil {
 			return fmt.Errorf("setting id prefix: %w", err)
 		}
 	}
 
-	idPrefix, _ := store.Get("id.prefix")
+	idPrefix, _ := store.Get("issue_prefix")
 
 	dataPath := filepath.Join(beadsPath, projectName)
 

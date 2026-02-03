@@ -44,11 +44,11 @@ func (n *Normalizer) SetSandboxPath(path string) {
 var (
 	// Match beads-lite IDs (bd-XXXX with optional .N.N suffix), original beads IDs
 	// (e2etests-XXX with optional .N.N suffix), or sandbox IDs
-	// (beads-sandbox-XXXXXXXX-XXX-YYY with optional extra suffix and .N.N suffix).
+	// (id-XXXXXXXX-XXX-YYY with optional extra suffix and .N.N suffix).
 	// The (\.\d+)* captures hierarchical child IDs like bd-a1f3.1 or e2etests-abc.1.2
 	// The (-[0-9a-z]+)? captures the extra ID suffix the reference binary adds
-	// in non-daemon mode (e.g., beads-sandbox-XXXXXXXX-abc-43c).
-	issueIDPattern   = regexp.MustCompile(`(bd-(?:mol|wisp)-[0-9a-z]{3,8}(\.\d+)*|bd-[0-9a-z]{3,8}(\.\d+)*|bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|ISSUE_[0-9A-Za-z]{2}-[0-9A-Za-z]{3}(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{3,8}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*|beads-sandbox-[A-Za-z0-9]+(\.\d+)*)`)
+	// in non-daemon mode (e.g., id-XXXXXXXX-abc-43c).
+	issueIDPattern   = regexp.MustCompile(`(bd-(?:mol|wisp)-[0-9a-z]{3,8}(\.\d+)*|bd-[0-9a-z]{3,8}(\.\d+)*|bd-[0-9a-f]{4}(\.\d+)*|bd-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{3}(\.\d+)*|e2etests-[0-9a-z]{2}-[0-9a-z]{3}(\.\d+)*|ISSUE_[0-9A-Za-z]{2}-[0-9A-Za-z]{3}(\.\d+)*|id-[A-Za-z0-9]+-[0-9a-z]{3,8}(-[0-9a-z]+)?(\.\d+)*|id-[A-Za-z0-9]+-[0-9a-z]{2}-[0-9a-z]{3}(-[0-9a-z]+)?(\.\d+)*|id-[A-Za-z0-9]+(\.\d+)*)`)
 	commentIDPattern = regexp.MustCompile(`c-[0-9a-f]{4}`)
 	timestampPattern = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z)`)
 )

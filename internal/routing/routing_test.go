@@ -153,7 +153,7 @@ func setupBeadsDir(t *testing.T, parentDir, prefix string) string {
 	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	config := "actor: test\nproject.name: issues\nid.prefix: " + prefix + "\n"
+	config := "actor: test\nproject.name: issues\nissue_prefix: " + prefix + "\n"
 	if err := os.WriteFile(filepath.Join(beadsDir, "config.yaml"), []byte(config), 0644); err != nil {
 		t.Fatal(err)
 	}
