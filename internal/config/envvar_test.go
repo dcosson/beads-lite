@@ -8,9 +8,7 @@ func TestApplyEnvOverrides_Actor(t *testing.T) {
 	t.Setenv(EnvActor, "test-actor")
 
 	s := &memStore{data: map[string]string{"actor": "${USER}"}}
-	if err := ApplyEnvOverrides(s); err != nil {
-		t.Fatalf("ApplyEnvOverrides: %v", err)
-	}
+	ApplyEnvOverrides(s)
 
 	if v, _ := s.Get("actor"); v != "test-actor" {
 		t.Errorf("actor = %q, want %q", v, "test-actor")
@@ -21,9 +19,7 @@ func TestApplyEnvOverrides_Project(t *testing.T) {
 	t.Setenv(EnvProject, "test-project")
 
 	s := &memStore{data: map[string]string{"project.name": "issues"}}
-	if err := ApplyEnvOverrides(s); err != nil {
-		t.Fatalf("ApplyEnvOverrides: %v", err)
-	}
+	ApplyEnvOverrides(s)
 
 	if v, _ := s.Get("project.name"); v != "test-project" {
 		t.Errorf("project.name = %q, want %q", v, "test-project")
@@ -38,9 +34,7 @@ func TestApplyEnvOverrides_NoOverride(t *testing.T) {
 		"actor":        "${USER}",
 		"project.name": "issues",
 	}}
-	if err := ApplyEnvOverrides(s); err != nil {
-		t.Fatalf("ApplyEnvOverrides: %v", err)
-	}
+	ApplyEnvOverrides(s)
 
 	if v, _ := s.Get("actor"); v != "${USER}" {
 		t.Errorf("actor = %q, want %q (should not change)", v, "${USER}")
@@ -59,9 +53,7 @@ func TestApplyEnvOverrides_Both(t *testing.T) {
 		"project.name":      "issues",
 		"defaults.priority": "medium",
 	}}
-	if err := ApplyEnvOverrides(s); err != nil {
-		t.Fatalf("ApplyEnvOverrides: %v", err)
-	}
+	ApplyEnvOverrides(s)
 
 	if v, _ := s.Get("actor"); v != "env-actor" {
 		t.Errorf("actor = %q, want %q", v, "env-actor")

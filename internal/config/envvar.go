@@ -12,17 +12,13 @@ const (
 )
 
 // ApplyEnvOverrides checks BD_ACTOR and BD_PROJECT env vars
-// and overrides the corresponding config values if set.
-func ApplyEnvOverrides(s Store) error {
+// and overrides the corresponding config values in memory.
+// These overrides are not persisted to the config file.
+func ApplyEnvOverrides(s Store) {
 	if actor := os.Getenv(EnvActor); actor != "" {
-		if err := s.Set("actor", actor); err != nil {
-			return err
-		}
+		s.SetInMemory("actor", actor)
 	}
 	if project := os.Getenv(EnvProject); project != "" {
-		if err := s.Set("project.name", project); err != nil {
-			return err
-		}
+		s.SetInMemory("project.name", project)
 	}
-	return nil
 }

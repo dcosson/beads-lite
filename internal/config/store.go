@@ -10,6 +10,11 @@ type Store interface {
 	// Set writes key=value to the store and persists to disk.
 	Set(key, value string) error
 
+	// SetInMemory writes key=value to the in-memory store without persisting.
+	// Use this for runtime overrides (defaults, env vars) that should not be
+	// written back to the config file.
+	SetInMemory(key, value string)
+
 	// Unset removes key from the store and persists to disk.
 	Unset(key string) error
 

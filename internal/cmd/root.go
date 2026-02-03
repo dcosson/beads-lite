@@ -62,12 +62,8 @@ func (p *AppProvider) init() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := config.ApplyDefaults(configStore); err != nil {
-		return nil, err
-	}
-	if err := config.ApplyEnvOverrides(configStore); err != nil {
-		return nil, err
-	}
+	config.ApplyDefaults(configStore)
+	config.ApplyEnvOverrides(configStore)
 
 	var fsOpts []filesystem.Option
 	if v, ok := configStore.Get("hierarchy.max_depth"); ok {

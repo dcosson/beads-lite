@@ -69,6 +69,11 @@ func (s *YAMLStore) Set(key, value string) error {
 	})
 }
 
+// SetInMemory writes key=value to the in-memory store without persisting.
+func (s *YAMLStore) SetInMemory(key, value string) {
+	s.data[key] = value
+}
+
 // Unset removes key and persists to disk.
 func (s *YAMLStore) Unset(key string) error {
 	return s.withLock(func() {

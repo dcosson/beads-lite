@@ -39,9 +39,7 @@ func TestApplyDefaults(t *testing.T) {
 		"actor": "alice",
 	}}
 
-	if err := ApplyDefaults(s); err != nil {
-		t.Fatalf("ApplyDefaults: %v", err)
-	}
+	ApplyDefaults(s)
 
 	// Pre-existing key should not be overwritten
 	if v, _ := s.Get("actor"); v != "alice" {
@@ -69,9 +67,7 @@ func TestApplyDefaults_AllPresent(t *testing.T) {
 		"project.name":      "work",
 	}}
 
-	if err := ApplyDefaults(s); err != nil {
-		t.Fatalf("ApplyDefaults: %v", err)
-	}
+	ApplyDefaults(s)
 
 	// No values should change
 	if v, _ := s.Get("defaults.priority"); v != "high" {
@@ -177,6 +173,10 @@ func (m *memStore) Get(key string) (string, bool) {
 func (m *memStore) Set(key, value string) error {
 	m.data[key] = value
 	return nil
+}
+
+func (m *memStore) SetInMemory(key, value string) {
+	m.data[key] = value
 }
 
 func (m *memStore) Unset(key string) error {

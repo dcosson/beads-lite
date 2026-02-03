@@ -97,8 +97,10 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	if err != nil {
 		return fmt.Errorf("creating config store: %w", err)
 	}
-	if err := config.ApplyDefaults(store); err != nil {
-		return fmt.Errorf("writing default config: %w", err)
+	for k, v := range config.DefaultValues() {
+		if err := store.Set(k, v); err != nil {
+			return fmt.Errorf("writing default config: %w", err)
+		}
 	}
 	if err := store.Set("project.name", projectName); err != nil {
 		return fmt.Errorf("setting project name: %w", err)

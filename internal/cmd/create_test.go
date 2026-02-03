@@ -632,6 +632,10 @@ func (m *mapConfigStore) Set(key, value string) error {
 	return nil
 }
 
+func (m *mapConfigStore) SetInMemory(key, value string) {
+	m.data[key] = value
+}
+
 func (m *mapConfigStore) Unset(key string) error {
 	delete(m.data, key)
 	return nil
