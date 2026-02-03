@@ -15,9 +15,10 @@ import (
 var compare = flag.Bool("compare", false, "compare against BD_REF_CMD")
 
 const (
-	benchCreateCount = 20
-	benchListCount   = 10
-	benchShowPerID   = 5
+	benchCreateCount    = 20
+	benchListCount      = 20
+	benchShowPerID      = 1
+	benchListFinalCount = 20
 )
 
 type phaseResult struct {
@@ -144,16 +145,18 @@ func runBenchmarkWorkflow(t *testing.T, r *reference.Runner, label string) []pha
 
 	// Phase 6: Final list - verify empty
 	start = time.Now()
-	result := r.Run(sandbox, "list", "--json")
-	if result.ExitCode != 0 {
-		t.Fatalf("[%s] final list: exit %d, stderr: %s", label, result.ExitCode, result.Stderr)
-	}
-	count := countJSONIssues(t, result.Stdout)
-	if count != 0 {
-		t.Fatalf("[%s] final list: expected 0 open issues, got %d", label, count)
+	for i := 0; i < benchListFinalCount; i++ {
+		result := r.Run(sandbox, "list", "--json")
+		if result.ExitCode != 0 {
+			t.Fatalf("[%s] final list iteration %d: exit %d, stderr: %s", label, i, result.ExitCode, result.Stderr)
+		}
+		count := countJSONIssues(t, result.Stdout)
+		if count != 0 {
+			t.Fatalf("[%s] final list iteration %d: expected 0 open issues, got %d", label, i, count)
+		}
 	}
 	results = append(results, phaseResult{
-		name:     "final list",
+		name:     fmt.Sprintf("final list (%dx)", benchListFinalCount),
 		duration: time.Since(start),
 	})
 
