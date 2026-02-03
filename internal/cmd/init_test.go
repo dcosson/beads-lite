@@ -273,7 +273,7 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("uses default prefix when flag not provided", func(t *testing.T) {
+	t.Run("defaults to directory name prefix when flag not provided", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		oldWd, err := os.Getwd()
@@ -299,8 +299,89 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("issue_prefix"); v != "bd-" {
-			t.Errorf("config issue_prefix = %q, want %q", v, "bd-")
+		expected := filepath.Base(tmpDir) + "-"
+		if v, _ := store.Get("issue_prefix"); v != expected {
+			t.Errorf("config issue_prefix = %q, want %q", v, expected)
+		}
+	})
+
+	t.Run("extracts prefix from existing issues on reinit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create .beads dir with issue files but no config.yaml
+		beadsPath := filepath.Join(tmpDir, ".beads")
+		openPath := filepath.Join(beadsPath, "issues", "open")
+		if err := os.MkdirAll(openPath, 0755); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(openPath, "proj-abc.json"),
+			[]byte(`{"id":"proj-abc","title":"test","status":"open"}`), 0644); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{"--force"})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		configPath := filepath.Join(beadsPath, "config.yaml")
+		store, err := yamlstore.New(configPath)
+		if err != nil {
+			t.Fatalf("loading config store: %v", err)
+		}
+		if v, _ := store.Get("issue_prefix"); v != "proj-" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "proj-")
+		}
+	})
+
+	t.Run("preserves existing config prefix on reinit", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getting current directory: %v", err)
+		}
+		defer os.Chdir(oldWd)
+
+		if err := os.Chdir(tmpDir); err != nil {
+			t.Fatalf("changing directory: %v", err)
+		}
+
+		// First init with explicit prefix
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{"--prefix", "myp-"})
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("first init failed: %v", err)
+		}
+
+		// Re-init without prefix flag
+		cmd2 := newInitCmd(provider)
+		cmd2.SetArgs([]string{"--force"})
+		if err := cmd2.Execute(); err != nil {
+			t.Fatalf("reinit failed: %v", err)
+		}
+
+		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
+		store, err := yamlstore.New(configPath)
+		if err != nil {
+			t.Fatalf("loading config store: %v", err)
+		}
+		if v, _ := store.Get("issue_prefix"); v != "myp-" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
 		}
 	})
 

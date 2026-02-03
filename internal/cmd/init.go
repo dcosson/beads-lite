@@ -12,8 +12,10 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
+	"beads-lite/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -97,7 +99,14 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	if err != nil {
 		return fmt.Errorf("creating config store: %w", err)
 	}
+
+	// Save existing issue_prefix before writing defaults (for re-init case).
+	existingPrefix, hasExistingPrefix := store.Get("issue_prefix")
+
 	for k, v := range config.DefaultValues() {
+		if k == "issue_prefix" {
+			continue // Resolved separately below.
+		}
 		if err := store.Set(k, v); err != nil {
 			return fmt.Errorf("writing default config: %w", err)
 		}
@@ -105,18 +114,12 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	if err := store.Set("project.name", projectName); err != nil {
 		return fmt.Errorf("setting project name: %w", err)
 	}
-	if prefix != "" {
-		if !strings.HasSuffix(prefix, "-") {
-			prefix += "-"
-		}
-		if err := store.Set("issue_prefix", prefix); err != nil {
-			return fmt.Errorf("setting id prefix: %w", err)
-		}
-	}
-
-	idPrefix, _ := store.Get("issue_prefix")
 
 	dataPath := filepath.Join(beadsPath, projectName)
+	idPrefix := resolvePrefix(prefix, existingPrefix, hasExistingPrefix, dataPath, absPath)
+	if err := store.Set("issue_prefix", idPrefix); err != nil {
+		return fmt.Errorf("setting issue prefix: %w", err)
+	}
 
 	// Create the issue storage
 	issueStore := filesystem.New(dataPath, idPrefix)
@@ -153,4 +156,48 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 
 	fmt.Fprintf(out, "Initialized beads-lite repository at %s\n", beadsPath)
 	return nil
+}
+
+// resolvePrefix determines the issue_prefix using a fallback chain:
+//  1. Explicit --prefix flag value
+//  2. Existing config value (re-init case)
+//  3. Prefix extracted from existing issue files
+//  4. Current directory name
+func resolvePrefix(flagValue, existingConfig string, hasExistingConfig bool, dataPath, absPath string) string {
+	if flagValue != "" {
+		if !strings.HasSuffix(flagValue, "-") {
+			flagValue += "-"
+		}
+		return flagValue
+	}
+	if hasExistingConfig {
+		return existingConfig
+	}
+	if p := extractPrefixFromExistingIssues(dataPath); p != "" {
+		return p
+	}
+	return filepath.Base(absPath) + "-"
+}
+
+// extractPrefixFromExistingIssues scans the data directory for existing issue
+// JSON files and extracts the ID prefix from the first one found.
+func extractPrefixFromExistingIssues(dataPath string) string {
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		dirPath := filepath.Join(dataPath, dir)
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if entry.IsDir() || filepath.Ext(name) != ".json" || strings.Contains(name, ".tmp.") {
+				continue
+			}
+			id := strings.TrimSuffix(name, ".json")
+			if p := routing.ExtractPrefix(id); p != "" {
+				return p
+			}
+		}
+	}
+	return ""
 }
