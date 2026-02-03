@@ -13,6 +13,11 @@ test-e2e: build
 	@test -x "$(BD_LITE_CMD)" || (echo "error: $(BD_LITE_CMD) is not executable" && exit 1)
 	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/... $(ARGS)
 
+test-concurrency:
+	@test -x "$(BD_LITE_CMD)" || (echo "error: bd binary not found at $(BD_LITE_CMD)" && echo "Run 'make build' first or set BD_LITE_CMD" && exit 1)
+	@test -x "$(BD_LITE_CMD)" || (echo "error: $(BD_LITE_CMD) is not executable" && exit 1)
+	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/concurrency -count=50 $(ARGS)
+
 bench-e2e: build
 	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests -run TestBenchmark -v -count=1 $(ARGS)
 
