@@ -4,7 +4,7 @@
 
 # Beads Lite
 
-A small, fast, lightweight drop-in replacement for [beads](https://github.com/anthropics/beads). Beads Lite stores issues as plain JSON files in a `.beads/` directory, making them easy to review, diff, and track alongside your code with no database required.
+A lightweight, drop-in replacement for [beads](https://github.com/anthropics/beads). Beads Lite stores issues as plain JSON files in a `.beads/` directory, making them easy to review, diff, and track alongside your code with no database required.
 
 ## Install
 
@@ -44,8 +44,8 @@ This table tracks implementation status across major feature areas.
 | `.beads/redirect` files | ✅ | ✅ | |
 | `bd config set/get/list/unset` | ✅ | ✅ | |
 | `bd config validate` | ✅ | ✅ | |
-| Custom types (`types.custom`) | ✅ | ⬜ | |
-| Custom statuses (`status.custom`) | ✅ | ⬜ | |
+| Custom types (`types.custom`) | ✅ | ✅ | |
+| Custom statuses (`status.custom`) | ✅ | ✅ | |
 
 ### Issue Tracking
 
@@ -108,7 +108,7 @@ This table tracks implementation status across major feature areas.
 | `bd gate` (async coordination) | ✅ | ✅ | show, list, wait, add-waiter, resolve, check |
 | `bd swarm` (validate, create, status, list) | ✅ | ✅ | |
 | Seed patrol (formula seeding) | ✅ | ✅ | |
-| `bd merge-slot` (serialized conflict resolution) | ✅ | ✅ | Built on KV storage |
+| `bd merge-slot` (serialized conflict resolution) | ✅ | ✅ | |
 | `bd audit` (append-only activity log) | ✅ | ⬜ | |
 | `bd set-state` / `bd state` | ✅ | ⬜ | |
 | `bd mail` | ✅ | ⬜ | Delegates to `gt mail` |
@@ -137,9 +137,9 @@ This table tracks implementation status across major feature areas.
 
 | Feature | beads | beads-lite | Notes |
 |---------|:-----:|:----------:|-------|
-| JSONL sync (`bd sync`) | ✅ | ⬜ | Accepted as no-op for compatibility |
-| Daemon (background sync) | ✅ | ⬜ | Not needed (no DB) |
-| Dolt backend (branching, history, diff) | ✅ | ⬜ | Out of scope |
+| JSONL sync (`bd sync`) | ✅ | ✅ | Accepted as no-op for compatibility |
+| Daemon (background sync) | ✅ | ✅ | Not needed (single source of truth) |
+| Dolt DB backend | ✅ | ⬜ | |
 | Jira / Linear / GitHub integrations | ✅ | ⬜ | |
 | Federation (peer-to-peer sync) | ✅ | ⬜ | |
 | Git merge driver | ✅ | ⬜ | |
