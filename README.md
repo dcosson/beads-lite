@@ -117,8 +117,8 @@ This table tracks implementation status across major feature areas.
 
 | Feature | beads | beads-lite | Notes |
 |---------|:-----:|:----------:|-------|
-| Issue prefix routing (`routes.json`) | ✅ | ✅ | See ROUTING.md |
-| Town root discovery | ✅ | ⬜ | |
+| Issue prefix routing (`routes.jsonl`) | ✅ | ✅ | See ROUTING.md |
+| Town root discovery | ✅ | ✅ | |
 | Contributor routing (maintainer/contributor workflows) | ✅ | ⬜ | |
 
 ### Compatibility Commands

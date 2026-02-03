@@ -54,7 +54,7 @@ func TestRouting(t *testing.T) {
 	//   ├── .beads/
 	//   │   ├── config.yaml   (id.prefix: hq-)
 	//   │   ├── issues/open/  (hq- issues live here)
-	//   │   └── routes.json   (hq- -> ".", bl- -> "crew/misc")
+	//   │   └── routes.jsonl   (hq- -> ".", bl- -> "crew/misc")
 	//   └── crew/
 	//       └── misc/
 	//           └── .beads/
@@ -68,8 +68,8 @@ func TestRouting(t *testing.T) {
 	mustMkdirAll(t, filepath.Join(hqBeads, "issues", "closed"))
 	mustWriteFile(t, filepath.Join(hqBeads, "config.yaml"),
 		"actor: test\nproject.name: issues\nid.prefix: hq-\ndefaults.priority: medium\ndefaults.type: task\n")
-	mustWriteFile(t, filepath.Join(hqBeads, "routes.json"),
-		`{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "crew/misc"}}}`)
+	mustWriteFile(t, filepath.Join(hqBeads, "routes.jsonl"),
+		"{\"prefix\": \"hq-\", \"path\": \".\"}\n{\"prefix\": \"bl-\", \"path\": \"crew/misc\"}\n")
 
 	rigDir := filepath.Join(townRoot, "crew", "misc")
 	rigBeads := filepath.Join(rigDir, ".beads")
@@ -133,7 +133,7 @@ func TestRouting(t *testing.T) {
 	})
 
 	t.Run("no_routes_file_not_found", func(t *testing.T) {
-		// Without routes.json, a remote-prefix ID is not found locally.
+		// Without routes.jsonl, a remote-prefix ID is not found locally.
 		// In JSON mode, show returns exit 0 with empty output for not-found.
 		noRoutesDir := t.TempDir()
 		noRoutesBeads := filepath.Join(noRoutesDir, ".beads")
@@ -145,7 +145,7 @@ func TestRouting(t *testing.T) {
 		result := r.Run(noRoutesBeads, "show", hqID)
 		// Non-JSON show returns non-zero exit for not-found
 		if result.ExitCode == 0 {
-			t.Fatal("expected non-zero exit when showing remote ID without routes.json")
+			t.Fatal("expected non-zero exit when showing remote ID without routes.jsonl")
 		}
 		if !strings.Contains(result.Stderr, "no issue found") {
 			t.Errorf("expected not-found error, got stderr: %s", result.Stderr)
@@ -160,8 +160,8 @@ func TestRouting(t *testing.T) {
 		mustMkdirAll(t, filepath.Join(rdHQBeads, "issues", "closed"))
 		mustWriteFile(t, filepath.Join(rdHQBeads, "config.yaml"),
 			"actor: test\nproject.name: issues\nid.prefix: hq-\ndefaults.priority: medium\ndefaults.type: task\n")
-		mustWriteFile(t, filepath.Join(rdHQBeads, "routes.json"),
-			`{"prefix_routes": {"hq-": {"path": "."}, "rd-": {"path": "rig"}}}`)
+		mustWriteFile(t, filepath.Join(rdHQBeads, "routes.jsonl"),
+			"{\"prefix\": \"hq-\", \"path\": \".\"}\n{\"prefix\": \"rd-\", \"path\": \"rig\"}\n")
 
 		// Actual .beads at a separate location
 		actualDir := t.TempDir()

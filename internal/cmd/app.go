@@ -22,7 +22,7 @@ type App struct {
 	SlotStore      kvstorage.KVStore
 	AgentStore     kvstorage.KVStore
 	MergeSlotStore kvstorage.KVStore
-	Router         *routing.Router // nil if no routes.json
+	Router         *routing.Router // nil if no routes.jsonl
 	ConfigStore    config.Store
 	ConfigDir      string // path to .beads directory
 	FormulaPath    meow.FormulaSearchPath

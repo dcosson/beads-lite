@@ -3,8 +3,19 @@ package routing
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+// jsonlRoutes builds routes.jsonl content from prefix→path pairs.
+func jsonlRoutes(routes ...string) string {
+	// routes are alternating prefix, path pairs
+	var lines []string
+	for i := 0; i < len(routes); i += 2 {
+		lines = append(lines, `{"prefix": "`+routes[i]+`", "path": "`+routes[i+1]+`"}`)
+	}
+	return strings.Join(lines, "\n") + "\n"
+}
 
 // --- ExtractPrefix tests ---
 
@@ -50,13 +61,8 @@ func TestExtractPrefix_HierarchicalID(t *testing.T) {
 
 func TestLoadRoutes_Valid(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "routes.json")
-	content := `{
-		"prefix_routes": {
-			"hq-": {"path": "."},
-			"bl-": {"path": "crew/misc"}
-		}
-	}`
+	path := filepath.Join(dir, "routes.jsonl")
+	content := jsonlRoutes("hq-", ".", "bl-", "crew/misc")
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +83,7 @@ func TestLoadRoutes_Valid(t *testing.T) {
 }
 
 func TestLoadRoutes_MissingFile(t *testing.T) {
-	routes, err := LoadRoutes("/nonexistent/routes.json")
+	routes, err := LoadRoutes("/nonexistent/routes.jsonl")
 	if err != nil {
 		t.Fatalf("LoadRoutes should not error for missing file: %v", err)
 	}
@@ -88,8 +94,8 @@ func TestLoadRoutes_MissingFile(t *testing.T) {
 
 func TestLoadRoutes_MalformedJSON(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "routes.json")
-	if err := os.WriteFile(path, []byte("{bad json"), 0644); err != nil {
+	path := filepath.Join(dir, "routes.jsonl")
+	if err := os.WriteFile(path, []byte("{bad json\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,10 +105,10 @@ func TestLoadRoutes_MalformedJSON(t *testing.T) {
 	}
 }
 
-func TestLoadRoutes_MissingPrefixRoutes(t *testing.T) {
+func TestLoadRoutes_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "routes.json")
-	if err := os.WriteFile(path, []byte(`{"other_key": "value"}`), 0644); err != nil {
+	path := filepath.Join(dir, "routes.jsonl")
+	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +117,27 @@ func TestLoadRoutes_MissingPrefixRoutes(t *testing.T) {
 		t.Fatalf("LoadRoutes error: %v", err)
 	}
 	if len(routes) != 0 {
-		t.Errorf("expected empty map for missing prefix_routes, got %d routes", len(routes))
+		t.Errorf("expected empty map for empty file, got %d routes", len(routes))
+	}
+}
+
+func TestLoadRoutes_SkipsEmptyLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "routes.jsonl")
+	content := `{"prefix": "hq-", "path": "."}
+
+{"prefix": "bl-", "path": "rig"}
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	routes, err := LoadRoutes(path)
+	if err != nil {
+		t.Fatalf("LoadRoutes error: %v", err)
+	}
+	if len(routes) != 2 {
+		t.Fatalf("expected 2 routes, got %d", len(routes))
 	}
 }
 
@@ -134,15 +160,19 @@ func setupBeadsDir(t *testing.T, parentDir, prefix string) string {
 	return beadsDir
 }
 
-func TestNew_WithRoutesJSON(t *testing.T) {
-	// Create town root with routes.json
-	townRoot := t.TempDir()
-	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "rig"}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
+func writeRoutes(t *testing.T, beadsDir string, routes ...string) {
+	t.Helper()
+	content := jsonlRoutes(routes...)
+	if err := os.WriteFile(filepath.Join(beadsDir, routesFileName), []byte(content), 0644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestNew_WithRoutesJSONL(t *testing.T) {
+	// Create town root with routes.jsonl
+	townRoot := t.TempDir()
+	townBeads := setupBeadsDir(t, townRoot, "hq-")
+	writeRoutes(t, townBeads, "hq-", ".", "bl-", "rig")
 
 	// Create rig .beads inside town
 	rigDir := filepath.Join(townRoot, "rig")
@@ -160,8 +190,8 @@ func TestNew_WithRoutesJSON(t *testing.T) {
 	}
 }
 
-func TestNew_WithoutRoutesJSON(t *testing.T) {
-	// Create a standalone .beads dir with no routes.json anywhere
+func TestNew_WithoutRoutesJSONL(t *testing.T) {
+	// Create a standalone .beads dir with no routes.jsonl anywhere
 	dir := t.TempDir()
 	setupBeadsDir(t, dir, "bl-")
 
@@ -170,18 +200,14 @@ func TestNew_WithoutRoutesJSON(t *testing.T) {
 		t.Fatalf("New error: %v", err)
 	}
 	if router != nil {
-		t.Fatal("expected nil Router when no routes.json exists")
+		t.Fatal("expected nil Router when no routes.jsonl exists")
 	}
 }
 
-func TestNew_WalksUpToFindRoutesJSON(t *testing.T) {
+func TestNew_WalksUpToFindRoutesJSONL(t *testing.T) {
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "a/b/rig"}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".", "bl-", "a/b/rig")
 
 	// Create deeply nested rig
 	rigDir := filepath.Join(townRoot, "a", "b", "rig")
@@ -192,18 +218,14 @@ func TestNew_WalksUpToFindRoutesJSON(t *testing.T) {
 		t.Fatalf("New error: %v", err)
 	}
 	if router == nil {
-		t.Fatal("expected non-nil Router (should walk up to find routes.json)")
+		t.Fatal("expected non-nil Router (should walk up to find routes.jsonl)")
 	}
 }
 
 func TestResolve_LocalPrefix(t *testing.T) {
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "rig"}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".", "bl-", "rig")
 
 	rigDir := filepath.Join(townRoot, "rig")
 	setupBeadsDir(t, rigDir, "bl-")
@@ -233,11 +255,7 @@ func TestResolve_LocalPrefix(t *testing.T) {
 func TestResolve_RemotePrefix(t *testing.T) {
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "rig"}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".", "bl-", "rig")
 
 	rigDir := filepath.Join(townRoot, "rig")
 	setupBeadsDir(t, rigDir, "bl-")
@@ -267,11 +285,7 @@ func TestResolve_RemotePrefix(t *testing.T) {
 func TestResolve_UnknownPrefix(t *testing.T) {
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".")
 
 	router, err := New(townBeads)
 	if err != nil {
@@ -313,11 +327,7 @@ func TestResolve_NilRouter(t *testing.T) {
 func TestResolve_FollowsRedirect(t *testing.T) {
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}, "bl-": {"path": "rig"}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".", "bl-", "rig")
 
 	// Create an actual .beads at a different location
 	actualDir := t.TempDir()
@@ -365,11 +375,7 @@ func TestResolve_SelfRouting(t *testing.T) {
 	// When the route for a prefix points back to the local .beads, isRemote should be false
 	townRoot := t.TempDir()
 	townBeads := setupBeadsDir(t, townRoot, "hq-")
-
-	routesContent := `{"prefix_routes": {"hq-": {"path": "."}}}`
-	if err := os.WriteFile(filepath.Join(townBeads, "routes.json"), []byte(routesContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	writeRoutes(t, townBeads, "hq-", ".")
 
 	// Create Router from the town root's own .beads
 	router, err := New(townBeads)
