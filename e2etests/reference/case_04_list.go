@@ -86,5 +86,12 @@ func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "list by priority P1", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
+	// List by label (singular --label flag for upstream compatibility)
+	result, err = mustRun(r, sandbox, "list", "--label", "urgent", "--json")
+	if err != nil {
+		return "", err
+	}
+	section(&out, "list by label", n.NormalizeJSONSorted([]byte(result.Stdout)))
+
 	return out.String(), nil
 }

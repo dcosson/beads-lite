@@ -44,7 +44,7 @@ Examples:
   bd list --status=in-progress # List in-progress issues
   bd list --type=bug           # List bugs
   bd list --priority=high      # List high priority issues
-  bd list --labels=urgent,v2   # List issues with both labels
+  bd list --label=urgent,v2    # List issues with both labels
   bd list --parent=be-abc      # List children of issue be-abc
   bd list --roots              # List root issues (no parent)
   bd list --assignee=alice     # List issues assigned to alice`,
@@ -191,7 +191,7 @@ Examples:
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
 	cmd.Flags().StringVarP(&issueType, "type", "t", "", "Filter by type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
-	cmd.Flags().StringSliceVarP(&labels, "labels", "l", nil, "Filter by labels (comma-separated, must have all)")
+	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Filter by labels (comma-separated or repeated, must have all)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Filter by parent issue ID")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee")
 	cmd.Flags().BoolVar(&all, "all", false, "List all issues (open and closed)")

@@ -183,3 +183,35 @@
 === list by priority P1 ===
 []
 
+=== list by label ===
+[
+  {
+    "assignee": "alice",
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "depends_on_id": "ISSUE_1",
+        "issue_id": "ISSUE_2",
+        "type": "parent-child"
+      }
+    ],
+    "dependency_count": 1,
+    "dependent_count": 0,
+    "description": "This is a detailed description",
+    "id": "ISSUE_2",
+    "issue_type": "feature",
+    "labels": [
+      "urgent",
+      "v2"
+    ],
+    "owner": "testactor@example.com",
+    "priority": 3,
+    "status": "open",
+    "title": "Feature request",
+    "updated_at": "TIMESTAMP"
+  }
+]
+

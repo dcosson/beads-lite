@@ -339,7 +339,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 	}
 
 	cmd := newListCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"--labels=urgent"})
+	cmd.SetArgs([]string{"--label=urgent"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("list command failed: %v", err)
 	}
