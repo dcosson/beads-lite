@@ -71,7 +71,7 @@ func (p *AppProvider) init() (*App, error) {
 			fsOpts = append(fsOpts, filesystem.WithMaxHierarchyDepth(n))
 		}
 	}
-	prefix := "bd-"
+	prefix := "bd"
 	if v, ok := configStore.Get("issue_prefix"); ok {
 		prefix = v
 	}

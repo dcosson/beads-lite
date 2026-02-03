@@ -165,18 +165,15 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 //  4. Current directory name
 func resolvePrefix(flagValue, existingConfig string, hasExistingConfig bool, dataPath, absPath string) string {
 	if flagValue != "" {
-		if !strings.HasSuffix(flagValue, "-") {
-			flagValue += "-"
-		}
-		return flagValue
+		return strings.TrimRight(flagValue, "-")
 	}
 	if hasExistingConfig {
 		return existingConfig
 	}
 	if p := extractPrefixFromExistingIssues(dataPath); p != "" {
-		return p
+		return strings.TrimRight(p, "-")
 	}
-	return filepath.Base(absPath) + "-"
+	return filepath.Base(absPath)
 }
 
 // extractPrefixFromExistingIssues scans the data directory for existing issue

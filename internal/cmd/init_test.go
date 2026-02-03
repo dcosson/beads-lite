@@ -237,12 +237,12 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("issue_prefix"); v != "myp-" {
-			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
+		if v, _ := store.Get("issue_prefix"); v != "myp" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp")
 		}
 	})
 
-	t.Run("appends dash to prefix if missing", func(t *testing.T) {
+	t.Run("strips dash from prefix flag", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		oldWd, err := os.Getwd()
@@ -268,8 +268,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("issue_prefix"); v != "myp-" {
-			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
+		if v, _ := store.Get("issue_prefix"); v != "myp" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp")
 		}
 	})
 
@@ -299,7 +299,7 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		expected := filepath.Base(tmpDir) + "-"
+		expected := filepath.Base(tmpDir)
 		if v, _ := store.Get("issue_prefix"); v != expected {
 			t.Errorf("config issue_prefix = %q, want %q", v, expected)
 		}
@@ -342,8 +342,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("issue_prefix"); v != "proj-" {
-			t.Errorf("config issue_prefix = %q, want %q", v, "proj-")
+		if v, _ := store.Get("issue_prefix"); v != "proj" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "proj")
 		}
 	})
 
@@ -380,8 +380,8 @@ func TestInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("loading config store: %v", err)
 		}
-		if v, _ := store.Get("issue_prefix"); v != "myp-" {
-			t.Errorf("config issue_prefix = %q, want %q", v, "myp-")
+		if v, _ := store.Get("issue_prefix"); v != "myp" {
+			t.Errorf("config issue_prefix = %q, want %q", v, "myp")
 		}
 	})
 
