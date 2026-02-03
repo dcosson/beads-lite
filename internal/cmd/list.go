@@ -70,7 +70,7 @@ Examples:
 					s := issuestorage.StatusTombstone
 					filter.Status = &s
 				} else {
-					s, err := parseStatus(status)
+					s, err := parseStatus(status, getCustomValues(app, "status.custom"))
 					if err != nil {
 						return err
 					}

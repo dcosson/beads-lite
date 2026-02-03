@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -78,6 +79,88 @@ func TestApplyDefaults_AllPresent(t *testing.T) {
 	}
 	if v, _ := s.Get("actor"); v != "bob" {
 		t.Errorf("actor = %q, want %q", v, "bob")
+	}
+}
+
+func TestSplitCustomValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{"empty string", "", nil},
+		{"whitespace only", "   ", nil},
+		{"single value", "widget", []string{"widget"}},
+		{"comma separated", "widget,gadget", []string{"widget", "gadget"}},
+		{"whitespace trimming", " widget , gadget , doohickey ", []string{"widget", "gadget", "doohickey"}},
+		{"trailing comma", "widget,gadget,", []string{"widget", "gadget"}},
+		{"empty segments", "widget,,gadget", []string{"widget", "gadget"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SplitCustomValues(tt.input)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("SplitCustomValues(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("SplitCustomValues(%q)[%d] = %q, want %q", tt.input, i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestValidate_TypesCustomAccepted(t *testing.T) {
+	s := &memStore{data: map[string]string{
+		"types.custom": "widget,gadget",
+	}}
+	if err := Validate(s); err != nil {
+		t.Errorf("Validate should accept types.custom: %v", err)
+	}
+}
+
+func TestValidate_StatusCustomAccepted(t *testing.T) {
+	s := &memStore{data: map[string]string{
+		"status.custom": "review,qa",
+	}}
+	if err := Validate(s); err != nil {
+		t.Errorf("Validate should accept status.custom: %v", err)
+	}
+}
+
+func TestValidate_DefaultsTypeWithCustomTypes(t *testing.T) {
+	s := &memStore{data: map[string]string{
+		"types.custom":  "widget,gadget",
+		"defaults.type": "widget",
+	}}
+	if err := Validate(s); err != nil {
+		t.Errorf("Validate should accept custom type as defaults.type: %v", err)
+	}
+}
+
+func TestValidate_DefaultsTypeInvalidWithCustomTypes(t *testing.T) {
+	s := &memStore{data: map[string]string{
+		"types.custom":  "widget,gadget",
+		"defaults.type": "bogus",
+	}}
+	err := Validate(s)
+	if err == nil {
+		t.Fatal("Validate should reject unknown defaults.type even with custom types")
+	}
+	if !strings.Contains(err.Error(), "bogus") {
+		t.Errorf("error should mention the invalid value: %v", err)
+	}
+}
+
+func TestValidate_DefaultsTypeBuiltInStillWorks(t *testing.T) {
+	s := &memStore{data: map[string]string{
+		"types.custom":  "widget",
+		"defaults.type": "task",
+	}}
+	if err := Validate(s); err != nil {
+		t.Errorf("Validate should still accept built-in types: %v", err)
 	}
 }
 

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"beads-lite/internal/config"
 	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
@@ -72,7 +73,7 @@ Examples:
 
 			var parsedType issuestorage.IssueType
 			if cmd.Flags().Changed("type") {
-				t, err := parseType(typeFlag)
+				t, err := parseType(typeFlag, getCustomValues(app, "types.custom"))
 				if err != nil {
 					return err
 				}
@@ -81,7 +82,7 @@ Examples:
 
 			var parsedStatus issuestorage.Status
 			if cmd.Flags().Changed("status") {
-				s, err := parseStatus(status)
+				s, err := parseStatus(status, getCustomValues(app, "status.custom"))
 				if err != nil {
 					if strings.Contains(err.Error(), "tombstone") {
 						// Tombstone rejection: print to stderr but exit 0 (matches reference)
@@ -259,7 +260,7 @@ func parsePriority(s string) (issuestorage.Priority, error) {
 	}
 }
 
-func parseType(s string) (issuestorage.IssueType, error) {
+func parseType(s string, customTypes []string) (issuestorage.IssueType, error) {
 	switch strings.ToLower(s) {
 	case "task":
 		return issuestorage.TypeTask, nil
@@ -276,11 +277,21 @@ func parseType(s string) (issuestorage.IssueType, error) {
 	case "molecule":
 		return issuestorage.TypeMolecule, nil
 	default:
-		return "", fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate, molecule", s)
+		lower := strings.ToLower(s)
+		for _, ct := range customTypes {
+			if strings.ToLower(ct) == lower {
+				return issuestorage.IssueType(s), nil
+			}
+		}
+		builtins := "task, bug, feature, epic, chore, gate, molecule"
+		if len(customTypes) > 0 {
+			builtins += ", " + strings.Join(customTypes, ", ")
+		}
+		return "", fmt.Errorf("invalid type %q: must be one of %s", s, builtins)
 	}
 }
 
-func parseStatus(s string) (issuestorage.Status, error) {
+func parseStatus(s string, customStatuses []string) (issuestorage.Status, error) {
 	switch strings.ToLower(s) {
 	case "open":
 		return issuestorage.StatusOpen, nil
@@ -297,8 +308,30 @@ func parseStatus(s string) (issuestorage.Status, error) {
 	case "tombstone":
 		return "", fmt.Errorf("cannot set status to tombstone directly; use 'bd delete' instead")
 	default:
-		return "", fmt.Errorf("invalid status %q: must be one of open, in-progress, blocked, deferred, hooked, closed", s)
+		lower := strings.ToLower(s)
+		for _, cs := range customStatuses {
+			if strings.ToLower(cs) == lower {
+				return issuestorage.Status(s), nil
+			}
+		}
+		builtins := "open, in-progress, blocked, deferred, hooked, closed"
+		if len(customStatuses) > 0 {
+			builtins += ", " + strings.Join(customStatuses, ", ")
+		}
+		return "", fmt.Errorf("invalid status %q: must be one of %s", s, builtins)
 	}
+}
+
+// getCustomValues reads a comma-separated config key and returns the split values.
+func getCustomValues(app *App, key string) []string {
+	if app == nil || app.ConfigStore == nil {
+		return nil
+	}
+	v, ok := app.ConfigStore.Get(key)
+	if !ok {
+		return nil
+	}
+	return config.SplitCustomValues(v)
 }
 
 func removeFromSlice(slice []string, item string) []string {

@@ -279,6 +279,7 @@ var validTypes = map[string]bool{
 
 // configValidators maps known keys to their validation functions.
 // Each validator returns an error message if the value is invalid, or "" if valid.
+// Validators that need access to the full config use configStoreValidators instead.
 var configValidators = map[string]func(string) string{
 	"create.require-description": func(v string) string {
 		if v != "true" && v != "false" {
@@ -293,12 +294,27 @@ var configValidators = map[string]func(string) string{
 		}
 		return ""
 	},
-	"defaults.type": func(v string) string {
-		if !validTypes[v] {
-			keys := sortedKeys(validTypes)
-			return fmt.Sprintf("defaults.type: invalid value %q (valid: %s)", v, strings.Join(keys, ", "))
+}
+
+// configStoreValidators maps known keys to validators that need access to the full config.
+var configStoreValidators = map[string]func(string, config.Store) string{
+	"defaults.type": func(v string, store config.Store) string {
+		if validTypes[v] {
+			return ""
 		}
-		return ""
+		// Check custom types
+		if customStr, ok := store.Get("types.custom"); ok {
+			for _, ct := range config.SplitCustomValues(customStr) {
+				if ct == v {
+					return ""
+				}
+			}
+		}
+		keys := sortedKeys(validTypes)
+		if customStr, ok := store.Get("types.custom"); ok {
+			keys = append(keys, config.SplitCustomValues(customStr)...)
+		}
+		return fmt.Sprintf("defaults.type: invalid value %q (valid: %s)", v, strings.Join(keys, ", "))
 	},
 }
 
@@ -332,6 +348,11 @@ Examples:
 			for key, value := range all {
 				if validator, ok := configValidators[key]; ok {
 					if msg := validator(value); msg != "" {
+						errors = append(errors, msg)
+					}
+				}
+				if validator, ok := configStoreValidators[key]; ok {
+					if msg := validator(value, store); msg != "" {
 						errors = append(errors, msg)
 					}
 				}

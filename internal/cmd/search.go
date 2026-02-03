@@ -38,7 +38,7 @@ Use --title-only to search only in titles.`,
 			var issues []*issuestorage.Issue
 
 			if status != "" {
-				s, err := parseStatus(status)
+				s, err := parseStatus(status, getCustomValues(app, "status.custom"))
 				if err != nil {
 					return err
 				}

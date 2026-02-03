@@ -818,6 +818,47 @@ func TestCreateRequireDescription_NotSet(t *testing.T) {
 	}
 }
 
+func TestCreateWithCustomType(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"types.custom": "widget,gadget",
+	}}
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test custom type", "--type", "widget"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create with custom type failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if issue.Type != issuestorage.IssueType("widget") {
+		t.Errorf("expected type %q, got %q", "widget", issue.Type)
+	}
+}
+
+func TestCreateWithCustomTypeInvalid(t *testing.T) {
+	app, _ := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"types.custom": "widget,gadget",
+	}}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--type", "bogus"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid type")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "widget") || !strings.Contains(msg, "gadget") {
+		t.Errorf("error should list custom types: %s", msg)
+	}
+	if !strings.Contains(msg, "task") || !strings.Contains(msg, "bug") {
+		t.Errorf("error should list built-in types: %s", msg)
+	}
+}
+
 func TestCreateWithMolType(t *testing.T) {
 	tests := []struct {
 		molType  string

@@ -443,6 +443,74 @@ func TestConfigValidate_JSON_Errors(t *testing.T) {
 	}
 }
 
+func TestConfigValidate_TypesCustomAccepted(t *testing.T) {
+	app, out := setupConfigTestApp(t)
+	seedConfigStore(t, app.ConfigDir, map[string]string{
+		"types.custom": "widget,gadget",
+	})
+
+	cmd := newConfigValidateCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("config validate failed: %v", err)
+	}
+
+	if got := strings.TrimSpace(out.String()); got != "Configuration is valid." {
+		t.Errorf("output = %q, want %q", got, "Configuration is valid.")
+	}
+}
+
+func TestConfigValidate_StatusCustomAccepted(t *testing.T) {
+	app, out := setupConfigTestApp(t)
+	seedConfigStore(t, app.ConfigDir, map[string]string{
+		"status.custom": "review,qa",
+	})
+
+	cmd := newConfigValidateCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("config validate failed: %v", err)
+	}
+
+	if got := strings.TrimSpace(out.String()); got != "Configuration is valid." {
+		t.Errorf("output = %q, want %q", got, "Configuration is valid.")
+	}
+}
+
+func TestConfigValidate_DefaultsTypeWithCustom(t *testing.T) {
+	app, out := setupConfigTestApp(t)
+	// defaults.type set to a custom type should be valid
+	seedConfigStore(t, app.ConfigDir, map[string]string{
+		"types.custom":  "widget,gadget",
+		"defaults.type": "widget",
+	})
+
+	cmd := newConfigValidateCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("config validate failed: %v", err)
+	}
+
+	if got := strings.TrimSpace(out.String()); got != "Configuration is valid." {
+		t.Errorf("output = %q, want %q", got, "Configuration is valid.")
+	}
+}
+
+func TestConfigValidate_DefaultsTypeInvalidWithCustom(t *testing.T) {
+	app, _ := setupConfigTestApp(t)
+	// defaults.type set to something not in built-ins or customs should fail
+	seedConfigStore(t, app.ConfigDir, map[string]string{
+		"types.custom":  "widget,gadget",
+		"defaults.type": "bogus",
+	})
+
+	cmd := newConfigValidateCmd(NewTestProvider(app))
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("config validate should have failed")
+	}
+	if !strings.Contains(err.Error(), "1 error(s)") {
+		t.Errorf("expected 1 error, got: %v", err)
+	}
+}
+
 func TestConfigValidate_CustomKeysIgnored(t *testing.T) {
 	app, out := setupConfigTestApp(t)
 	seedConfigStore(t, app.ConfigDir, map[string]string{

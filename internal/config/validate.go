@@ -15,6 +15,8 @@ var validValues = map[string][]string{
 	"actor":               {},
 	"project.name":        {},
 	"hierarchy.max_depth": {},
+	"types.custom":        {},
+	"status.custom":       {},
 }
 
 // Validate checks all values in s for known keys. It returns an error
@@ -30,10 +32,17 @@ func Validate(s Store) error {
 		}
 
 		if len(allowed) > 0 {
-			if !contains(allowed, val) {
+			effective := allowed
+			// For defaults.type, also accept custom types from types.custom
+			if key == "defaults.type" {
+				if customStr, ok := all["types.custom"]; ok {
+					effective = append(append([]string{}, allowed...), splitCustomValues(customStr)...)
+				}
+			}
+			if !contains(effective, val) {
 				errs = append(errs, fmt.Sprintf(
 					"%s: invalid value %q (allowed: %s)",
-					key, val, strings.Join(allowed, ", ")))
+					key, val, strings.Join(effective, ", ")))
 			}
 			continue
 		}
@@ -62,4 +71,24 @@ func contains(ss []string, s string) bool {
 		}
 	}
 	return false
+}
+
+// SplitCustomValues splits a comma-separated string into trimmed, non-empty values.
+func SplitCustomValues(s string) []string {
+	return splitCustomValues(s)
+}
+
+func splitCustomValues(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		v := strings.TrimSpace(p)
+		if v != "" {
+			result = append(result, v)
+		}
+	}
+	return result
 }

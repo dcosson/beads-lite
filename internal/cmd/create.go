@@ -63,24 +63,11 @@ Examples:
 			// Parse and validate type
 			issueType := issuestorage.TypeTask
 			if typeFlag != "" {
-				switch strings.ToLower(typeFlag) {
-				case "task":
-					issueType = issuestorage.TypeTask
-				case "bug":
-					issueType = issuestorage.TypeBug
-				case "feature":
-					issueType = issuestorage.TypeFeature
-				case "epic":
-					issueType = issuestorage.TypeEpic
-				case "chore":
-					issueType = issuestorage.TypeChore
-				case "gate":
-					issueType = issuestorage.TypeGate
-				case "molecule":
-					issueType = issuestorage.TypeMolecule
-				default:
-					return fmt.Errorf("invalid type %q: must be one of task, bug, feature, epic, chore, gate, molecule", typeFlag)
+				t, err := parseType(typeFlag, getCustomValues(app, "types.custom"))
+				if err != nil {
+					return err
 				}
+				issueType = t
 			}
 
 			// Parse and validate priority

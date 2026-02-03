@@ -772,6 +772,263 @@ func TestUpdateClaimResolvesBDActorEnv(t *testing.T) {
 	}
 }
 
+func TestParseTypeWithCustomTypes(t *testing.T) {
+	customTypes := []string{"widget", "gadget"}
+
+	tests := []struct {
+		input    string
+		expected issuestorage.IssueType
+	}{
+		// Built-in types still work
+		{"task", issuestorage.TypeTask},
+		{"bug", issuestorage.TypeBug},
+		{"FEATURE", issuestorage.TypeFeature},
+		{"gate", issuestorage.TypeGate},
+		{"molecule", issuestorage.TypeMolecule},
+		// Custom types work
+		{"widget", issuestorage.IssueType("widget")},
+		{"Widget", issuestorage.IssueType("Widget")},
+		{"gadget", issuestorage.IssueType("gadget")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseType(tt.input, customTypes)
+			if err != nil {
+				t.Fatalf("parseType(%q) error: %v", tt.input, err)
+			}
+			if got != tt.expected {
+				t.Errorf("parseType(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseTypeCustomTypeErrorMessage(t *testing.T) {
+	customTypes := []string{"widget", "gadget"}
+	_, err := parseType("bogus", customTypes)
+	if err == nil {
+		t.Fatal("expected error for invalid type")
+	}
+	msg := err.Error()
+	// Error should list both built-in and custom types
+	if !strings.Contains(msg, "widget") || !strings.Contains(msg, "gadget") {
+		t.Errorf("error message should include custom types, got: %s", msg)
+	}
+	if !strings.Contains(msg, "task") || !strings.Contains(msg, "bug") {
+		t.Errorf("error message should include built-in types, got: %s", msg)
+	}
+}
+
+func TestParseTypeNoCustomTypes(t *testing.T) {
+	// Without custom types, should work as before
+	got, err := parseType("task", nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != issuestorage.TypeTask {
+		t.Errorf("got %q, want %q", got, issuestorage.TypeTask)
+	}
+
+	_, err = parseType("bogus", nil)
+	if err == nil {
+		t.Fatal("expected error for invalid type with no custom types")
+	}
+	if strings.Contains(err.Error(), ", ,") {
+		t.Errorf("error message should not have double commas: %s", err.Error())
+	}
+}
+
+func TestParseStatusWithCustomStatuses(t *testing.T) {
+	customStatuses := []string{"review", "qa"}
+
+	tests := []struct {
+		input    string
+		expected issuestorage.Status
+	}{
+		// Built-in statuses still work
+		{"open", issuestorage.StatusOpen},
+		{"in-progress", issuestorage.StatusInProgress},
+		{"in_progress", issuestorage.StatusInProgress},
+		{"BLOCKED", issuestorage.StatusBlocked},
+		{"closed", issuestorage.StatusClosed},
+		// Custom statuses work
+		{"review", issuestorage.Status("review")},
+		{"Review", issuestorage.Status("Review")},
+		{"qa", issuestorage.Status("qa")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseStatus(tt.input, customStatuses)
+			if err != nil {
+				t.Fatalf("parseStatus(%q) error: %v", tt.input, err)
+			}
+			if got != tt.expected {
+				t.Errorf("parseStatus(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseStatusCustomStatusErrorMessage(t *testing.T) {
+	customStatuses := []string{"review", "qa"}
+	_, err := parseStatus("bogus", customStatuses)
+	if err == nil {
+		t.Fatal("expected error for invalid status")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "review") || !strings.Contains(msg, "qa") {
+		t.Errorf("error message should include custom statuses, got: %s", msg)
+	}
+	if !strings.Contains(msg, "open") || !strings.Contains(msg, "closed") {
+		t.Errorf("error message should include built-in statuses, got: %s", msg)
+	}
+}
+
+func TestParseStatusTombstoneStillRejected(t *testing.T) {
+	_, err := parseStatus("tombstone", []string{"review"})
+	if err == nil {
+		t.Fatal("expected error for tombstone")
+	}
+	if !strings.Contains(err.Error(), "tombstone") {
+		t.Errorf("expected tombstone-specific error, got: %v", err)
+	}
+}
+
+func TestGetCustomValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		app      *App
+		key      string
+		expected []string
+	}{
+		{
+			name:     "nil app",
+			app:      nil,
+			key:      "types.custom",
+			expected: nil,
+		},
+		{
+			name:     "nil config store",
+			app:      &App{},
+			key:      "types.custom",
+			expected: nil,
+		},
+		{
+			name: "key not set",
+			app: &App{ConfigStore: &mapConfigStore{data: map[string]string{
+				"other.key": "value",
+			}}},
+			key:      "types.custom",
+			expected: nil,
+		},
+		{
+			name: "empty string",
+			app: &App{ConfigStore: &mapConfigStore{data: map[string]string{
+				"types.custom": "",
+			}}},
+			key:      "types.custom",
+			expected: nil,
+		},
+		{
+			name: "single value",
+			app: &App{ConfigStore: &mapConfigStore{data: map[string]string{
+				"types.custom": "widget",
+			}}},
+			key:      "types.custom",
+			expected: []string{"widget"},
+		},
+		{
+			name: "comma separated",
+			app: &App{ConfigStore: &mapConfigStore{data: map[string]string{
+				"types.custom": "widget,gadget",
+			}}},
+			key:      "types.custom",
+			expected: []string{"widget", "gadget"},
+		},
+		{
+			name: "whitespace trimming",
+			app: &App{ConfigStore: &mapConfigStore{data: map[string]string{
+				"types.custom": " widget , gadget , doohickey ",
+			}}},
+			key:      "types.custom",
+			expected: []string{"widget", "gadget", "doohickey"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getCustomValues(tt.app, tt.key)
+			if len(got) != len(tt.expected) {
+				t.Fatalf("getCustomValues() = %v, want %v", got, tt.expected)
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Errorf("getCustomValues()[%d] = %q, want %q", i, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateWithCustomType(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"types.custom": "widget,gadget",
+	}}
+	issueID := createTestIssue(t, store)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{issueID, "--type", "widget"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update with custom type failed: %v", err)
+	}
+
+	issue, _ := store.Get(context.Background(), issueID)
+	if issue.Type != issuestorage.IssueType("widget") {
+		t.Errorf("expected type %q, got %q", "widget", issue.Type)
+	}
+}
+
+func TestUpdateWithCustomStatus(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"status.custom": "review,qa",
+	}}
+	issueID := createTestIssue(t, store)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{issueID, "--status", "review"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("update with custom status failed: %v", err)
+	}
+
+	issue, _ := store.Get(context.Background(), issueID)
+	if issue.Status != issuestorage.Status("review") {
+		t.Errorf("expected status %q, got %q", "review", issue.Status)
+	}
+}
+
+func TestUpdateInvalidTypeWithCustomTypes(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"types.custom": "widget,gadget",
+	}}
+	issueID := createTestIssue(t, store)
+
+	cmd := newUpdateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{issueID, "--type", "bogus"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid type")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "widget") || !strings.Contains(msg, "gadget") {
+		t.Errorf("error should list custom types: %s", msg)
+	}
+}
+
 func TestUpdateClaimResolvesGitConfig(t *testing.T) {
 	// When BD_ACTOR is not set (config has default "${USER}"),
 	// actor should resolve from git config user.name.
