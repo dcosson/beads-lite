@@ -334,20 +334,38 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	return "", fmt.Errorf("failed to generate unique ID: %d retries exhausted at length %d", MaxIDRetries, length)
 }
 
+// readFileSharedLock reads a file while holding a shared (LOCK_SH) flock.
+// This prevents reading while Modify holds an exclusive lock and is doing
+// an in-place truncate+write.
+func readFileSharedLock(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_SH); err != nil {
+		return nil, err
+	}
+	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+
+	return io.ReadAll(f)
+}
+
 // Get retrieves an issue by ID.
 func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.Issue, error) {
 	// Check open first (more common case)
 	path := fs.issuePath(id, false)
-	data, err := os.ReadFile(path)
+	data, err := readFileSharedLock(path)
 	if os.IsNotExist(err) {
 		// Check closed
 		path = fs.issuePath(id, true)
-		data, err = os.ReadFile(path)
+		data, err = readFileSharedLock(path)
 	}
 	if os.IsNotExist(err) {
 		// Check deleted (tombstones)
 		path = fs.issuePathInDir(id, issuestorage.DirDeleted)
-		data, err = os.ReadFile(path)
+		data, err = readFileSharedLock(path)
 	}
 	if os.IsNotExist(err) {
 		return nil, issuestorage.ErrNotFound
