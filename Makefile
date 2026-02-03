@@ -1,5 +1,5 @@
 BD_LITE_CMD ?= ./bd
-BD_REF_CMD ?= $(shell which bd)
+BD_REF_CMD ?= /opt/homebrew/bin/bd
 
 .PHONY: test test-unit test-e2e bench-e2e bench-comparison-e2e e2e-update build check check-ci fmt fmt-check vet staticcheck deps
 
