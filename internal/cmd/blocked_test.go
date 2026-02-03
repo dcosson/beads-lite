@@ -335,7 +335,7 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 	}
 }
 
-func TestBlockedExcludesEphemeralIssues(t *testing.T) {
+func TestBlockedIncludesEphemeralIssues(t *testing.T) {
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
@@ -352,7 +352,7 @@ func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 		t.Fatalf("failed to create dep issue: %v", err)
 	}
 
-	// Create an ephemeral blocked issue — should be excluded
+	// Create an ephemeral blocked issue — should be included
 	ephID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Ephemeral blocked issue",
 		Priority:  issuestorage.PriorityMedium,
@@ -365,7 +365,7 @@ func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
-	// Create a persistent blocked issue — should be included
+	// Create a persistent blocked issue — should also be included
 	persistID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked issue",
 		Priority: issuestorage.PriorityMedium,
@@ -390,8 +390,8 @@ func TestBlockedExcludesEphemeralIssues(t *testing.T) {
 	}
 
 	output := out.String()
-	if containsString(output, ephID) {
-		t.Errorf("expected ephemeral issue %s to be excluded from blocked output, got: %s", ephID, output)
+	if !containsString(output, ephID) {
+		t.Errorf("expected ephemeral issue %s to be included in blocked output, got: %s", ephID, output)
 	}
 	if !containsString(output, persistID) {
 		t.Errorf("expected persistent issue %s to be included in blocked output, got: %s", persistID, output)
