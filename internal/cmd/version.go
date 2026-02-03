@@ -9,7 +9,7 @@ import (
 
 // Version is the current version of beads-lite. It can be overridden at build
 // time via -ldflags "-X beads-lite/internal/cmd.Version=1.2.3".
-var Version = "0.43.0"
+var Version = "0.50.0"
 
 func newVersionCmd(provider *AppProvider) *cobra.Command {
 	cmd := &cobra.Command{
