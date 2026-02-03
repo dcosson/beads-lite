@@ -59,7 +59,7 @@ func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	section(&out, "list open issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List open issues with no limit
-	result, err = mustRun(r, sandbox, "list", "--limit", "0", "--json")
+	result, err = mustRun(r, sandbox, "list", "--all", "--limit", "0", "--json")
 	if err != nil {
 		return "", err
 	}

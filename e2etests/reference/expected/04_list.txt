@@ -56,7 +56,7 @@
   }
 ]
 
-=== list all issues ===
+=== list open issues no limit ===
 [
   {
     "assignee": "alice",

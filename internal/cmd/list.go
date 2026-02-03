@@ -24,6 +24,7 @@ func newListCmd(provider *AppProvider) *cobra.Command {
 		closed    bool
 		roots     bool
 		format    string
+		limit     int
 	)
 
 	cmd := &cobra.Command{
@@ -31,11 +32,13 @@ func newListCmd(provider *AppProvider) *cobra.Command {
 		Short: "List issues with filtering",
 		Long: `List issues with various filters.
 
-By default, lists open issues. Use flags to filter by status, type,
-priority, labels, parent, or assignee.
+By default, lists open issues (up to 50). Use flags to filter by status,
+type, priority, labels, parent, or assignee. Use --limit to change the
+maximum number of results, or --limit 0 / --all to return all results.
 
 Examples:
-  bd list                      # List all open issues
+  bd list                      # List open issues (up to 50)
+  bd list --limit 0            # List all open issues (no limit)
   bd list --all                # List all issues (open and closed)
   bd list --closed             # List only closed issues
   bd list --status=in-progress # List in-progress issues
@@ -135,6 +138,12 @@ Examples:
 				issues = append(issues, closedIssues...)
 			}
 
+			// Apply limit
+			limited := limit > 0 && len(issues) > limit
+			if limited {
+				issues = issues[:limit]
+			}
+
 			// JSON output
 			if app.JSON {
 				result := make([]IssueListJSON, len(issues))
@@ -170,6 +179,10 @@ Examples:
 				}
 			}
 
+			if limited {
+				fmt.Fprintf(app.Out, "\nShowing %d issues (use --limit 0 for all)\n", limit)
+			}
+
 			return nil
 		},
 	}
@@ -185,6 +198,7 @@ Examples:
 	cmd.Flags().BoolVar(&closed, "closed", false, "List only closed issues")
 	cmd.Flags().BoolVar(&roots, "roots", false, "List only root issues (no parent)")
 	cmd.Flags().StringVarP(&format, "format", "f", "", "Output format (not implemented, accepts any value)")
+	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum number of issues to return (0 for all)")
 
 	return cmd
 }

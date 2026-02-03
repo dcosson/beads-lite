@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -706,5 +707,125 @@ func TestListCommand_MolTypeInvalid(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "invalid mol-type") {
 		t.Errorf("expected error about invalid mol-type, got: %v", err)
+	}
+}
+
+func TestListCommand_DefaultLimit(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create 55 issues (more than the default limit of 50)
+	for i := 0; i < 55; i++ {
+		_, err := store.Create(ctx, &issuestorage.Issue{
+			Title:    fmt.Sprintf("Issue %d", i),
+			Priority: issuestorage.PriorityMedium,
+		})
+		if err != nil {
+			t.Fatalf("failed to create issue %d: %v", i, err)
+		}
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    true,
+	}
+
+	cmd := newListCmd(NewTestProvider(app))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 50 {
+		t.Errorf("expected 50 issues (default limit), got %d", len(issues))
+	}
+}
+
+func TestListCommand_LimitZeroReturnsAll(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	for i := 0; i < 5; i++ {
+		_, err := store.Create(ctx, &issuestorage.Issue{
+			Title:    fmt.Sprintf("Issue %d", i),
+			Priority: issuestorage.PriorityMedium,
+		})
+		if err != nil {
+			t.Fatalf("failed to create issue %d: %v", i, err)
+		}
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    true,
+	}
+
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--limit", "0"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 5 {
+		t.Errorf("expected 5 issues (no limit), got %d", len(issues))
+	}
+}
+
+func TestListCommand_CustomLimit(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	for i := 0; i < 5; i++ {
+		_, err := store.Create(ctx, &issuestorage.Issue{
+			Title:    fmt.Sprintf("Issue %d", i),
+			Priority: issuestorage.PriorityMedium,
+		})
+		if err != nil {
+			t.Fatalf("failed to create issue %d: %v", i, err)
+		}
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    true,
+	}
+
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--limit", "2"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 2 {
+		t.Errorf("expected 2 issues (custom limit), got %d", len(issues))
 	}
 }
