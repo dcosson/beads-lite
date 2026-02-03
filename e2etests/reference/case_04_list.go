@@ -58,12 +58,12 @@ func caseList(r *Runner, n *Normalizer, sandbox string) (string, error) {
 	}
 	section(&out, "list open issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
-	// List all issues
-	result, err = mustRun(r, sandbox, "list", "--all", "--json")
+	// List open issues with no limit
+	result, err = mustRun(r, sandbox, "list", "--limit", "0", "--json")
 	if err != nil {
 		return "", err
 	}
-	section(&out, "list all issues", n.NormalizeJSONSorted([]byte(result.Stdout)))
+	section(&out, "list open issues no limit", n.NormalizeJSONSorted([]byte(result.Stdout)))
 
 	// List closed (use --status closed for original beads compatibility)
 	result, err = mustRun(r, sandbox, "list", "--status", "closed", "--json")
