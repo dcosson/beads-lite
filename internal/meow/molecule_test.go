@@ -2,7 +2,6 @@ package meow
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -338,38 +337,6 @@ func TestInferMolecule_IgnoresChildEpics(t *testing.T) {
 	}
 	if got != rootID {
 		t.Errorf("got %s, want root %s (not child %s)", got, rootID, childID)
-	}
-}
-
-func TestResolveUser_BDActorEnv(t *testing.T) {
-	t.Setenv("BD_ACTOR", "test-actor")
-	got := ResolveUser()
-	if got != "test-actor" {
-		t.Errorf("ResolveUser: got %q, want %q", got, "test-actor")
-	}
-}
-
-func TestResolveUser_FallsBackToUSER(t *testing.T) {
-	t.Setenv("BD_ACTOR", "")
-	// We can't easily control git config in tests, but we can verify
-	// the function doesn't panic and returns something non-empty.
-	got := ResolveUser()
-	if got == "" {
-		t.Error("ResolveUser returned empty string")
-	}
-}
-
-func TestResolveUser_USEREnvFallback(t *testing.T) {
-	t.Setenv("BD_ACTOR", "")
-	// Set PATH to empty to ensure git config fails.
-	oldPath := os.Getenv("PATH")
-	t.Setenv("PATH", "")
-	defer os.Setenv("PATH", oldPath)
-	t.Setenv("USER", "fallback-user")
-
-	got := ResolveUser()
-	if got != "fallback-user" {
-		t.Errorf("ResolveUser: got %q, want %q", got, "fallback-user")
 	}
 }
 

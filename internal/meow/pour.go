@@ -10,11 +10,12 @@ import (
 
 // PourOptions configures a Pour or Wisp operation.
 type PourOptions struct {
-	FormulaName     string
-	Vars            map[string]string
-	Ephemeral       bool // false = pour (persistent), true = wisp (ephemeral)
-	PrefixAddition  string
-	SearchPath      FormulaSearchPath
+	FormulaName    string
+	Vars           map[string]string
+	Ephemeral      bool // false = pour (persistent), true = wisp (ephemeral)
+	PrefixAddition string
+	SearchPath     FormulaSearchPath
+	Actor          string // resolved actor identity; used as created_by on issues
 }
 
 // PourResult contains the issues created by a Pour or Wisp operation.
@@ -50,8 +51,8 @@ func Pour(ctx context.Context, store issuestorage.IssueStore, opts PourOptions) 
 		fmt.Fprintf(os.Stderr, "warning: formula %q has phase \"vapor\"; consider using wisp instead of pour\n", formula.Formula)
 	}
 
-	// 5. Resolve actor for created_by.
-	actor := ResolveUser()
+	// 5. Use caller-provided actor for created_by.
+	actor := opts.Actor
 
 	// 6. Create root epic issue.
 	rootIssue := &issuestorage.Issue{

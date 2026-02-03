@@ -3,9 +3,6 @@ package meow
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
 
 	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
@@ -46,7 +43,7 @@ func Current(ctx context.Context, store issuestorage.IssueStore, opts CurrentOpt
 	if molID == "" {
 		actor := opts.Actor
 		if actor == "" {
-			actor = ResolveUser()
+			return nil, fmt.Errorf("actor is required when molecule ID is not provided")
 		}
 		inferred, err := InferMolecule(ctx, store, actor)
 		if err != nil {
@@ -224,25 +221,3 @@ func InferMolecule(ctx context.Context, store issuestorage.IssueStore, actor str
 	return roots[0].ID, nil
 }
 
-// ResolveUser determines the current user identity using the priority:
-//  1. BD_ACTOR env var
-//  2. git config user.name
-//  3. $USER (OS username)
-func ResolveUser() string {
-	if actor := os.Getenv("BD_ACTOR"); actor != "" {
-		return actor
-	}
-
-	if out, err := exec.Command("git", "config", "user.name").Output(); err == nil {
-		name := strings.TrimSpace(string(out))
-		if name != "" {
-			return name
-		}
-	}
-
-	if user := os.Getenv("USER"); user != "" {
-		return user
-	}
-
-	return "unknown"
-}

@@ -48,6 +48,7 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 	result, err := Pour(ctx, store, PourOptions{
 		FormulaName: "deploy",
 		SearchPath:  sp,
+		Actor:       "test-actor",
 	})
 	if err != nil {
 		t.Fatalf("Pour() error = %v", err)
@@ -67,13 +68,16 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 	if root.Description != "Deploy pipeline" {
 		t.Errorf("root.Description = %q, want %q", root.Description, "Deploy pipeline")
 	}
+	if root.CreatedBy != "test-actor" {
+		t.Errorf("root.CreatedBy = %q, want %q", root.CreatedBy, "test-actor")
+	}
 
 	// Should have 3 children (plus 1 root = 4 entries in IDMapping).
 	if result.Created != 4 {
 		t.Fatalf("Created = %d, want 4", result.Created)
 	}
 
-	// Each child should have parent-child dep to root.
+	// Each child should have parent-child dep to root and inherit created_by.
 	for key, childID := range result.IDMapping {
 		if childID == result.NewEpicID {
 			continue // skip root entry
@@ -84,6 +88,9 @@ func TestPourCreatesRootAndChildren(t *testing.T) {
 		}
 		if child.Parent != result.NewEpicID {
 			t.Errorf("child %s.Parent = %q, want %q", key, child.Parent, result.NewEpicID)
+		}
+		if child.CreatedBy != "test-actor" {
+			t.Errorf("child %s.CreatedBy = %q, want %q", key, child.CreatedBy, "test-actor")
 		}
 	}
 }
