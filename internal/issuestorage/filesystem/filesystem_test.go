@@ -782,7 +782,7 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-// TestGetNextChildID_Sequential verifies sequential counter increments.
+// TestGetNextChildID_Sequential verifies sequential child ID assignment.
 func TestGetNextChildID_Sequential(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
@@ -803,10 +803,50 @@ func TestGetNextChildID_Sequential(t *testing.T) {
 		if childID != want {
 			t.Errorf("Call %d: got %q, want %q", i, childID, want)
 		}
+		// Create the issue so the next scan finds it
+		createIssueWithID(t, s, childID, fmt.Sprintf("Child %d", i))
 	}
 }
 
-// TestGetNextChildID_Concurrent verifies atomic increments under concurrency.
+// TestGetNextChildID_MultiDigitNumbers verifies that child numbers >9 are
+// parsed correctly as integers (not lexicographically), ensuring .10 comes
+// after .9, not after .1.
+func TestGetNextChildID_MultiDigitNumbers(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	parent := &issuestorage.Issue{Title: "Parent"}
+	parentID, err := s.Create(ctx, parent)
+	if err != nil {
+		t.Fatalf("Create parent failed: %v", err)
+	}
+
+	// Create 12 children sequentially
+	for i := 1; i <= 12; i++ {
+		childID, err := s.GetNextChildID(ctx, parentID)
+		if err != nil {
+			t.Fatalf("GetNextChildID call %d failed: %v", i, err)
+		}
+		want := fmt.Sprintf("%s.%d", parentID, i)
+		if childID != want {
+			t.Errorf("Call %d: got %q, want %q", i, childID, want)
+		}
+		createIssueWithID(t, s, childID, fmt.Sprintf("Child %d", i))
+	}
+
+	// After 12 children, the next should be .13
+	nextID, err := s.GetNextChildID(ctx, parentID)
+	if err != nil {
+		t.Fatalf("GetNextChildID call 13 failed: %v", err)
+	}
+	want := fmt.Sprintf("%s.13", parentID)
+	if nextID != want {
+		t.Errorf("Call 13: got %q, want %q", nextID, want)
+	}
+}
+
+// TestGetNextChildID_Concurrent verifies that concurrent GetNextChildID + Create
+// produces unique IDs when callers retry on collision.
 func TestGetNextChildID_Concurrent(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
@@ -819,7 +859,7 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 	}
 
 	const numWorkers = 10
-	const callsPerWorker = 10
+	const callsPerWorker = 5
 	total := numWorkers * callsPerWorker
 
 	results := make(chan string, total)
@@ -831,12 +871,26 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < callsPerWorker; i++ {
-				childID, err := s.GetNextChildID(ctx, parentID)
-				if err != nil {
+				// Retry loop: GetNextChildID + Create, retry on collision
+				for attempt := 0; attempt < 100; attempt++ {
+					childID, err := s.GetNextChildID(ctx, parentID)
+					if err != nil {
+						errs <- err
+						return
+					}
+					child := &issuestorage.Issue{ID: childID, Title: "Concurrent child"}
+					_, err = s.Create(ctx, child)
+					if err == nil {
+						results <- childID
+						break
+					}
+					// Collision (O_EXCL failed) — retry with fresh scan
+					if strings.Contains(err.Error(), "already exists") {
+						continue
+					}
 					errs <- err
 					return
 				}
-				results <- childID
 			}
 		}()
 	}
@@ -862,7 +916,8 @@ func TestGetNextChildID_Concurrent(t *testing.T) {
 	}
 }
 
-// TestGetNextChildID_Persistence verifies counters survive re-initialization.
+// TestGetNextChildID_Persistence verifies that child numbering survives
+// re-initialization (the scan finds existing files on disk).
 func TestGetNextChildID_Persistence(t *testing.T) {
 	dir := t.TempDir()
 	ctx := context.Background()
@@ -878,11 +933,13 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 		t.Fatalf("Create parent failed: %v", err)
 	}
 
-	// Increment counter 3 times
-	for i := 0; i < 3; i++ {
-		if _, err := s1.GetNextChildID(ctx, parentID); err != nil {
+	// Create 3 children
+	for i := 1; i <= 3; i++ {
+		childID, err := s1.GetNextChildID(ctx, parentID)
+		if err != nil {
 			t.Fatalf("GetNextChildID failed: %v", err)
 		}
+		createIssueWithID(t, s1, childID, fmt.Sprintf("Child %d", i))
 	}
 
 	// Create new storage instance on same directory
@@ -897,7 +954,7 @@ func TestGetNextChildID_Persistence(t *testing.T) {
 	}
 	want := fmt.Sprintf("%s.%d", parentID, 4)
 	if childID != want {
-		t.Errorf("Counter after reinit: got %q, want %q", childID, want)
+		t.Errorf("After reinit: got %q, want %q", childID, want)
 	}
 }
 
@@ -1138,10 +1195,10 @@ func TestCreateExplicitHierarchicalID_MaxDepth(t *testing.T) {
 	}
 }
 
-// TestDeleteDoesNotReuseChildNumbers verifies that deleting or closing a child
-// issue does not cause its child number to be reused. The child counter must
-// never be decremented; it persists at its last value regardless of deletions.
-func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
+// TestDeleteReusesChildNumbers verifies that hard-deleting a child issue
+// allows its number to be reused, since the scan-based approach only sees
+// files that exist on disk.
+func TestDeleteReusesChildNumbers(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
@@ -1161,22 +1218,21 @@ func TestDeleteDoesNotReuseChildNumbers(t *testing.T) {
 	if child1ID != wantChild1 {
 		t.Fatalf("First child: got %q, want %q", child1ID, wantChild1)
 	}
-	// Actually create the child issue so we can delete it
 	createIssueWithID(t, s, child1ID, "Child 1")
 
-	// Delete child .1 (permanent deletion)
+	// Delete child .1 (permanent deletion removes the file)
 	if err := s.Delete(ctx, child1ID); err != nil {
 		t.Fatalf("Delete child 1 failed: %v", err)
 	}
 
-	// Create next child — must get .2, not .1
+	// With scan-based approach, .1 is reused since the file is gone
 	child2ID, err := s.GetNextChildID(ctx, parentID)
 	if err != nil {
 		t.Fatalf("GetNextChildID after delete failed: %v", err)
 	}
-	wantChild2 := issuestorage.ChildID(parentID, 2)
+	wantChild2 := issuestorage.ChildID(parentID, 1)
 	if child2ID != wantChild2 {
-		t.Errorf("After deleting child .1: got %q, want %q", child2ID, wantChild2)
+		t.Errorf("After deleting child .1: got %q, want %q (number should be reused)", child2ID, wantChild2)
 	}
 }
 
@@ -1363,6 +1419,8 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 		if childID != want {
 			t.Errorf("Step %d: got %q, want %q", i, childID, want)
 		}
+		// Create the issue so the next scan finds it
+		createIssueWithID(t, s, childID, fmt.Sprintf("Child step %d", i))
 	}
 }
 

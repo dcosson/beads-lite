@@ -257,15 +257,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		}
 		f.Close()
 
-		// Update child counter when creating with an explicit hierarchical ID
-		// so future GetNextChildID calls won't generate colliding IDs.
-		if parentID, childNum, ok := issuestorage.ParseHierarchicalID(issue.ID); ok {
-			if err := fs.ensureChildCounterUpdated(parentID, childNum); err != nil {
-				os.Remove(path)
-				return "", fmt.Errorf("updating child counter for %s: %w", parentID, err)
-			}
-		}
-
 		issue.CreatedAt = time.Now()
 		issue.UpdatedAt = issue.CreatedAt
 
@@ -1033,56 +1024,46 @@ func removeDep(deps []issuestorage.Dependency, id string) []issuestorage.Depende
 	return result
 }
 
-// childCountersPath returns the path to the child counters JSON file.
-func (fs *FilesystemStorage) childCountersPath() string {
-	return filepath.Join(fs.root, "child_counters.json")
-}
-
-// childCountersLockPath returns the path to the lock file for child counters.
-func (fs *FilesystemStorage) childCountersLockPath() string {
-	return filepath.Join(fs.root, "child_counters.lock")
-}
-
-// ensureChildCounterUpdated sets the child counter for parentID to at least
-// childNum, using max(current_counter, childNum). This prevents
-// GetNextChildID from generating IDs that collide with explicitly-created
-// hierarchical child IDs.
-func (fs *FilesystemStorage) ensureChildCounterUpdated(parentID string, childNum int) error {
-	lockPath := fs.childCountersLockPath()
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		return fmt.Errorf("opening child counters lock: %w", err)
+// scanMaxChildNumber scans all issue directories for direct children of
+// parentID and returns the highest child number found. Returns 0 if no
+// children exist.
+func (fs *FilesystemStorage) scanMaxChildNumber(parentID string) (int, error) {
+	dirs := []string{
+		issuestorage.DirOpen, issuestorage.DirEphemeral,
+		issuestorage.DirClosed, issuestorage.DirDeleted,
 	}
-	defer f.Close()
+	prefix := parentID + "."
+	maxChild := 0
 
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("acquiring child counters lock: %w", err)
-	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-
-	counters := make(map[string]int)
-	counterPath := fs.childCountersPath()
-	data, err := os.ReadFile(counterPath)
-	if err == nil {
-		if err := json.Unmarshal(data, &counters); err != nil {
-			return fmt.Errorf("parsing child counters: %w", err)
+	for _, dir := range dirs {
+		dirPath := filepath.Join(fs.root, dir)
+		entries, err := os.ReadDir(dirPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return 0, fmt.Errorf("reading %s: %w", dir, err)
 		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("reading child counters: %w", err)
-	}
-
-	if counters[parentID] < childNum {
-		counters[parentID] = childNum
-		if err := atomicWriteJSON(counterPath, counters); err != nil {
-			return fmt.Errorf("writing child counters: %w", err)
+		for _, entry := range entries {
+			name := entry.Name()
+			if !strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, ".json") {
+				continue
+			}
+			id := strings.TrimSuffix(name, ".json")
+			parent, childNum, ok := issuestorage.ParseHierarchicalID(id)
+			if ok && parent == parentID && childNum > maxChild {
+				maxChild = childNum
+			}
 		}
 	}
 
-	return nil
+	return maxChild, nil
 }
 
 // GetNextChildID validates the parent exists, checks hierarchy depth limits,
-// atomically increments the child counter, and returns the full child ID.
+// scans the filesystem for existing children, and returns the next child ID.
+// The returned ID is not reserved — the caller should create the issue with
+// O_EXCL to handle concurrent races, retrying GetNextChildID on collision.
 func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string) (string, error) {
 	// 1. Validate the parent exists
 	if _, err := fs.Get(ctx, parentID); err != nil {
@@ -1097,39 +1078,13 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 		return "", err
 	}
 
-	// 3. Atomically increment the child counter
-	lockPath := fs.childCountersLockPath()
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	// 3. Scan filesystem for existing children, find highest number
+	maxChild, err := fs.scanMaxChildNumber(parentID)
 	if err != nil {
-		return "", fmt.Errorf("opening child counters lock: %w", err)
-	}
-	defer f.Close()
-
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return "", fmt.Errorf("acquiring child counters lock: %w", err)
-	}
-	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-
-	counters := make(map[string]int)
-	counterPath := fs.childCountersPath()
-	data, err := os.ReadFile(counterPath)
-	if err == nil {
-		if err := json.Unmarshal(data, &counters); err != nil {
-			return "", fmt.Errorf("parsing child counters: %w", err)
-		}
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("reading child counters: %w", err)
+		return "", fmt.Errorf("scanning children of %s: %w", parentID, err)
 	}
 
-	counters[parentID]++
-	next := counters[parentID]
-
-	if err := atomicWriteJSON(counterPath, counters); err != nil {
-		return "", fmt.Errorf("writing child counters: %w", err)
-	}
-
-	// 4. Return the full child ID
-	return issuestorage.ChildID(parentID, next), nil
+	return issuestorage.ChildID(parentID, maxChild+1), nil
 }
 
 // hasDependencyCycle checks if adding a dependency from issueID to dependsOnID would create a cycle.

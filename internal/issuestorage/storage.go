@@ -369,8 +369,10 @@ type IssueStore interface {
 	AddComment(ctx context.Context, issueID string, comment *Comment) error
 
 	// GetNextChildID validates the parent exists, checks hierarchy depth limits,
-	// atomically increments the child counter, and returns the full child ID
+	// scans for existing children, and returns the next child ID
 	// (e.g., "bd-a3f8" → "bd-a3f8.1", "bd-a3f8.1" → "bd-a3f8.1.1").
+	// The returned ID is not reserved; the caller should use O_EXCL on
+	// creation and retry GetNextChildID on collision.
 	// Returns ErrNotFound if parent doesn't exist, ErrMaxDepthExceeded if
 	// the parent is already at the maximum hierarchy depth.
 	GetNextChildID(ctx context.Context, parentID string) (string, error)

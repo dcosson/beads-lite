@@ -742,6 +742,11 @@ func testChildCounters(t *testing.T, s IssueStore) {
 	if childID != wantFirst {
 		t.Errorf("First child ID: got %q, want %q", childID, wantFirst)
 	}
+	// Create so next scan sees it
+	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child A.1"})
+	if err != nil {
+		t.Fatalf("Create child A.1 failed: %v", err)
+	}
 
 	// Second child should return parentID.2
 	childID, err = s.GetNextChildID(ctx, idA)
@@ -752,6 +757,10 @@ func testChildCounters(t *testing.T, s IssueStore) {
 	if childID != wantSecond {
 		t.Errorf("Second child ID: got %q, want %q", childID, wantSecond)
 	}
+	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child A.2"})
+	if err != nil {
+		t.Fatalf("Create child A.2 failed: %v", err)
+	}
 
 	// Different parent should start at .1
 	childID, err = s.GetNextChildID(ctx, idB)
@@ -761,6 +770,10 @@ func testChildCounters(t *testing.T, s IssueStore) {
 	wantB := idB + ".1"
 	if childID != wantB {
 		t.Errorf("First child of different parent: got %q, want %q", childID, wantB)
+	}
+	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child B.1"})
+	if err != nil {
+		t.Fatalf("Create child B.1 failed: %v", err)
 	}
 
 	// Original parent should continue from .3
