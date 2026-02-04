@@ -17,6 +17,7 @@ func newCloseCmd(provider *AppProvider) *cobra.Command {
 		continueFlag bool
 		noAuto       bool
 		suggestNext  bool
+		reason       string
 	)
 
 	cmd := &cobra.Command{
@@ -28,7 +29,8 @@ Sets status to closed and records the closed_at timestamp.
 
 Examples:
   bd close bd-a1b2
-  bd close bd-a1b2 bd-c3d4 bd-e5f6`,
+  bd close bd-a1b2 bd-c3d4 bd-e5f6
+  bd close --reason "Won't fix" bd-a1b2`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
@@ -48,6 +50,9 @@ Examples:
 				}
 				if err := store.Modify(ctx, issueID, func(i *issuestorage.Issue) error {
 					i.Status = issuestorage.StatusClosed
+					if reason != "" {
+						i.CloseReason = reason
+					}
 					return nil
 				}); err != nil {
 					errors = append(errors, fmt.Errorf("closing %s: %w", issueID, err))
@@ -186,6 +191,7 @@ Examples:
 	cmd.Flags().BoolVar(&continueFlag, "continue", false, "Auto-advance to next molecule step")
 	cmd.Flags().BoolVar(&noAuto, "no-auto", false, "With --continue: show next step without claiming it")
 	cmd.Flags().BoolVar(&suggestNext, "suggest-next", false, "Show newly unblocked issues after close")
+	cmd.Flags().StringVar(&reason, "reason", "", "Set the close reason (default: \"Closed\")")
 
 	return cmd
 }

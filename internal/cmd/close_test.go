@@ -239,6 +239,108 @@ func TestCloseNoArgs(t *testing.T) {
 	}
 }
 
+func TestCloseWithReason(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue with reason",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--reason", "Won't fix", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --reason failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Closed "+id) {
+		t.Errorf("expected output to contain 'Closed %s', got %q", id, output)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusClosed, got.Status)
+	}
+	if got.CloseReason != "Won't fix" {
+		t.Errorf("expected close_reason %q, got %q", "Won't fix", got.CloseReason)
+	}
+}
+
+func TestCloseWithReasonJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue with reason JSON",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--reason", "Duplicate", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --reason (JSON) failed: %v", err)
+	}
+
+	var result []map[string]interface{}
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, out.String())
+	}
+
+	if len(result) != 1 {
+		t.Fatalf("expected 1 closed issue, got %d", len(result))
+	}
+	if result[0]["close_reason"].(string) != "Duplicate" {
+		t.Errorf("expected close_reason %q, got %q", "Duplicate", result[0]["close_reason"])
+	}
+}
+
+func TestCloseDefaultReason(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue default reason",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close failed: %v", err)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if got.CloseReason != "Closed" {
+		t.Errorf("expected default close_reason %q, got %q", "Closed", got.CloseReason)
+	}
+}
+
 func TestCloseAlreadyClosed(t *testing.T) {
 	app, store := setupTestApp(t)
 
