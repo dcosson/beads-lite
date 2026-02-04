@@ -78,7 +78,7 @@ This table tracks implementation status across major feature areas.
 | `bd stale` (not updated recently) | ✅ | ⬜ | |
 | `bd lint` (check template sections) | ✅ | ⬜ | |
 | `bd graph` (dependency graph) | ✅ | 🟡 | `internal/graph` pkg exists, no CLI command |
-| `bd activity` (real-time mutation feed) | ✅ | ⬜ | Requires daemon; supports `--follow`, `--town`, `--json` |
+| `bd activity` (real-time mutation feed) | ✅ | ⬜ | Accepted as no-op; supports `--follow`, `--town`, `--json` flags but produces no output |
 | Export / import (JSONL) | ✅ | ⬜ | |
 
 > 🟡 **graph**: The `internal/graph` package implements the dependency graph logic, but no `bd graph` CLI command exposes it yet.

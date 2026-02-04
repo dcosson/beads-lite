@@ -230,6 +230,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newEditCmd(provider))
 	rootCmd.AddCommand(newSwarmCmd(provider))
 	rootCmd.AddCommand(newMergeSlotCmd(provider))
+	rootCmd.AddCommand(newActivityCmd(provider))
 
 	return rootCmd
 }
