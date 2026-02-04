@@ -923,3 +923,214 @@ func TestCreateWithMolTypeInvalid(t *testing.T) {
 		t.Errorf("expected error about invalid mol-type, got: %v", err)
 	}
 }
+
+func TestCreateWithCustomID(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Custom ID issue", "--id", "bd-custom123"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create with --id failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	if id != "bd-custom123" {
+		t.Errorf("expected id %q, got %q", "bd-custom123", id)
+	}
+
+	issue, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if issue.Title != "Custom ID issue" {
+		t.Errorf("expected title %q, got %q", "Custom ID issue", issue.Title)
+	}
+}
+
+func TestCreateWithCustomID_NoHyphen(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--id", "nohyphen"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for ID without hyphen")
+	}
+	if !strings.Contains(err.Error(), "must contain a hyphen") {
+		t.Errorf("expected error about hyphen, got: %v", err)
+	}
+}
+
+func TestCreateWithCustomID_WrongPrefix(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--id", "xx-abc"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for wrong prefix")
+	}
+	if !strings.Contains(err.Error(), "prefix") {
+		t.Errorf("expected error about prefix, got: %v", err)
+	}
+}
+
+func TestCreateWithCustomID_AllowedPrefix(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{
+		"allowed_prefixes": "other,proj",
+	}}
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Allowed prefix issue", "--id", "other-abc"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create with allowed prefix failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	if id != "other-abc" {
+		t.Errorf("expected id %q, got %q", "other-abc", id)
+	}
+
+	issue, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if issue.Title != "Allowed prefix issue" {
+		t.Errorf("expected title %q, got %q", "Allowed prefix issue", issue.Title)
+	}
+}
+
+func TestCreateWithCustomID_AlreadyExists(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	// Create an issue with explicit ID first
+	existing := &issuestorage.Issue{ID: "bd-exist1", Title: "Existing"}
+	if _, err := store.Create(context.Background(), existing); err != nil {
+		t.Fatalf("failed to create existing issue: %v", err)
+	}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Duplicate", "--id", "bd-exist1"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when creating with duplicate ID")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("expected error about already exists, got: %v", err)
+	}
+}
+
+func TestCreateWithCustomID_AndParent(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	parentID, _ := store.Create(context.Background(), &issuestorage.Issue{Title: "Parent"})
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--id", "bd-custom", "--parent", parentID})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error when both --id and --parent are set")
+	}
+	if !strings.Contains(err.Error(), "cannot be combined") {
+		t.Errorf("expected error about --id and --parent conflict, got: %v", err)
+	}
+}
+
+func TestCreateWithCustomID_Force(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	// Without --force, wrong prefix should fail
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--id", "xx-abc"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error without --force")
+	}
+
+	// With --force, wrong prefix should succeed
+	out.Reset()
+	cmd2 := newCreateCmd(NewTestProvider(app))
+	cmd2.SetArgs([]string{"Forced issue", "--id", "xx-abc", "--force"})
+	if err := cmd2.Execute(); err != nil {
+		t.Fatalf("create with --force failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	if id != "xx-abc" {
+		t.Errorf("expected id %q, got %q", "xx-abc", id)
+	}
+
+	issue, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if issue.Title != "Forced issue" {
+		t.Errorf("expected title %q, got %q", "Forced issue", issue.Title)
+	}
+}
+
+func TestCreateWithCustomID_ForceNoHyphen(t *testing.T) {
+	app, _ := setupTestApp(t)
+
+	// --force should NOT bypass the hyphen requirement (it's a format check, not a prefix check)
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--id", "nohyphen", "--force"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error even with --force when ID has no hyphen")
+	}
+	if !strings.Contains(err.Error(), "must contain a hyphen") {
+		t.Errorf("expected error about hyphen, got: %v", err)
+	}
+}
+
+func TestCreateWithCustomID_TombstoneResurrection(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	// Create and tombstone an issue
+	original := &issuestorage.Issue{ID: "bd-tomb1", Title: "Original"}
+	if _, err := store.Create(context.Background(), original); err != nil {
+		t.Fatalf("failed to create original issue: %v", err)
+	}
+	if err := store.CreateTombstone(context.Background(), "bd-tomb1", "test", "testing"); err != nil {
+		t.Fatalf("failed to tombstone issue: %v", err)
+	}
+
+	// Verify it's tombstoned
+	tombstoned, err := store.Get(context.Background(), "bd-tomb1")
+	if err != nil {
+		t.Fatalf("failed to get tombstoned issue: %v", err)
+	}
+	if tombstoned.Status != issuestorage.StatusTombstone {
+		t.Fatalf("expected tombstone status, got %q", tombstoned.Status)
+	}
+
+	// Create with same ID should succeed (resurrect)
+	out := app.Out.(*bytes.Buffer)
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Resurrected issue", "--id", "bd-tomb1"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create with tombstoned ID failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	if id != "bd-tomb1" {
+		t.Errorf("expected id %q, got %q", "bd-tomb1", id)
+	}
+
+	// The new issue should be open with the new title
+	resurrected, err := store.Get(context.Background(), "bd-tomb1")
+	if err != nil {
+		t.Fatalf("failed to get resurrected issue: %v", err)
+	}
+	if resurrected.Title != "Resurrected issue" {
+		t.Errorf("expected title %q, got %q", "Resurrected issue", resurrected.Title)
+	}
+	if resurrected.Status != issuestorage.StatusOpen {
+		t.Errorf("expected status %q, got %q", issuestorage.StatusOpen, resurrected.Status)
+	}
+}

@@ -27,6 +27,8 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		description string
 		titleFlag   string
 		molType     string
+		idFlag      string
+		forceFlag   bool
 	)
 
 	cmd := &cobra.Command{
@@ -58,6 +60,16 @@ Examples:
 			}
 			if strings.TrimSpace(title) == "" {
 				return fmt.Errorf("title is required (provide as argument or --title)")
+			}
+
+			// Validate --id flag
+			if idFlag != "" && parent != "" {
+				return fmt.Errorf("--id and --parent cannot be combined")
+			}
+			if idFlag != "" {
+				if err := validateCustomID(idFlag, app, forceFlag); err != nil {
+					return err
+				}
 			}
 
 			// Parse and validate type
@@ -123,6 +135,16 @@ Examples:
 				Owner:       owner,
 				Labels:      labels,
 				Assignee:    assignee,
+			}
+
+			// When --id is specified, use the explicit ID
+			if idFlag != "" {
+				// Check if the ID exists as a tombstone and clean it up
+				existing, err := app.Storage.Get(ctx, idFlag)
+				if err == nil && existing.Status == issuestorage.StatusTombstone {
+					app.Storage.Delete(ctx, idFlag)
+				}
+				issue.ID = idFlag
 			}
 
 			// When --parent is specified, use dot-notation child ID
@@ -197,6 +219,8 @@ Examples:
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user")
 	cmd.Flags().StringVar(&description, "description", "", "Full description (use - for stdin)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Molecule type (swarm, patrol, work)")
+	cmd.Flags().StringVar(&idFlag, "id", "", "Explicit issue ID (must match configured prefix)")
+	cmd.Flags().BoolVar(&forceFlag, "force", false, "Bypass prefix validation for --id")
 
 	return cmd
 }
@@ -246,6 +270,44 @@ func parseCreateDependency(input string) (issuestorage.DependencyType, string, e
 	}
 
 	return depType, depID, nil
+}
+
+// validateCustomID checks that the given ID is well-formed and uses
+// an allowed prefix. When force is true, prefix validation is skipped.
+func validateCustomID(id string, app *App, force bool) error {
+	if !strings.Contains(id, "-") {
+		return fmt.Errorf("custom ID %q must contain a hyphen (e.g. \"prefix-name\")", id)
+	}
+
+	if force {
+		return nil
+	}
+
+	prefix := id[:strings.Index(id, "-")]
+
+	// Build the set of valid prefixes
+	issuePrefix := "bd" // default
+	if app.ConfigStore != nil {
+		if v, ok := app.ConfigStore.Get("issue_prefix"); ok {
+			issuePrefix = v
+		}
+	}
+
+	validPrefixes := map[string]bool{issuePrefix: true}
+	for _, p := range getCustomValues(app, "allowed_prefixes") {
+		validPrefixes[p] = true
+	}
+
+	if !validPrefixes[prefix] {
+		allowed := make([]string, 0, len(validPrefixes))
+		for p := range validPrefixes {
+			allowed = append(allowed, p)
+		}
+		sort.Strings(allowed)
+		return fmt.Errorf("custom ID prefix %q is not allowed; valid prefixes: %s", prefix, strings.Join(allowed, ", "))
+	}
+
+	return nil
 }
 
 func validDependencyTypeList() string {
