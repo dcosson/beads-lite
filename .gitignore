@@ -5,3 +5,7 @@
 
 # built binary
 bd
+
+# test coverage
+coverage.out
+coverage.html

@@ -1,12 +1,17 @@
 BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= /opt/homebrew/bin/bd
 
-.PHONY: test test-unit test-e2e bench-e2e bench-comparison-e2e e2e-update build check check-ci fmt fmt-check vet staticcheck deps
+.PHONY: test test-unit test-unit-coverage test-e2e bench-e2e bench-comparison-e2e e2e-update build check check-ci fmt fmt-check vet staticcheck deps
 
 test: test-unit test-e2e
 
 test-unit:
 	go test -race ./internal/... ./cmd/... $(ARGS)
+
+test-unit-coverage:
+	go test -race -coverprofile=coverage.out ./internal/... ./cmd/... $(ARGS)
+	go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: coverage.html"
 
 test-e2e: build
 	@test -x "$(BD_LITE_CMD)" || (echo "error: bd binary not found at $(BD_LITE_CMD)" && echo "Run 'make build' first or set BD_LITE_CMD" && exit 1)
