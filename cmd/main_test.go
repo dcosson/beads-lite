@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,6 +49,58 @@ func runBd(t *testing.T, dir string, args ...string) (stdout, stderr string, exi
 	}
 
 	return outBuf.String(), errBuf.String(), exitCode
+}
+
+func TestMain_RunError(t *testing.T) {
+	origRun := run
+	origExit := osExit
+	defer func() {
+		run = origRun
+		osExit = origExit
+	}()
+
+	var gotCode int
+	osExit = func(code int) { gotCode = code }
+	run = func() error { return fmt.Errorf("something went wrong") }
+
+	// Capture stderr
+	origStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+
+	main()
+
+	w.Close()
+	os.Stderr = origStderr
+
+	var buf bytes.Buffer
+	buf.ReadFrom(r)
+
+	if gotCode != 1 {
+		t.Errorf("expected exit code 1, got %d", gotCode)
+	}
+	if !strings.Contains(buf.String(), "something went wrong") {
+		t.Errorf("expected error on stderr, got: %s", buf.String())
+	}
+}
+
+func TestMain_RunSuccess(t *testing.T) {
+	origRun := run
+	origExit := osExit
+	defer func() {
+		run = origRun
+		osExit = origExit
+	}()
+
+	var gotCode int = -1
+	osExit = func(code int) { gotCode = code }
+	run = func() error { return nil }
+
+	main()
+
+	if gotCode != -1 {
+		t.Errorf("expected osExit not to be called, but got code %d", gotCode)
+	}
 }
 
 func TestRun_HelpFlag(t *testing.T) {

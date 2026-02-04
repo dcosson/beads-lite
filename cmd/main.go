@@ -8,13 +8,14 @@ import (
 	"beads-lite/internal/cmd"
 )
 
-func run() error {
-	return cmd.Execute()
-}
+var (
+	run    = func() error { return cmd.Execute() }
+	osExit = os.Exit
+)
 
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		osExit(1)
 	}
 }
