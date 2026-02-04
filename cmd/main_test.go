@@ -50,6 +50,26 @@ func runBd(t *testing.T, dir string, args ...string) (stdout, stderr string, exi
 	return outBuf.String(), errBuf.String(), exitCode
 }
 
+func TestRun_HelpFlag(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+	os.Args = []string{"bd", "--help"}
+
+	if err := run(); err != nil {
+		t.Errorf("run(--help) returned error: %v", err)
+	}
+}
+
+func TestRun_UnknownCommand(t *testing.T) {
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+	os.Args = []string{"bd", "nonexistent-command-xyz"}
+
+	if err := run(); err == nil {
+		t.Error("run(unknown command) should return error")
+	}
+}
+
 func TestHelp(t *testing.T) {
 	stdout, _, exitCode := runBd(t, t.TempDir(), "--help")
 
