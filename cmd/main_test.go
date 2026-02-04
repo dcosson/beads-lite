@@ -119,7 +119,7 @@ func TestInitAndCreate(t *testing.T) {
 	dir := t.TempDir()
 
 	// Initialize beads
-	stdout, stderr, exitCode := runBd(t, dir, "init")
+	stdout, stderr, exitCode := runBd(t, dir, "init", "--prefix", "bd")
 	if exitCode != 0 {
 		t.Fatalf("init failed (exit %d): stdout=%s stderr=%s", exitCode, stdout, stderr)
 	}
@@ -208,7 +208,7 @@ func TestWorkflow(t *testing.T) {
 	dir := t.TempDir()
 
 	// Init
-	runBd(t, dir, "init")
+	runBd(t, dir, "init", "--prefix", "bd")
 
 	// Create issue
 	stdout, _, _ := runBd(t, dir, "--json", "create", "Workflow test issue")
