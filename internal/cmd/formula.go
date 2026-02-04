@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"beads-lite/internal/meow"
 
@@ -72,14 +73,42 @@ Examples:
 				return nil
 			}
 
-			fmt.Fprintf(app.Out, "Formulas (%d):\n", len(entries))
+			fmt.Fprintf(app.Out, "Formulas (%d found)\n", len(entries))
+
+			// Group by type.
+			byType := make(map[meow.FormulaType][]meow.FormulaEntry)
 			for _, e := range entries {
-				phase := ""
-				if e.Phase != "" {
-					phase = fmt.Sprintf(" [%s]", e.Phase)
+				byType[e.Type] = append(byType[e.Type], e)
+			}
+
+			// Print in fixed order: workflow, expansion, aspect.
+			typeOrder := []meow.FormulaType{
+				meow.FormulaTypeWorkflow,
+				meow.FormulaTypeExpansion,
+				meow.FormulaTypeAspect,
+			}
+			typeIcons := map[meow.FormulaType]string{
+				meow.FormulaTypeWorkflow:  "Workflow",
+				meow.FormulaTypeExpansion: "Expansion",
+				meow.FormulaTypeAspect:    "Aspect",
+			}
+			for _, ft := range typeOrder {
+				group := byType[ft]
+				if len(group) == 0 {
+					continue
 				}
-				fmt.Fprintf(app.Out, "  %-20s %-12s%s  %s\n", e.Name, e.Type, phase, e.Description)
-				fmt.Fprintf(app.Out, "    %s\n", e.SourcePath)
+				sort.Slice(group, func(i, j int) bool {
+					return group[i].Name < group[j].Name
+				})
+				fmt.Fprintf(app.Out, "\n%s:\n", typeIcons[ft])
+				for _, e := range group {
+					varInfo := ""
+					if e.Vars > 0 {
+						varInfo = fmt.Sprintf(" (%d vars)", e.Vars)
+					}
+					desc := truncateDesc(e.Description, 60)
+					fmt.Fprintf(app.Out, "  %-25s %s%s\n", e.Name, desc, varInfo)
+				}
 			}
 			return nil
 		},
@@ -197,6 +226,17 @@ Examples:
 	}
 
 	return cmd
+}
+
+// truncateDesc truncates a description to maxLen characters, appending "..."
+// if truncation occurs. Newlines are replaced with spaces for single-line display.
+func truncateDesc(s string, maxLen int) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	if utf8.RuneCountInString(s) <= maxLen {
+		return s
+	}
+	runes := []rune(s)
+	return string(runes[:maxLen-3]) + "..."
 }
 
 // stepType returns the type for display, defaulting to "task".

@@ -50,6 +50,7 @@ func TestFormulaListText(t *testing.T) {
 			"version": 1,
 			"type": "workflow",
 			"phase": "liquid",
+			"vars": {"env": {"description": "Target environment"}},
 			"steps": [{"id": "s1", "title": "Build"}]
 		}`,
 		"triage.formula.toml": `formula = "triage"
@@ -57,6 +58,12 @@ description = "Bug triage"
 version = 1
 type = "expansion"
 `,
+		"security.formula.json": `{
+			"formula": "security",
+			"description": "Security audit aspect",
+			"version": 1,
+			"type": "aspect"
+		}`,
 	})
 
 	app, _ := setupTestApp(t)
@@ -71,23 +78,99 @@ type = "expansion"
 	}
 
 	output := out.String()
-	if !strings.Contains(output, "Formulas (2):") {
-		t.Errorf("expected 'Formulas (2):', got:\n%s", output)
+	// Header with total count.
+	if !strings.Contains(output, "Formulas (3 found)") {
+		t.Errorf("expected 'Formulas (3 found)', got:\n%s", output)
 	}
+	// Grouped by type with headers.
+	if !strings.Contains(output, "Workflow:") {
+		t.Errorf("expected 'Workflow:' section header, got:\n%s", output)
+	}
+	if !strings.Contains(output, "Expansion:") {
+		t.Errorf("expected 'Expansion:' section header, got:\n%s", output)
+	}
+	if !strings.Contains(output, "Aspect:") {
+		t.Errorf("expected 'Aspect:' section header, got:\n%s", output)
+	}
+	// Formula names present.
 	if !strings.Contains(output, "deploy") {
 		t.Errorf("expected 'deploy' in output, got:\n%s", output)
 	}
 	if !strings.Contains(output, "triage") {
 		t.Errorf("expected 'triage' in output, got:\n%s", output)
 	}
+	if !strings.Contains(output, "security") {
+		t.Errorf("expected 'security' in output, got:\n%s", output)
+	}
+	// Var count shown for deploy (1 var).
+	if !strings.Contains(output, "(1 vars)") {
+		t.Errorf("expected '(1 vars)' for deploy, got:\n%s", output)
+	}
+	// Descriptions present.
 	if !strings.Contains(output, "Deploy pipeline") {
 		t.Errorf("expected description in output, got:\n%s", output)
 	}
-	if !strings.Contains(output, "workflow") {
-		t.Errorf("expected type in output, got:\n%s", output)
+}
+
+func TestFormulaListTextTruncation(t *testing.T) {
+	longDesc := "This is a very long description that should be truncated because it exceeds sixty characters in length"
+	configDir := writeMultipleFormulas(t, map[string]string{
+		"longdesc.formula.json": `{
+			"formula": "longdesc",
+			"description": "` + longDesc + `",
+			"version": 1,
+			"type": "workflow"
+		}`,
+	})
+
+	app, _ := setupTestApp(t)
+	app.FormulaPath = meow.FormulaSearchPath{filepath.Join(configDir, "formulas")}
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newFormulaListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(output, "[liquid]") {
-		t.Errorf("expected phase in output, got:\n%s", output)
+
+	output := out.String()
+	// Full description should NOT appear.
+	if strings.Contains(output, longDesc) {
+		t.Errorf("expected description to be truncated, got:\n%s", output)
+	}
+	// Should end with "..."
+	if !strings.Contains(output, "...") {
+		t.Errorf("expected truncated description with '...', got:\n%s", output)
+	}
+}
+
+func TestFormulaListTextTypeOrder(t *testing.T) {
+	// Verify type sections appear in order: workflow, expansion, aspect.
+	configDir := writeMultipleFormulas(t, map[string]string{
+		"z-aspect.formula.json":    `{"formula":"z-aspect","description":"An aspect","version":1,"type":"aspect"}`,
+		"a-expansion.formula.json": `{"formula":"a-expansion","description":"An expansion","version":1,"type":"expansion"}`,
+		"m-workflow.formula.json":  `{"formula":"m-workflow","description":"A workflow","version":1,"type":"workflow"}`,
+	})
+
+	app, _ := setupTestApp(t)
+	app.FormulaPath = meow.FormulaSearchPath{filepath.Join(configDir, "formulas")}
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newFormulaListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := out.String()
+	wIdx := strings.Index(output, "Workflow:")
+	eIdx := strings.Index(output, "Expansion:")
+	aIdx := strings.Index(output, "Aspect:")
+	if wIdx < 0 || eIdx < 0 || aIdx < 0 {
+		t.Fatalf("expected all three type headers, got:\n%s", output)
+	}
+	if wIdx >= eIdx || eIdx >= aIdx {
+		t.Errorf("expected Workflow < Expansion < Aspect order, got w=%d e=%d a=%d\n%s", wIdx, eIdx, aIdx, output)
 	}
 }
 

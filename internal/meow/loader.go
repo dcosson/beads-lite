@@ -79,6 +79,7 @@ type FormulaEntry struct {
 	Type        FormulaType `json:"type"`
 	Phase       string      `json:"phase,omitempty"`
 	Description string      `json:"description"`
+	Vars        int         `json:"vars"`
 	SourcePath  string      `json:"source_path"`
 	Format      string      `json:"format"` // "json" or "toml"
 }
@@ -142,6 +143,7 @@ func ListFormulas(path FormulaSearchPath) ([]FormulaEntry, error) {
 				Type:        f.Type,
 				Phase:       f.Phase,
 				Description: f.Description,
+				Vars:        len(f.Vars),
 				SourcePath:  filePath,
 				Format:      format,
 			})
