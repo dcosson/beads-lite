@@ -168,6 +168,66 @@ func TestCreateWithLabels(t *testing.T) {
 	}
 }
 
+func TestCreateWithLabelsFlag(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--labels", "urgent,backend"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if len(issue.Labels) != 2 {
+		t.Errorf("expected 2 labels, got %d", len(issue.Labels))
+	}
+}
+
+func TestCreateWithLabelAlias(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	// --label (singular) is a hidden alias for --labels
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--label", "urgent,backend"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if len(issue.Labels) != 2 {
+		t.Errorf("expected 2 labels, got %d", len(issue.Labels))
+	}
+}
+
+func TestCreateWithLabelsAndLabelAliasCombined(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	// Both --labels and --label can be used together; values are merged
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--labels", "urgent,backend", "--label", "critical"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if len(issue.Labels) != 3 {
+		t.Fatalf("expected 3 labels, got %d: %v", len(issue.Labels), issue.Labels)
+	}
+	// --labels values come first, then --label alias values are appended
+	expected := []string{"urgent", "backend", "critical"}
+	for i, want := range expected {
+		if issue.Labels[i] != want {
+			t.Errorf("label[%d]: expected %q, got %q", i, want, issue.Labels[i])
+		}
+	}
+}
+
 func TestCreateWithAssignee(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
@@ -712,8 +772,7 @@ func TestCreateAllFlags(t *testing.T) {
 		"--priority", "1",
 		"--parent", parentID,
 		"--deps", depID,
-		"--label", "backend",
-		"--label", "api",
+		"--labels", "backend,api",
 		"--assignee", "bob",
 		"--description", "A comprehensive description",
 	})

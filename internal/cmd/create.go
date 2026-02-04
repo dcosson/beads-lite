@@ -72,6 +72,12 @@ Examples:
 				}
 			}
 
+			// Merge --label alias into --labels
+			labelAlias, _ := cmd.Flags().GetStringSlice("label")
+			if len(labelAlias) > 0 {
+				labels = append(labels, labelAlias...)
+			}
+
 			// Parse and validate type
 			issueType := issuestorage.TypeTask
 			if typeFlag != "" {
@@ -215,7 +221,9 @@ Examples:
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority (0-4 or P0-P4)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Parent issue ID")
 	cmd.Flags().StringSliceVarP(&deps, "deps", "d", nil, "Dependencies in format 'type:id' or 'id' (can repeat)")
-	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Add label (can repeat)")
+	cmd.Flags().StringSliceVarP(&labels, "labels", "l", nil, "Labels (comma-separated or repeat flag)")
+	cmd.Flags().StringSlice("label", nil, "Alias for --labels")
+	cmd.Flags().MarkHidden("label")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user")
 	cmd.Flags().StringVar(&description, "description", "", "Full description (use - for stdin)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Molecule type (swarm, patrol, work)")
