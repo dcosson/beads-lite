@@ -446,6 +446,159 @@ func TestCloseContinueNonMolecule(t *testing.T) {
 	}
 }
 
+func TestCloseContinueJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+	_, idA, idB, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue (JSON) failed: %v", err)
+	}
+
+	var result CloseWithContinueJSON
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, out.String())
+	}
+
+	if len(result.Closed) != 1 {
+		t.Fatalf("expected 1 closed issue, got %d", len(result.Closed))
+	}
+	if result.Closed[0].ID != idA {
+		t.Errorf("expected closed id %q, got %q", idA, result.Closed[0].ID)
+	}
+	if result.Continue == nil {
+		t.Fatal("expected continue block, got nil")
+	}
+	if !result.Continue.AutoAdvanced {
+		t.Error("expected auto_advanced to be true")
+	}
+	if result.Continue.NextStep == nil {
+		t.Fatal("expected next_step, got nil")
+	}
+	if result.Continue.NextStep.ID != idB {
+		t.Errorf("expected next_step id %q, got %q", idB, result.Continue.NextStep.ID)
+	}
+	if result.Continue.MoleculeComplete {
+		t.Error("expected molecule_complete to be false")
+	}
+
+	// Verify step B is now in_progress
+	got, err := store.Get(context.Background(), idB)
+	if err != nil {
+		t.Fatalf("failed to get step B: %v", err)
+	}
+	if got.Status != issuestorage.StatusInProgress {
+		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
+	}
+}
+
+func TestCloseContinueNoAutoJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+	_, idA, idB, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", "--no-auto", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue --no-auto (JSON) failed: %v", err)
+	}
+
+	var result CloseWithContinueJSON
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, out.String())
+	}
+
+	if result.Continue == nil {
+		t.Fatal("expected continue block, got nil")
+	}
+	if result.Continue.AutoAdvanced {
+		t.Error("expected auto_advanced to be false")
+	}
+	if result.Continue.NextStep == nil {
+		t.Fatal("expected next_step, got nil")
+	}
+	if result.Continue.NextStep.ID != idB {
+		t.Errorf("expected next_step id %q, got %q", idB, result.Continue.NextStep.ID)
+	}
+
+	// Verify step B is still open (not auto-advanced)
+	got, err := store.Get(context.Background(), idB)
+	if err != nil {
+		t.Fatalf("failed to get step B: %v", err)
+	}
+	if got.Status != issuestorage.StatusOpen {
+		t.Errorf("expected step B status %q, got %q", issuestorage.StatusOpen, got.Status)
+	}
+}
+
+func TestCloseContinueJSONNonMolecule(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Standalone issue",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", id})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue (JSON, non-molecule) failed: %v", err)
+	}
+
+	var result CloseWithContinueJSON
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, out.String())
+	}
+
+	if result.Continue == nil {
+		t.Fatal("expected continue block, got nil")
+	}
+	if result.Continue.NextStep != nil {
+		t.Errorf("expected next_step to be nil for non-molecule, got %+v", result.Continue.NextStep)
+	}
+	if !result.Continue.MoleculeComplete {
+		t.Error("expected molecule_complete to be true for non-molecule")
+	}
+}
+
+func TestCloseSuggestNextJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+	_, idA, _, _ := setupMolecule(t, store)
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--suggest-next", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --suggest-next (JSON) failed: %v", err)
+	}
+
+	// The JSON output for suggest-next is a plain []IssueJSON (not wrapped)
+	var result []map[string]interface{}
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON: %v\nraw: %s", err, out.String())
+	}
+
+	if len(result) != 1 {
+		t.Fatalf("expected 1 closed issue in output, got %d", len(result))
+	}
+	if result[0]["id"].(string) != idA {
+		t.Errorf("expected id %q, got %q", idA, result[0]["id"])
+	}
+}
+
 func TestCloseContinueEndOfMolecule(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
