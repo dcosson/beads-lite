@@ -50,20 +50,37 @@ func (a *App) StorageFor(ctx context.Context, id string) (issuestorage.IssueStor
 	return filesystem.New(paths.DataDir, prefix), nil
 }
 
-// SuccessColor returns the string wrapped in green ANSI codes if stdout is a terminal,
-// otherwise returns the string unchanged.
-func (a *App) SuccessColor(s string) string {
-	if f, ok := a.Out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		return "\033[32m" + s + "\033[0m"
+// IsColor returns true if colored output should be used.
+// Color is enabled when stdout is a TTY or CLICOLOR_FORCE=1 is set,
+// and disabled when NO_COLOR is set.
+func (a *App) IsColor() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
 	}
-	return s
+	if os.Getenv("CLICOLOR_FORCE") == "1" {
+		return true
+	}
+	if f, ok := a.Out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
+		return true
+	}
+	return false
 }
 
-// WarnColor returns the string wrapped in orange ANSI codes if stdout is a terminal,
-// otherwise returns the string unchanged.
-func (a *App) WarnColor(s string) string {
-	if f, ok := a.Out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		return "\033[38;5;214m" + s + "\033[0m"
+// Colorize wraps s in the given ANSI code if color is enabled.
+// code should be the numeric part only, e.g. "31" for red or "38;5;214" for orange.
+func (a *App) Colorize(s string, code string) string {
+	if !a.IsColor() {
+		return s
 	}
-	return s
+	return "\033[" + code + "m" + s + "\033[0m"
+}
+
+// SuccessColor returns the string wrapped in green ANSI codes if color is enabled.
+func (a *App) SuccessColor(s string) string {
+	return a.Colorize(s, "32")
+}
+
+// WarnColor returns the string wrapped in orange ANSI codes if color is enabled.
+func (a *App) WarnColor(s string) string {
+	return a.Colorize(s, "38;5;214")
 }

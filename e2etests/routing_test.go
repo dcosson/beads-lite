@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"beads-lite/e2etests/reference"
 )
 
 // seedIssue writes a minimal issue JSON file into the given .beads data directory.
@@ -47,7 +45,7 @@ func TestRouting(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &Runner{BdCmd: bdCmd}
 
 	// Build a multi-rig town layout:
 	//   town_root/

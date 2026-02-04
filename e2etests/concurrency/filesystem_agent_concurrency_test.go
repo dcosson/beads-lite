@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"beads-lite/e2etests/reference"
+	"beads-lite/e2etests"
 )
 
 // TestConcurrentAgentStateSet verifies that 20 goroutines can set state for
@@ -19,7 +19,7 @@ func TestConcurrentAgentStateSet(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestConcurrentAgentHeartbeat(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)

@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"beads-lite/e2etests/reference"
+	"beads-lite/e2etests"
 )
 
 // TestConcurrentIssueCreates verifies that 20 goroutines can create issues
@@ -19,7 +19,7 @@ func TestConcurrentIssueCreates(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)
@@ -103,7 +103,7 @@ func TestConcurrentIssueUpdates(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)
@@ -182,7 +182,7 @@ func TestConcurrentStatusUpdates(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)
@@ -316,7 +316,7 @@ func TestConcurrentIssueDependencies(t *testing.T) {
 		t.Skip("BD_CMD environment variable not set")
 	}
 
-	r := &reference.Runner{BdCmd: bdCmd}
+	r := &e2etests.Runner{BdCmd: bdCmd}
 	sandbox, err := r.SetupSandbox()
 	if err != nil {
 		t.Fatal(err)

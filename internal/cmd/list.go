@@ -163,24 +163,30 @@ Examples:
 				return nil
 			}
 
-			fmt.Fprintf(app.Out, "Issues (%d):\n\n", len(issues))
 			for _, issue := range issues {
-				statusStr := string(issue.Status)
+				icon, iconColor := statusIcon(issue.Status)
+				coloredIcon := app.Colorize(icon, iconColor)
+
+				priDisplay := issue.Priority.Display()
+				priColor := priorityColor(issue.Priority)
+				var priBracket string
+				if issue.Status == issuestorage.StatusClosed {
+					priBracket = "[" + app.Colorize(priDisplay, priColor) + "]"
+				} else {
+					priBracket = "[" + app.Colorize("● "+priDisplay, priColor) + "]"
+				}
+
 				typeStr := string(issue.Type)
-				priorityStr := string(issue.Priority)
+				typeColor := issueTypeColor(issue.Type)
+				typeBracket := "[" + app.Colorize(typeStr, typeColor) + "]"
 
-				fmt.Fprintf(app.Out, "  %s  [%s] [%s] [%s] %s\n",
-					issue.ID, statusStr, typeStr, priorityStr, issue.Title)
-
+				assigneeStr := ""
 				if issue.Assignee != "" {
-					fmt.Fprintf(app.Out, "       Assignee: %s\n", issue.Assignee)
+					assigneeStr = " @" + issue.Assignee
 				}
-				if len(issue.Labels) > 0 {
-					fmt.Fprintf(app.Out, "       Labels: %s\n", strings.Join(issue.Labels, ", "))
-				}
-				if issue.Parent != "" {
-					fmt.Fprintf(app.Out, "       Parent: %s\n", issue.Parent)
-				}
+
+				fmt.Fprintf(app.Out, "%s %s %s %s%s - %s\n",
+					coloredIcon, issue.ID, priBracket, typeBracket, assigneeStr, issue.Title)
 			}
 
 			if limited {
@@ -205,4 +211,54 @@ Examples:
 	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum number of issues to return (0 for all)")
 
 	return cmd
+}
+
+// statusIcon returns the icon and ANSI color code for a status.
+func statusIcon(s issuestorage.Status) (icon string, colorCode string) {
+	switch s {
+	case issuestorage.StatusOpen:
+		return "○", ""
+	case issuestorage.StatusInProgress:
+		return "◐", "38;5;214"
+	case issuestorage.StatusClosed:
+		return "✓", "90"
+	case issuestorage.StatusBlocked:
+		return "✕", "31"
+	case issuestorage.StatusDeferred:
+		return "?", "90"
+	default:
+		return "?", ""
+	}
+}
+
+// priorityColor returns the ANSI color code for a priority level.
+func priorityColor(p issuestorage.Priority) string {
+	switch p {
+	case issuestorage.PriorityCritical:
+		return "31"
+	case issuestorage.PriorityHigh:
+		return "38;5;208"
+	case issuestorage.PriorityMedium:
+		return "38;5;214"
+	case issuestorage.PriorityLow:
+		return "33"
+	case issuestorage.PriorityBacklog:
+		return ""
+	default:
+		return ""
+	}
+}
+
+// issueTypeColor returns the ANSI color code for an issue type.
+func issueTypeColor(t issuestorage.IssueType) string {
+	switch t {
+	case issuestorage.TypeEpic:
+		return "35"
+	case issuestorage.TypeBug:
+		return "31"
+	case issuestorage.TypeFeature:
+		return "32"
+	default:
+		return ""
+	}
 }

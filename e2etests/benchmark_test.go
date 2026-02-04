@@ -8,8 +8,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"beads-lite/e2etests/reference"
 )
 
 var compare = flag.Bool("compare", false, "compare against BD_REF_CMD")
@@ -38,8 +36,8 @@ func TestBenchmark(t *testing.T) {
 			t.Fatal("compare mode requires BD_REF_CMD environment variable")
 		}
 
-		refRunner := &reference.Runner{BdCmd: refCmd, KillDaemons: true}
-		liteRunner := &reference.Runner{BdCmd: bdCmd}
+		refRunner := &Runner{BdCmd: refCmd, KillDaemons: true}
+		liteRunner := &Runner{BdCmd: bdCmd}
 
 		t.Log("Running benchmark against reference binary...")
 		refResults := runBenchmarkWorkflow(t, refRunner, "bd (reference)")
@@ -49,13 +47,13 @@ func TestBenchmark(t *testing.T) {
 
 		printComparisonTable(t, liteResults, refResults)
 	} else {
-		r := &reference.Runner{BdCmd: bdCmd}
+		r := &Runner{BdCmd: bdCmd}
 		results := runBenchmarkWorkflow(t, r, "beads-lite")
 		printSingleResults(t, results)
 	}
 }
 
-func runBenchmarkWorkflow(t *testing.T, r *reference.Runner, label string) []phaseResult {
+func runBenchmarkWorkflow(t *testing.T, r *Runner, label string) []phaseResult {
 	t.Helper()
 
 	sandbox, err := r.SetupSandbox()
@@ -74,7 +72,7 @@ func runBenchmarkWorkflow(t *testing.T, r *reference.Runner, label string) []pha
 		if result.ExitCode != 0 {
 			t.Fatalf("[%s] create task %d: exit %d, stderr: %s", label, i, result.ExitCode, result.Stderr)
 		}
-		id := reference.ExtractID([]byte(result.Stdout))
+		id := ExtractID([]byte(result.Stdout))
 		if id == "" {
 			t.Fatalf("[%s] create task %d: could not extract ID from: %s", label, i, result.Stdout)
 		}

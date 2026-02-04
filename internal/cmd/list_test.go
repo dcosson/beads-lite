@@ -542,11 +542,11 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 	}
 
 	output := out.String()
-	// Should produce default output (full format with status/type/priority)
-	if !strings.Contains(output, "[open]") {
-		t.Errorf("expected default format with status brackets, got: %s", output)
+	// Should produce default output with status icon and priority/type brackets
+	if !strings.Contains(output, "○") {
+		t.Errorf("expected status icon in output, got: %s", output)
 	}
-	if !strings.Contains(output, "Test issue") {
+	if !strings.Contains(output, "- Test issue") {
 		t.Errorf("expected output to contain title, got: %s", output)
 	}
 }

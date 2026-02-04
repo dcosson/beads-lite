@@ -1,4 +1,4 @@
-package reference
+package e2etests
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ type Runner struct {
 	BdCmd       string   // path to bd binary
 	KillDaemons bool     // kill reference binary daemons between sandboxes
 	ExtraArgs   []string // extra args prepended to every command (e.g. --no-daemon)
+	ExtraEnv    []string // extra env vars for every command (e.g. "CLICOLOR_FORCE=1")
 }
 
 // SetupSandbox creates a fresh beads sandbox directory by running the setup script.
@@ -73,6 +74,9 @@ func (r *Runner) Run(sandbox string, args ...string) RunResult {
 		cmd.Dir = sandbox
 		cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
 	}
+	for _, env := range r.ExtraEnv {
+		cmd.Env = append(cmd.Env, env)
+	}
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -110,15 +114,15 @@ func projectRoot() string {
 	if err != nil {
 		panic(fmt.Sprintf("cannot get working directory: %v", err))
 	}
-	// This file is in e2etests/reference/, so project root is two levels up
-	if filepath.Base(dir) == "reference" && filepath.Base(filepath.Dir(dir)) == "e2etests" {
-		return filepath.Dir(filepath.Dir(dir))
-	}
-	// Fallback: if running from e2etests/, go up one level
+	// This file is in e2etests/, so project root is one level up
 	if filepath.Base(dir) == "e2etests" {
 		return filepath.Dir(dir)
 	}
-	// If running from a subdirectory of e2etests/ (e.g. e2etests/concurrency/)
+	// If running from e2etests/reference/
+	if filepath.Base(dir) == "reference" && filepath.Base(filepath.Dir(dir)) == "e2etests" {
+		return filepath.Dir(filepath.Dir(dir))
+	}
+	// If running from a subdirectory of e2etests/ (e.g. e2etests/concurrency/, e2etests/bdlite/)
 	if filepath.Base(filepath.Dir(dir)) == "e2etests" {
 		return filepath.Dir(filepath.Dir(dir))
 	}
