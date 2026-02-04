@@ -2,7 +2,7 @@
   <img src="images/beads-lite-hero-square.jpg" alt="Beads Lite" width="400">
 </p>
 
-# Beads Lite
+# bd: Beads Lite
 
 Beads Lite is a lightweight, drop-in replacement for [beads](https://github.com/steveyegge/beads), a CLI task tracker for AI Agents. It's designed to work with [Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04) and should work with any other scripts or tools you already have built around beads. It supports the Molecular Expression of Work commands for cooking, pouring, and burning formulas, molecules, and wisps.
 
