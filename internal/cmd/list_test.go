@@ -626,6 +626,79 @@ func TestListCommand_NoIssues(t *testing.T) {
 	}
 }
 
+func TestListCommand_StatusAll(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create issues with different statuses
+	openID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Open issue",
+		Priority: issuestorage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "In-progress issue",
+		Priority: issuestorage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
+
+	closedID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Closed issue",
+		Priority: issuestorage.PriorityLow,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
+
+	// Create a deleted issue (tombstone)
+	deletedID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Deleted issue",
+		Priority: issuestorage.PriorityLow,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	store.CreateTombstone(ctx, deletedID, "test", "test deletion")
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--status=all"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, openID) {
+		t.Errorf("expected output to contain open issue %s, got: %s", openID, output)
+	}
+	if !strings.Contains(output, inProgressID) {
+		t.Errorf("expected output to contain in-progress issue %s, got: %s", inProgressID, output)
+	}
+	if !strings.Contains(output, closedID) {
+		t.Errorf("expected output to contain closed issue %s, got: %s", closedID, output)
+	}
+	if strings.Contains(output, deletedID) {
+		t.Errorf("expected output NOT to contain deleted issue %s, got: %s", deletedID, output)
+	}
+}
+
 func TestListCommand_MolTypeFilter(t *testing.T) {
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")

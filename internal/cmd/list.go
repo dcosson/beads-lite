@@ -69,7 +69,11 @@ Examples:
 			} else if status != "" {
 				// Allow tombstone as a valid filter for list (even though
 				// update rejects it — listing tombstones is an admin query)
-				if strings.ToLower(status) == "tombstone" {
+				if strings.ToLower(status) == "all" {
+					// --status=all behaves like --all: list open + closed, skip deleted
+					filter.Status = nil
+					all = true
+				} else if strings.ToLower(status) == "tombstone" {
 					s := issuestorage.StatusTombstone
 					filter.Status = &s
 				} else {
