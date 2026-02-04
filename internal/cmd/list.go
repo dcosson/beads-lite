@@ -187,7 +187,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status (open, in-progress, blocked, deferred, closed)")
+	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status ("+statusNames(nil)+")")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
 	cmd.Flags().StringVarP(&issueType, "type", "t", "", "Filter by type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")

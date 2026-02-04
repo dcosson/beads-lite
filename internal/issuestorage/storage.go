@@ -202,9 +202,16 @@ const (
 	StatusBlocked    Status = "blocked"
 	StatusDeferred   Status = "deferred"
 	StatusHooked     Status = "hooked"
+	StatusPinned     Status = "pinned"
 	StatusClosed     Status = "closed"
 	StatusTombstone  Status = "tombstone"
 )
+
+// BuiltinStatuses lists the statuses users can set directly (excludes tombstone).
+var BuiltinStatuses = []Status{
+	StatusOpen, StatusInProgress, StatusBlocked, StatusDeferred,
+	StatusHooked, StatusPinned, StatusClosed,
+}
 
 // Priority represents the urgency of an issue.
 type Priority string

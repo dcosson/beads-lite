@@ -233,7 +233,7 @@ Examples:
 	cmd.Flags().StringVar(&description, "description", "", "New description (use - for stdin)")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "New priority (0-4 or P0-P4)")
 	cmd.Flags().StringVarP(&typeFlag, "type", "t", "", "New type (task, bug, feature, epic, chore, gate)")
-	cmd.Flags().StringVarP(&status, "status", "s", "", "New status (open, in-progress, blocked, deferred, hooked, closed)")
+	cmd.Flags().StringVarP(&status, "status", "s", "", "New status ("+statusNames(nil)+")")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Assign to user (empty string to unassign)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Set parent issue (empty string to remove parent)")
 	cmd.Flags().StringSliceVar(&addLabels, "add-label", nil, "Add label (can repeat)")
@@ -303,6 +303,8 @@ func parseStatus(s string, customStatuses []string) (issuestorage.Status, error)
 		return issuestorage.StatusDeferred, nil
 	case "hooked":
 		return issuestorage.StatusHooked, nil
+	case "pinned":
+		return issuestorage.StatusPinned, nil
 	case "closed":
 		return issuestorage.StatusClosed, nil
 	case "tombstone":
@@ -314,12 +316,19 @@ func parseStatus(s string, customStatuses []string) (issuestorage.Status, error)
 				return issuestorage.Status(s), nil
 			}
 		}
-		builtins := "open, in-progress, blocked, deferred, hooked, closed"
-		if len(customStatuses) > 0 {
-			builtins += ", " + strings.Join(customStatuses, ", ")
-		}
-		return "", fmt.Errorf("invalid status %q: must be one of %s", s, builtins)
+		return "", fmt.Errorf("invalid status %q: must be one of %s", s, statusNames(customStatuses))
 	}
+}
+
+// statusNames returns a comma-separated string of all valid status names
+// (built-in + custom).
+func statusNames(customStatuses []string) string {
+	names := make([]string, 0, len(issuestorage.BuiltinStatuses)+len(customStatuses))
+	for _, s := range issuestorage.BuiltinStatuses {
+		names = append(names, string(s))
+	}
+	names = append(names, customStatuses...)
+	return strings.Join(names, ", ")
 }
 
 // getCustomValues reads a comma-separated config key and returns the split values.

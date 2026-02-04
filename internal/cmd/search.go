@@ -94,7 +94,7 @@ Use --title-only to search only in titles.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status (open, in-progress, blocked, deferred, closed)")
+	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status ("+statusNames(nil)+")")
 	cmd.Flags().BoolVar(&titleOnly, "title-only", false, "Only search titles")
 
 	return cmd
