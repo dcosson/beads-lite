@@ -14,7 +14,6 @@ func DefaultValues() map[string]string {
 		"defaults.type":              "task",
 		"issue_prefix":               "bd",
 		"actor":                      "${USER}",
-		"project.name":               "issues",
 		"hierarchy.max_depth":        strconv.Itoa(issuestorage.DefaultMaxHierarchyDepth),
 	}
 }

@@ -58,14 +58,10 @@ func New(root, prefix string, opts ...Option) *FilesystemStorage {
 
 // Init initializes the storage by creating the required directories.
 func (fs *FilesystemStorage) Init(ctx context.Context) error {
-	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirOpen), 0755); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirClosed), 0755); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Join(fs.root, issuestorage.DirDeleted), 0755); err != nil {
-		return err
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
+		if err := os.MkdirAll(filepath.Join(fs.root, dir), 0755); err != nil {
+			return err
+		}
 	}
 	// Recover any .backup files left by a crashed Modify.
 	fs.recoverBackups()
@@ -77,7 +73,7 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 // recoverBackups restores .json.backup files left by a Modify that
 // crashed between creating the backup and completing the write.
 func (fs *FilesystemStorage) recoverBackups() {
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
 		dirPath := filepath.Join(fs.root, dir)
 		entries, err := os.ReadDir(dirPath)
 		if err != nil {
@@ -178,7 +174,7 @@ func (fs *FilesystemStorage) acquireLock(id string) (*issueLock, error) {
 // countAllIssues returns the total number of JSON issue files across all directories.
 func (fs *FilesystemStorage) countAllIssues() (int, error) {
 	count := 0
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
 		entries, err := os.ReadDir(filepath.Join(fs.root, dir))
 		if os.IsNotExist(err) {
 			continue
@@ -246,7 +242,11 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 			}
 		}
 
-		path := fs.issuePath(issue.ID, false)
+		if issue.Status == "" {
+			issue.Status = issuestorage.StatusOpen
+		}
+		dir := issuestorage.DirForIssue(issue)
+		path := fs.issuePathInDir(issue.ID, dir)
 
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
 		if os.IsExist(err) {
@@ -268,9 +268,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 
 		issue.CreatedAt = time.Now()
 		issue.UpdatedAt = issue.CreatedAt
-		if issue.Status == "" {
-			issue.Status = issuestorage.StatusOpen
-		}
 
 		if err := atomicWriteJSON(path, issue); err != nil {
 			os.Remove(path)
@@ -297,6 +294,11 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	}
 	effectivePrefix := issuestorage.BuildPrefix(fs.prefix, prefixAddition)
 
+	if issue.Status == "" {
+		issue.Status = issuestorage.StatusOpen
+	}
+	dir := issuestorage.DirForIssue(issue)
+
 	// Retry with fresh random IDs on collision.
 	// AdaptiveLength ensures ≤25% collision probability,
 	// so P(MaxIDRetries consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
@@ -305,7 +307,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		if err != nil {
 			return "", fmt.Errorf("generating random ID: %w", err)
 		}
-		path := fs.issuePath(id, false)
+		path := fs.issuePathInDir(id, dir)
 
 		// O_EXCL fails if file exists - collision detection
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
@@ -320,9 +322,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		issue.ID = id
 		issue.CreatedAt = now
 		issue.UpdatedAt = now
-		if issue.Status == "" {
-			issue.Status = issuestorage.StatusOpen
-		}
 
 		if err := atomicWriteJSON(path, issue); err != nil {
 			os.Remove(path)
@@ -354,18 +353,14 @@ func readFileSharedLock(path string) ([]byte, error) {
 
 // Get retrieves an issue by ID.
 func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.Issue, error) {
-	// Check open first (more common case)
-	path := fs.issuePath(id, false)
-	data, err := readFileSharedLock(path)
-	if os.IsNotExist(err) {
-		// Check closed
-		path = fs.issuePath(id, true)
-		data, err = readFileSharedLock(path)
-	}
-	if os.IsNotExist(err) {
-		// Check deleted (tombstones)
-		path = fs.issuePathInDir(id, issuestorage.DirDeleted)
-		data, err = readFileSharedLock(path)
+	// Search order: open → ephemeral → closed → deleted
+	var data []byte
+	var err error
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		data, err = readFileSharedLock(fs.issuePathInDir(id, dir))
+		if !os.IsNotExist(err) {
+			break
+		}
 	}
 	if os.IsNotExist(err) {
 		return nil, issuestorage.ErrNotFound
@@ -392,16 +387,17 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.
 // automatically. Status transition side effects (ClosedAt, CloseReason)
 // are applied via ApplyStatusDefaults.
 func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
-	// Find the issue file.
-	path := fs.issuePath(id, false)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = fs.issuePath(id, true)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			path = fs.issuePathInDir(id, issuestorage.DirDeleted)
-			if _, err := os.Stat(path); os.IsNotExist(err) {
-				return issuestorage.ErrNotFound
-			}
+	// Find the issue file: open → ephemeral → closed → deleted
+	var path string
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		candidate := fs.issuePathInDir(id, dir)
+		if _, err := os.Stat(candidate); err == nil {
+			path = candidate
+			break
 		}
+	}
+	if path == "" {
+		return issuestorage.ErrNotFound
 	}
 
 	f, err := os.OpenFile(path, os.O_RDWR, 0644)
@@ -427,6 +423,7 @@ func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*iss
 	}
 
 	oldStatus := issue.Status
+	oldEphemeral := issue.Ephemeral
 
 	if err := fn(&issue); err != nil {
 		return err
@@ -438,8 +435,8 @@ func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*iss
 
 	issue.UpdatedAt = time.Now()
 
-	oldDir := issuestorage.DirForStatus(oldStatus)
-	newDir := issuestorage.DirForStatus(issue.Status)
+	oldDir := issuestorage.DirForIssue(&issuestorage.Issue{Status: oldStatus, Ephemeral: oldEphemeral})
+	newDir := issuestorage.DirForIssue(&issue)
 
 	if oldDir == newDir {
 		// Same directory — in-place write with backup (current behavior).
@@ -488,15 +485,12 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 	}
 	defer lock.release()
 
-	path := fs.issuePath(id, false)
-	err = os.Remove(path)
-	if os.IsNotExist(err) {
-		path = fs.issuePath(id, true)
-		err = os.Remove(path)
-	}
-	if os.IsNotExist(err) {
-		path = fs.issuePathInDir(id, issuestorage.DirDeleted)
-		err = os.Remove(path)
+	// Search order: open → ephemeral → closed → deleted
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+		err = os.Remove(fs.issuePathInDir(id, dir))
+		if !os.IsNotExist(err) {
+			break
+		}
 	}
 	if os.IsNotExist(err) {
 		return issuestorage.ErrNotFound
@@ -535,6 +529,12 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.List
 			return nil, err
 		}
 		issues = append(issues, openIssues...)
+
+		ephemeralIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirEphemeral), filter)
+		if err != nil {
+			return nil, err
+		}
+		issues = append(issues, ephemeralIssues...)
 	}
 
 	if scanClosed {
@@ -684,24 +684,24 @@ func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, act
 		return err
 	}
 
-	// Remove from original location (try open/ then closed/)
-	openPath := fs.issuePath(id, false)
-	closedPath := fs.issuePath(id, true)
-	errOpen := os.Remove(openPath)
-	if os.IsNotExist(errOpen) {
-		errClosed := os.Remove(closedPath)
-		if os.IsNotExist(errClosed) {
-			// Issue wasn't in open/ or closed/ — might have been created directly
-			// in deleted/. The write above succeeded, so this is fine.
-		} else if errClosed != nil {
+	// Remove from original location (try open/, ephemeral/, then closed/)
+	var removeErr error
+	removed := false
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed} {
+		removeErr = os.Remove(fs.issuePathInDir(id, dir))
+		if removeErr == nil {
+			removed = true
+			break
+		}
+		if !os.IsNotExist(removeErr) {
 			// Rollback: remove from deleted/
 			os.Remove(deletedPath)
-			return errClosed
+			return removeErr
 		}
-	} else if errOpen != nil {
-		// Rollback: remove from deleted/
-		os.Remove(deletedPath)
-		return errOpen
+	}
+	if !removed {
+		// Issue wasn't in open/, ephemeral/, or closed/ — might have been
+		// created directly in deleted/. The write above succeeded, so this is fine.
 	}
 
 	// Clean up lock file
@@ -841,163 +841,100 @@ func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, com
 func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, error) {
 	var problems []string
 
-	// Load all issues from both directories
-	openIssues := make(map[string]*issuestorage.Issue)
-	closedIssues := make(map[string]*issuestorage.Issue)
+	// issuesByDir tracks which directory each issue was found in.
+	type locatedIssue struct {
+		issue *issuestorage.Issue
+		dir   string
+	}
+	issuesByID := make(map[string]*locatedIssue)
 	allIssues := make(map[string]*issuestorage.Issue)
 
-	// Scan open/ directory
-	openEntries, err := os.ReadDir(filepath.Join(fs.root, issuestorage.DirOpen))
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	for _, entry := range openEntries {
-		name := entry.Name()
-		ext := filepath.Ext(name)
-
-		// Check for orphaned temp files
-		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", issuestorage.DirOpen, name))
-			if fix {
-				os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, name))
-			}
-			continue
+	// Scan all directories
+	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed} {
+		entries, err := os.ReadDir(filepath.Join(fs.root, dir))
+		if err != nil && !os.IsNotExist(err) {
+			return nil, err
 		}
 
-		// Check for orphaned lock files
-		if ext == ".lock" {
-			id := name[:len(name)-5]
-			jsonPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
-			if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
-				problems = append(problems, fmt.Sprintf("orphaned lock file: %s/%s", issuestorage.DirOpen, name))
+		for _, entry := range entries {
+			name := entry.Name()
+			ext := filepath.Ext(name)
+
+			// Check for orphaned temp files
+			if strings.Contains(name, ".tmp.") {
+				problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", dir, name))
 				if fix {
-					os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, name))
+					os.Remove(filepath.Join(fs.root, dir, name))
 				}
+				continue
 			}
-			continue
-		}
 
-		if ext != ".json" {
-			continue
-		}
-
-		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, issuestorage.DirOpen, name)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", issuestorage.DirOpen, name, err))
-			continue
-		}
-
-		var issue issuestorage.Issue
-		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", issuestorage.DirOpen, name, err))
-			continue
-		}
-
-		openIssues[id] = &issue
-		allIssues[id] = &issue
-	}
-
-	// Scan closed/ directory
-	closedEntries, err := os.ReadDir(filepath.Join(fs.root, issuestorage.DirClosed))
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	for _, entry := range closedEntries {
-		name := entry.Name()
-		ext := filepath.Ext(name)
-
-		// Check for orphaned temp files
-		if strings.Contains(name, ".tmp.") {
-			problems = append(problems, fmt.Sprintf("orphaned temp file: %s/%s", issuestorage.DirClosed, name))
-			if fix {
-				os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, name))
-			}
-			continue
-		}
-
-		if ext != ".json" {
-			continue
-		}
-
-		id := name[:len(name)-5]
-		path := filepath.Join(fs.root, issuestorage.DirClosed, name)
-		data, err := os.ReadFile(path)
-		if err != nil {
-			problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", issuestorage.DirClosed, name, err))
-			continue
-		}
-
-		var issue issuestorage.Issue
-		if err := json.Unmarshal(data, &issue); err != nil {
-			problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", issuestorage.DirClosed, name, err))
-			continue
-		}
-
-		closedIssues[id] = &issue
-		// Only add to allIssues if not already in open (duplicate check below)
-		if _, exists := allIssues[id]; !exists {
-			allIssues[id] = &issue
-		}
-	}
-
-	// Check for duplicate issues (same ID in both open/ and closed/)
-	for id := range openIssues {
-		if closedIssue, exists := closedIssues[id]; exists {
-			openIssue := openIssues[id]
-			problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, issuestorage.DirOpen, issuestorage.DirClosed))
-			if fix {
-				// Prefer the version with Status=closed if in closed/, otherwise keep the newer one
-				if closedIssue.Status == issuestorage.StatusClosed {
-					// Remove from open/
-					os.Remove(filepath.Join(fs.root, issuestorage.DirOpen, id+".json"))
-					allIssues[id] = closedIssue
-				} else if openIssue.Status == issuestorage.StatusClosed {
-					// Remove from closed/
-					os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, id+".json"))
-					allIssues[id] = openIssue
-				} else {
-					// Both have non-closed status, keep the one in open/ and remove from closed/
-					os.Remove(filepath.Join(fs.root, issuestorage.DirClosed, id+".json"))
-					allIssues[id] = openIssue
+			// Check for orphaned lock files (only in open/)
+			if ext == ".lock" && dir == issuestorage.DirOpen {
+				id := name[:len(name)-5]
+				jsonPath := filepath.Join(fs.root, dir, id+".json")
+				if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
+					problems = append(problems, fmt.Sprintf("orphaned lock file: %s/%s", dir, name))
+					if fix {
+						os.Remove(filepath.Join(fs.root, dir, name))
+					}
 				}
+				continue
 			}
-		}
-	}
 
-	// Check for status-location mismatches
-	for id, issue := range openIssues {
-		if _, isDuplicate := closedIssues[id]; isDuplicate {
-			continue // Already handled above
-		}
-		if issue.Status == issuestorage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=closed but is in %s/", id, issuestorage.DirOpen))
-			if fix {
-				// Move to closed/
-				openPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
-				closedPath := filepath.Join(fs.root, issuestorage.DirClosed, id+".json")
-				if err := atomicWriteJSON(closedPath, issue); err == nil {
-					os.Remove(openPath)
+			if ext != ".json" {
+				continue
+			}
+
+			id := name[:len(name)-5]
+			path := filepath.Join(fs.root, dir, name)
+			data, err := os.ReadFile(path)
+			if err != nil {
+				problems = append(problems, fmt.Sprintf("cannot read file: %s/%s: %v", dir, name, err))
+				continue
+			}
+
+			var issue issuestorage.Issue
+			if err := json.Unmarshal(data, &issue); err != nil {
+				problems = append(problems, fmt.Sprintf("malformed JSON: %s/%s: %v", dir, name, err))
+				continue
+			}
+
+			if existing, exists := issuesByID[id]; exists {
+				problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, existing.dir, dir))
+				if fix {
+					// Keep the one in the correct directory based on status/ephemeral
+					correctDir := issuestorage.DirForIssue(&issue)
+					if dir == correctDir {
+						os.Remove(filepath.Join(fs.root, existing.dir, id+".json"))
+						issuesByID[id] = &locatedIssue{issue: &issue, dir: dir}
+						allIssues[id] = &issue
+					} else {
+						os.Remove(filepath.Join(fs.root, dir, id+".json"))
+					}
 				}
+			} else {
+				issuesByID[id] = &locatedIssue{issue: &issue, dir: dir}
+				allIssues[id] = &issue
 			}
 		}
 	}
 
-	for id, issue := range closedIssues {
-		if _, isDuplicate := openIssues[id]; isDuplicate {
-			continue // Already handled above
-		}
-		if issue.Status != issuestorage.StatusClosed {
-			problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, issue.Status, issuestorage.DirClosed))
+	// Check for status-location and ephemeral-location mismatches
+	for id, loc := range issuesByID {
+		expectedDir := issuestorage.DirForIssue(loc.issue)
+		if loc.dir != expectedDir {
+			if loc.issue.Ephemeral && loc.dir != issuestorage.DirEphemeral {
+				problems = append(problems, fmt.Sprintf("ephemeral mismatch: %s is ephemeral but is in %s/ (expected %s/)", id, loc.dir, issuestorage.DirEphemeral))
+			} else if !loc.issue.Ephemeral {
+				problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, loc.issue.Status, loc.dir))
+			}
 			if fix {
-				// Move to open/
-				closedPath := filepath.Join(fs.root, issuestorage.DirClosed, id+".json")
-				openPath := filepath.Join(fs.root, issuestorage.DirOpen, id+".json")
-				if err := atomicWriteJSON(openPath, issue); err == nil {
-					os.Remove(closedPath)
+				oldPath := filepath.Join(fs.root, loc.dir, id+".json")
+				newPath := filepath.Join(fs.root, expectedDir, id+".json")
+				if err := atomicWriteJSON(newPath, loc.issue); err == nil {
+					os.Remove(oldPath)
+					loc.dir = expectedDir
 				}
 			}
 		}
@@ -1076,8 +1013,8 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	if fix {
 		for id := range issuesNeedingUpdate {
 			issue := allIssues[id]
-			isClosed := issue.Status == issuestorage.StatusClosed
-			path := fs.issuePath(id, isClosed)
+			dir := issuestorage.DirForIssue(issue)
+			path := fs.issuePathInDir(id, dir)
 			atomicWriteJSON(path, issue)
 		}
 	}

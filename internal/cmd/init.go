@@ -24,9 +24,8 @@ import (
 // Note: init doesn't use the provider since it creates the .beads directory.
 func newInitCmd(provider *AppProvider) *cobra.Command {
 	var (
-		force       bool
-		projectName string
-		prefix      string
+		force  bool
+		prefix string
 	)
 
 	cmd := &cobra.Command{
@@ -38,21 +37,17 @@ func newInitCmd(provider *AppProvider) *cobra.Command {
 			if out == nil {
 				out = os.Stdout
 			}
-			return runInit(out, force, projectName, prefix)
+			return runInit(out, force, prefix)
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Force initialization even if .beads exists")
-	cmd.Flags().StringVar(&projectName, "project", "issues", "Project name for data directory")
 	cmd.Flags().StringVar(&prefix, "prefix", "", "ID prefix for issues (e.g. 'proj-')")
 
 	return cmd
 }
 
-func runInit(out io.Writer, force bool, projectName, prefix string) error {
-	if projectName == "" {
-		return errors.New("project name cannot be empty")
-	}
+func runInit(out io.Writer, force bool, prefix string) error {
 	// Path resolution: BEADS_DIR env var > CWD
 	var basePath string
 	if envDir := os.Getenv(config.EnvBeadsDir); envDir != "" {
@@ -111,11 +106,8 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 			return fmt.Errorf("writing default config: %w", err)
 		}
 	}
-	if err := store.Set("project.name", projectName); err != nil {
-		return fmt.Errorf("setting project name: %w", err)
-	}
 
-	dataPath := filepath.Join(beadsPath, projectName)
+	dataPath := filepath.Join(beadsPath, issuestorage.DirIssues)
 	idPrefix := resolvePrefix(prefix, existingPrefix, hasExistingPrefix, dataPath, absPath)
 	if err := store.Set("issue_prefix", idPrefix); err != nil {
 		return fmt.Errorf("setting issue prefix: %w", err)
@@ -128,7 +120,7 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	}
 
 	// Create the slot KV store
-	slotStore, err := kvfs.New(dataPath, "slots")
+	slotStore, err := kvfs.New(beadsPath, "slots")
 	if err != nil {
 		return fmt.Errorf("creating slot store: %w", err)
 	}
@@ -137,7 +129,7 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	}
 
 	// Create the agent KV store
-	agentStore, err := kvfs.New(dataPath, "agents")
+	agentStore, err := kvfs.New(beadsPath, "agents")
 	if err != nil {
 		return fmt.Errorf("creating agent store: %w", err)
 	}
@@ -146,12 +138,19 @@ func runInit(out io.Writer, force bool, projectName, prefix string) error {
 	}
 
 	// Create the merge-slot KV store
-	mergeSlotStore, err := kvfs.New(dataPath, "merge-slot")
+	mergeSlotStore, err := kvfs.New(beadsPath, "merge-slot")
 	if err != nil {
 		return fmt.Errorf("creating merge-slot store: %w", err)
 	}
 	if err := mergeSlotStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing merge-slot store: %w", err)
+	}
+
+	// Create .gitignore in .beads/ directory
+	gitignorePath := filepath.Join(beadsPath, ".gitignore")
+	gitignoreContent := "issues/ephemeral/\n*.lock\n"
+	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
+		return fmt.Errorf("creating .gitignore: %w", err)
 	}
 
 	fmt.Fprintf(out, "Initialized beads-lite repository at %s\n", beadsPath)

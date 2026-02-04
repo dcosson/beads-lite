@@ -6,8 +6,6 @@ package kvstorage
 import (
 	"context"
 	"fmt"
-
-	"beads-lite/internal/issuestorage"
 )
 
 // KVStore defines the interface for generic key-value persistence.
@@ -40,9 +38,9 @@ type SetOptions struct {
 	FailIfExists bool
 }
 
-// ReservedTableNames are directory names used by issue storage.
+// ReservedTableNames are top-level directory names used by beads-lite.
 // These cannot be used as KV table names.
-var ReservedTableNames = issuestorage.ReservedDirs
+var ReservedTableNames = []string{"issues", "formulas"}
 
 // ValidateTableName checks that a table name is not reserved and is non-empty.
 func ValidateTableName(name string) error {

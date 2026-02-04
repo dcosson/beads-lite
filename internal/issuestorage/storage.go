@@ -45,14 +45,26 @@ const DefaultMaxHierarchyDepth = 3
 
 // Directory names used by filesystem storage within the project data dir.
 const (
-	DirOpen    = "open"
-	DirClosed  = "closed"
-	DirDeleted = "deleted"
+	DirIssues    = "issues"
+	DirOpen      = "open"
+	DirClosed    = "closed"
+	DirDeleted   = "deleted"
+	DirEphemeral = "ephemeral"
 )
 
 // ReservedDirs lists all directory names used by issue storage.
 // Other storage systems (e.g., kvstorage) should not use these names.
-var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted}
+var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted, DirEphemeral}
+
+// DirForIssue returns the appropriate directory for an issue based on its
+// ephemeral flag and status. Ephemeral issues go to DirEphemeral; others
+// go to the directory matching their status.
+func DirForIssue(issue *Issue) string {
+	if issue.Ephemeral {
+		return DirEphemeral
+	}
+	return DirForStatus(issue.Status)
+}
 
 // DependencyType represents the type of relationship between two issues.
 type DependencyType string

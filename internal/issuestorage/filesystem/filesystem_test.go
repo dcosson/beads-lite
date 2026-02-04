@@ -1668,3 +1668,233 @@ func issueIDs(issues []*issuestorage.Issue) []string {
 	}
 	return ids
 }
+
+// TestCreateEphemeralIssue verifies ephemeral issues are stored in ephemeral/.
+func TestCreateEphemeralIssue(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title:     "Ephemeral task",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create ephemeral issue failed: %v", err)
+	}
+
+	// File should be in ephemeral/, not open/
+	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
+	if !fileExists(ephemeralPath) {
+		t.Error("ephemeral issue should exist in ephemeral/")
+	}
+	if fileExists(openPath) {
+		t.Error("ephemeral issue should NOT exist in open/")
+	}
+}
+
+// TestCreateNonEphemeralIssue verifies non-ephemeral issues are still in open/.
+func TestCreateNonEphemeralIssue(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title: "Normal task",
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
+	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	if !fileExists(openPath) {
+		t.Error("non-ephemeral issue should exist in open/")
+	}
+	if fileExists(ephemeralPath) {
+		t.Error("non-ephemeral issue should NOT exist in ephemeral/")
+	}
+}
+
+// TestCreateEphemeralWithExplicitID verifies ephemeral issues with pre-set IDs go to ephemeral/.
+func TestCreateEphemeralWithExplicitID(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		ID:        "my-ephemeral-1",
+		Title:     "Ephemeral with ID",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	if !fileExists(ephemeralPath) {
+		t.Error("ephemeral issue with explicit ID should be in ephemeral/")
+	}
+}
+
+// TestGetFindsEphemeralIssue verifies Get() finds issues in ephemeral/.
+func TestGetFindsEphemeralIssue(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title:     "Find me",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get ephemeral issue failed: %v", err)
+	}
+	if got.ID != id {
+		t.Errorf("Get ID = %q, want %q", got.ID, id)
+	}
+	if !got.Ephemeral {
+		t.Error("Get should return Ephemeral=true")
+	}
+}
+
+// TestModifyEphemeralToNonEphemeral verifies promoting an ephemeral issue
+// moves the file from ephemeral/ to open/.
+func TestModifyEphemeralToNonEphemeral(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title:     "Promote me",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Promote: set Ephemeral=false
+	if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error {
+		i.Ephemeral = false
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify failed: %v", err)
+	}
+
+	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
+	if fileExists(ephemeralPath) {
+		t.Error("after promotion, file should NOT be in ephemeral/")
+	}
+	if !fileExists(openPath) {
+		t.Error("after promotion, file should be in open/")
+	}
+
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get after promotion failed: %v", err)
+	}
+	if got.Ephemeral {
+		t.Error("Ephemeral should be false after promotion")
+	}
+}
+
+// TestListIncludesEphemeral verifies List with nil filter includes ephemeral issues.
+func TestListIncludesEphemeral(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	_, err := s.Create(ctx, &issuestorage.Issue{Title: "Normal"})
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	_, err = s.Create(ctx, &issuestorage.Issue{Title: "Ephemeral", Ephemeral: true})
+	if err != nil {
+		t.Fatalf("Create ephemeral failed: %v", err)
+	}
+
+	issues, err := s.List(ctx, nil)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(issues) != 2 {
+		t.Errorf("List should return 2 issues (1 open + 1 ephemeral), got %d", len(issues))
+	}
+}
+
+// TestDeleteEphemeral verifies Delete removes from ephemeral/.
+func TestDeleteEphemeral(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title:     "Delete me",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := s.Delete(ctx, id); err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+
+	_, err = s.Get(ctx, id)
+	if !errors.Is(err, issuestorage.ErrNotFound) {
+		t.Errorf("Get after delete: got %v, want ErrNotFound", err)
+	}
+}
+
+// TestCreateTombstoneEphemeral verifies tombstoning removes from ephemeral/.
+func TestCreateTombstoneEphemeral(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	issue := &issuestorage.Issue{
+		Title:     "Tombstone me",
+		Ephemeral: true,
+	}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if err := s.CreateTombstone(ctx, id, "test", "testing"); err != nil {
+		t.Fatalf("CreateTombstone failed: %v", err)
+	}
+
+	// Should be in deleted/ now
+	deletedPath := filepath.Join(s.root, issuestorage.DirDeleted, id+".json")
+	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	if !fileExists(deletedPath) {
+		t.Error("tombstoned issue should be in deleted/")
+	}
+	if fileExists(ephemeralPath) {
+		t.Error("tombstoned issue should NOT be in ephemeral/")
+	}
+}
+
+// TestInitCreatesEphemeralDir verifies Init creates the ephemeral/ directory.
+func TestInitCreatesEphemeralDir(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir, "bd-")
+	if err := s.Init(context.Background()); err != nil {
+		t.Fatalf("Init failed: %v", err)
+	}
+
+	ephemeralDir := filepath.Join(dir, issuestorage.DirEphemeral)
+	info, err := os.Stat(ephemeralDir)
+	if err != nil {
+		t.Fatalf("ephemeral/ directory not created: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatal("ephemeral path is not a directory")
+	}
+}

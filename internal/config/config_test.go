@@ -14,7 +14,6 @@ func TestDefaultValues(t *testing.T) {
 		"defaults.type":              "task",
 		"issue_prefix":                  "bd",
 		"actor":                      "${USER}",
-		"project.name":               "issues",
 		"hierarchy.max_depth":        "3",
 	}
 
@@ -53,9 +52,6 @@ func TestApplyDefaults(t *testing.T) {
 	if v, ok := s.Get("issue_prefix"); !ok || v != "bd" {
 		t.Errorf("issue_prefix = %q, %v; want %q, true", v, ok, "bd")
 	}
-	if v, ok := s.Get("project.name"); !ok || v != "issues" {
-		t.Errorf("project.name = %q, %v; want %q, true", v, ok, "issues")
-	}
 }
 
 func TestApplyDefaults_AllPresent(t *testing.T) {
@@ -64,7 +60,6 @@ func TestApplyDefaults_AllPresent(t *testing.T) {
 		"defaults.type":     "bug",
 		"issue_prefix":         "x-",
 		"actor":             "bob",
-		"project.name":      "work",
 	}}
 
 	ApplyDefaults(s)

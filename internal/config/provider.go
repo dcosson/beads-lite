@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"beads-lite/internal/issuestorage"
 )
 
 // Paths captures resolved locations for config and data.
@@ -105,14 +105,9 @@ func ResolveFromBase(basePath string) (Paths, error) {
 	return buildPaths(basePath, configFile)
 }
 
-// buildPaths reads project.name from a config file and constructs Paths.
+// buildPaths constructs Paths using the hardcoded "issues" data directory.
 func buildPaths(configDir, configFile string) (Paths, error) {
-	projectName, err := readProjectName(configFile)
-	if err != nil {
-		return Paths{}, err
-	}
-
-	dataDir := filepath.Join(configDir, projectName)
+	dataDir := filepath.Join(configDir, issuestorage.DirIssues)
 	if err := ensureDirExists(dataDir); err != nil {
 		return Paths{}, missingDataErr(dataDir)
 	}
@@ -122,25 +117,6 @@ func buildPaths(configDir, configFile string) (Paths, error) {
 		ConfigFile: configFile,
 		DataDir:    dataDir,
 	}, nil
-}
-
-// readProjectName reads the project.name value from a flat YAML config file.
-// Returns "issues" as default if the key is not present.
-func readProjectName(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("reading config: %w", err)
-	}
-
-	var m map[string]string
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return "", fmt.Errorf("parsing config: %w", err)
-	}
-
-	if name, ok := m["project.name"]; ok && name != "" {
-		return name, nil
-	}
-	return "issues", nil
 }
 
 func normalizeBasePath(path string) (string, error) {
@@ -281,29 +257,20 @@ func ReadRedirect(beadsDir string) (string, error) {
 }
 
 // isValidBeadsLiteDir checks whether a directory looks like a valid beads-lite .beads directory.
-// It checks for config.yaml or project subdirs with open/closed dirs.
+// It checks for config.yaml or the issues/ subdir with open/closed dirs.
 func isValidBeadsLiteDir(dir string) bool {
 	// Check for config.yaml
 	if _, err := os.Stat(filepath.Join(dir, "config.yaml")); err == nil {
 		return true
 	}
 
-	// Check for project subdirectories containing open/ or closed/
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false
+	// Check for issues/open or issues/closed
+	issuesDir := filepath.Join(dir, issuestorage.DirIssues)
+	if _, err := os.Stat(filepath.Join(issuesDir, "open")); err == nil {
+		return true
 	}
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		subdir := filepath.Join(dir, entry.Name())
-		if _, err := os.Stat(filepath.Join(subdir, "open")); err == nil {
-			return true
-		}
-		if _, err := os.Stat(filepath.Join(subdir, "closed")); err == nil {
-			return true
-		}
+	if _, err := os.Stat(filepath.Join(issuesDir, "closed")); err == nil {
+		return true
 	}
 	return false
 }

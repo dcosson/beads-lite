@@ -88,32 +88,6 @@ func resolvePath(path string) string {
 	return filepath.Clean(resolved)
 }
 
-func TestResolvePaths_CustomProjectName(t *testing.T) {
-	tmpDir := t.TempDir()
-	beadsDir := filepath.Join(tmpDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(beadsDir, "work", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(beadsDir, "work", "closed"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	configPath := filepath.Join(beadsDir, "config.yaml")
-	writeFlatConfig(t, configPath, map[string]string{
-		"project.name": "work",
-	})
-
-	t.Setenv(EnvBeadsDir, beadsDir)
-
-	paths, err := ResolvePaths()
-	if err != nil {
-		t.Fatalf("ResolvePaths error: %v", err)
-	}
-	wantData := filepath.Join(beadsDir, "work")
-	if paths.DataDir != wantData {
-		t.Errorf("DataDir = %q, want %q", paths.DataDir, wantData)
-	}
-}
-
 func TestResolvePaths_MissingConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 	deepDir := filepath.Join(tmpDir, "a", "b", "c")
@@ -624,7 +598,7 @@ func TestFindGitWorktreeRoot_NotWorktree(t *testing.T) {
 // writeDefaultConfig writes a flat key-value config file with default values.
 func writeDefaultConfig(t *testing.T, path string) {
 	t.Helper()
-	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nissue_prefix: bd-\nproject.name: issues\n"
+	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nissue_prefix: bd-\n"
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		t.Fatal(err)
 	}

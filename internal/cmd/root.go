@@ -79,17 +79,17 @@ func (p *AppProvider) init() (*App, error) {
 	store := filesystem.New(paths.DataDir, prefix, fsOpts...)
 	store.CleanupStaleLocks()
 
-	slotStore, err := kvfs.New(paths.DataDir, "slots")
+	slotStore, err := kvfs.New(paths.ConfigDir, "slots")
 	if err != nil {
 		return nil, fmt.Errorf("creating slot store: %w", err)
 	}
 
-	agentStore, err := kvfs.New(paths.DataDir, "agents")
+	agentStore, err := kvfs.New(paths.ConfigDir, "agents")
 	if err != nil {
 		return nil, fmt.Errorf("creating agent store: %w", err)
 	}
 
-	mergeSlotStore, err := kvfs.New(paths.DataDir, "merge-slot")
+	mergeSlotStore, err := kvfs.New(paths.ConfigDir, "merge-slot")
 	if err != nil {
 		return nil, fmt.Errorf("creating merge-slot store: %w", err)
 	}

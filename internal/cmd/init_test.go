@@ -140,42 +140,6 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("uses project flag for data directory", func(t *testing.T) {
-		tmpDir := t.TempDir()
-
-		oldWd, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("getting current directory: %v", err)
-		}
-		defer os.Chdir(oldWd)
-
-		if err := os.Chdir(tmpDir); err != nil {
-			t.Fatalf("changing directory: %v", err)
-		}
-
-		provider := &AppProvider{}
-		cmd := newInitCmd(provider)
-		cmd.SetArgs([]string{"--project", "work"})
-
-		if err := cmd.Execute(); err != nil {
-			t.Fatalf("init command failed: %v", err)
-		}
-
-		configPath := filepath.Join(tmpDir, ".beads", "config.yaml")
-		store, err := yamlstore.New(configPath)
-		if err != nil {
-			t.Fatalf("loading config store: %v", err)
-		}
-		if v, _ := store.Get("project.name"); v != "work" {
-			t.Errorf("config project.name = %q, want %q", v, "work")
-		}
-
-		dataPath := filepath.Join(tmpDir, ".beads", "work")
-		if _, err := os.Stat(dataPath); os.IsNotExist(err) {
-			t.Error(".beads/work directory was not created")
-		}
-	})
-
 	t.Run("creates flat config format", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
@@ -204,7 +168,7 @@ func TestInit(t *testing.T) {
 		}
 
 		// Verify all default keys are present as flat key-value pairs
-		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "issue_prefix", "project.name"} {
+		for _, key := range []string{"actor", "defaults.priority", "defaults.type", "issue_prefix"} {
 			if _, ok := store.Get(key); !ok {
 				t.Errorf("config missing key %q", key)
 			}
@@ -419,6 +383,94 @@ func TestInit(t *testing.T) {
 		beadsPath := filepath.Join(tmpDir, ".beads")
 		if _, err := os.Stat(beadsPath); os.IsNotExist(err) {
 			t.Error(".beads directory was not created")
+		}
+	})
+
+	t.Run("creates gitignore", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		gitignorePath := filepath.Join(tmpDir, ".beads", ".gitignore")
+		data, err := os.ReadFile(gitignorePath)
+		if err != nil {
+			t.Fatalf(".gitignore not created: %v", err)
+		}
+		content := string(data)
+		if content != "issues/ephemeral/\n*.lock\n" {
+			t.Errorf(".gitignore content = %q, want %q", content, "issues/ephemeral/\n*.lock\n")
+		}
+	})
+
+	t.Run("creates ephemeral directory", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		ephemeralPath := filepath.Join(tmpDir, ".beads", "issues", "ephemeral")
+		info, err := os.Stat(ephemeralPath)
+		if err != nil {
+			t.Fatalf("ephemeral directory not created: %v", err)
+		}
+		if !info.IsDir() {
+			t.Error("ephemeral path is not a directory")
+		}
+	})
+
+	t.Run("creates kv stores as siblings of issues", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("init command failed: %v", err)
+		}
+
+		beadsPath := filepath.Join(tmpDir, ".beads")
+		for _, dir := range []string{"slots", "agents", "merge-slot"} {
+			dirPath := filepath.Join(beadsPath, dir)
+			info, err := os.Stat(dirPath)
+			if err != nil {
+				t.Errorf("%s directory not created: %v", dir, err)
+				continue
+			}
+			if !info.IsDir() {
+				t.Errorf("%s is not a directory", dir)
+			}
+		}
+
+		// Verify they are NOT inside issues/
+		issuesPath := filepath.Join(beadsPath, "issues")
+		for _, dir := range []string{"slots", "agents", "merge-slot"} {
+			if _, err := os.Stat(filepath.Join(issuesPath, dir)); err == nil {
+				t.Errorf("%s should NOT be inside issues/, should be a sibling", dir)
+			}
 		}
 	})
 
