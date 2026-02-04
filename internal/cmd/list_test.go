@@ -12,7 +12,7 @@ import (
 	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
+func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	ctx := context.Background()
@@ -20,13 +20,47 @@ func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	// Create open and closed issues
+	// Create issues in every non-closed status to verify the default list
+	// includes all of them, not just "open".
 	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "In-progress issue",
+		Priority: issuestorage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	if err := store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
+		t.Fatalf("failed to set in-progress: %v", err)
+	}
+
+	blockedID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Blocked issue",
+		Priority: issuestorage.PriorityMedium,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	if err := store.Modify(ctx, blockedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusBlocked; return nil }); err != nil {
+		t.Fatalf("failed to set blocked: %v", err)
+	}
+
+	deferredID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Deferred issue",
+		Priority: issuestorage.PriorityLow,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	if err := store.Modify(ctx, deferredID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusDeferred; return nil }); err != nil {
+		t.Fatalf("failed to set deferred: %v", err)
 	}
 
 	closedID, err := store.Create(ctx, &issuestorage.Issue{
@@ -53,11 +87,24 @@ func TestListCommand_DefaultListsOpenIssues(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, openID) {
-		t.Errorf("expected output to contain open issue %s, got: %s", openID, output)
-	}
-	if strings.Contains(output, closedID) {
-		t.Errorf("expected output NOT to contain closed issue %s, got: %s", closedID, output)
+	for _, tc := range []struct {
+		id     string
+		label  string
+		expect bool
+	}{
+		{openID, "open", true},
+		{inProgressID, "in-progress", true},
+		{blockedID, "blocked", true},
+		{deferredID, "deferred", true},
+		{closedID, "closed", false},
+	} {
+		found := strings.Contains(output, tc.id)
+		if tc.expect && !found {
+			t.Errorf("expected output to contain %s issue %s, got: %s", tc.label, tc.id, output)
+		}
+		if !tc.expect && found {
+			t.Errorf("expected output NOT to contain %s issue %s, got: %s", tc.label, tc.id, output)
+		}
 	}
 }
 
@@ -69,13 +116,24 @@ func TestListCommand_AllFlag(t *testing.T) {
 		t.Fatalf("failed to init storage: %v", err)
 	}
 
-	// Create open and closed issues
+	// Create open, in-progress, and closed issues — --all should show all of them
 	openID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "In-progress issue",
+		Priority: issuestorage.PriorityHigh,
+	})
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+	if err := store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
+		t.Fatalf("failed to set in-progress: %v", err)
 	}
 
 	closedID, err := store.Create(ctx, &issuestorage.Issue{
@@ -105,6 +163,9 @@ func TestListCommand_AllFlag(t *testing.T) {
 	output := out.String()
 	if !strings.Contains(output, openID) {
 		t.Errorf("expected output to contain open issue %s, got: %s", openID, output)
+	}
+	if !strings.Contains(output, inProgressID) {
+		t.Errorf("expected output to contain in-progress issue %s, got: %s", inProgressID, output)
 	}
 	if !strings.Contains(output, closedID) {
 		t.Errorf("expected output to contain closed issue %s, got: %s", closedID, output)

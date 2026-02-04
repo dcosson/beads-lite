@@ -84,9 +84,10 @@ Examples:
 					filter.Status = &s
 				}
 			} else {
-				// Default: list open issues
-				s := issuestorage.StatusOpen
-				filter.Status = &s
+				// Default: list non-closed issues (open, in_progress, blocked, deferred, etc.)
+				// A nil status filter with scanOpen=true (the storage default) scans
+				// the open/ and ephemeral/ directories, returning all statuses found there.
+				filter.Status = nil
 			}
 
 			if priority != "" {
