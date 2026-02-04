@@ -4,18 +4,19 @@
 
 # Beads Lite
 
-A lightweight, drop-in replacement for [beads](https://github.com/anthropics/beads). Beads Lite stores issues as plain JSON files in a `.beads/` directory, making them easy to review, diff, and track alongside your code with no database required.
+Beads Lite is a lightweight, drop-in replacement for [beads](https://github.com/steveyegge/beads), a CLI task tracker for AI Agents. It's designed to work with [Gas Town](https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04) and should work with any other scripts or tools you already have built around beads. It supports the Molecular Expression of Work commands for cooking, pouring, and burning formulas, molecules, and wisps.
+
+Beads is a great tool but it can be slow and buggy, particularly it seems in a complicated routing setup like gastown. Beads Lite stores issues as plain JSON files, one issue to a file, in a `.beads/` directory, making them easy to review, diff, and track alongside your code (or to store untracked in a separate directory if you prefer). It's ~10x faster than beads with no split source of truth between sqlite & jsonl files, no background daemon needed, and no global locking. It makes Gas Town noticeably snappier to run.
+
+There are still some gaps listed below, and there may be others in particular flags or semantics, but most of the functionality is already covered. The backend is pluggable behind a simple CRUD interface so it would be simple to add integrations for sqlite, dolt, redis, or other datastores.
 
 ## Install
 
-```bash
-go install beads-lite/cmd@latest
-```
-
-Or build from source:
+Build from source:
 
 ```bash
-make build    # produces ./bd
+make build                        # produces ./bd
+ln -s "$(pwd)/bd" ~/.local/bin/bd # creates symlink. Make sure ~/.local/bin is on your path.
 ```
 
 ## Usage
@@ -36,114 +37,114 @@ This table tracks implementation status across major feature areas.
 
 ### Config & Setup
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| `bd init` | ✅ | ✅ | |
-| `BEADS_DIR` env var | ✅ | ✅ | |
-| Config path resolution (walk up CWD, git root) | ✅ | ✅ | |
-| `.beads/redirect` files | ✅ | ✅ | |
-| `bd config set/get/list/unset` | ✅ | ✅ | |
-| `bd config validate` | ✅ | ✅ | |
-| Custom types (`types.custom`) | ✅ | ✅ | |
-| Custom statuses (`status.custom`) | ✅ | ✅ | |
+| Feature                                        | beads | beads-lite | Notes |
+| ---------------------------------------------- | :---: | :--------: | ----- |
+| `bd init`                                      |  ✅   |     ✅     |       |
+| `BEADS_DIR` env var                            |  ✅   |     ✅     |       |
+| Config path resolution (walk up CWD, git root) |  ✅   |     ✅     |       |
+| `.beads/redirect` files                        |  ✅   |     ✅     |       |
+| `bd config set/get/list/unset`                 |  ✅   |     ✅     |       |
+| `bd config validate`                           |  ✅   |     ✅     |       |
+| Custom types (`types.custom`)                  |  ✅   |     ✅     |       |
+| Custom statuses (`status.custom`)              |  ✅   |     ✅     |       |
 
 ### Issue Tracking
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| Create / show / update / delete | ✅ | ✅ | |
-| List with filters (status, priority, type, label, assignee) | ✅ | ✅ | |
-| Issue types (task, bug, feature, epic, chore, molecule) | ✅ | ✅ | |
-| Molecule types (`mol_type`: swarm, patrol, work) | ✅ | ✅ | Filterable via `--mol-type` |
-| Priorities (P0-P4) | ✅ | ✅ | |
-| Statuses (open, in_progress, blocked, deferred, closed) | ✅ | ✅ | |
-| `hooked` status | ✅ | ✅ | For GUPP protocol (agent hook attachment) |
-| Close / reopen | ✅ | ✅ | |
-| Assignees | ✅ | ✅ | |
-| Labels | ✅ | ✅ | |
-| Comments (`bd comments`) | ✅ | ✅ | |
-| Dependencies (10 typed dep kinds) | ✅ | ✅ | |
-| Parent-child hierarchy (dot notation IDs) | ✅ | ✅ | |
-| Search | ✅ | ✅ | |
-| Doctor (consistency checks) | ✅ | ✅ | |
-| Stats | ✅ | ✅ | |
-| Compact (prune old closed issues) | ✅ | ✅ | |
-| Ready / blocked views | ✅ | ✅ | |
-| Batch close with `--continue`/`--suggest-next` | ✅ | ✅ | |
-| `bd edit` (open in `$EDITOR`) | ✅ | ✅ | |
-| `bd label` management | ✅ | ✅ | |
-| `bd rename` (rename issue ID) | ✅ | ⬜ | |
-| `bd move` / `bd refile` (move between rigs) | ✅ | ⬜ | |
-| `bd duplicate` / `bd duplicates` | ✅ | ⬜ | |
-| `bd stale` (not updated recently) | ✅ | ⬜ | |
-| `bd lint` (check template sections) | ✅ | ⬜ | |
-| `bd graph` (dependency graph) | ✅ | 🟡 | `internal/graph` pkg exists, no CLI command |
-| `bd activity` (real-time mutation feed) | ✅ | ⬜ | Accepted as no-op; supports `--follow`, `--town`, `--json` flags but produces no output |
-| Export / import (JSONL) | ✅ | ⬜ | |
+| Feature                                                     | beads | beads-lite | Notes                                                                                   |
+| ----------------------------------------------------------- | :---: | :--------: | --------------------------------------------------------------------------------------- |
+| Create / show / update / delete                             |  ✅   |     ✅     |                                                                                         |
+| List with filters (status, priority, type, label, assignee) |  ✅   |     ✅     |                                                                                         |
+| Issue types (task, bug, feature, epic, chore, molecule)     |  ✅   |     ✅     |                                                                                         |
+| Molecule types (`mol_type`: swarm, patrol, work)            |  ✅   |     ✅     | Filterable via `--mol-type`                                                             |
+| Priorities (P0-P4)                                          |  ✅   |     ✅     |                                                                                         |
+| Statuses (open, in_progress, blocked, deferred, closed)     |  ✅   |     ✅     |                                                                                         |
+| `hooked` status                                             |  ✅   |     ✅     | For GUPP protocol (agent hook attachment)                                               |
+| Close / reopen                                              |  ✅   |     ✅     |                                                                                         |
+| Assignees                                                   |  ✅   |     ✅     |                                                                                         |
+| Labels                                                      |  ✅   |     ✅     |                                                                                         |
+| Comments (`bd comments`)                                    |  ✅   |     ✅     |                                                                                         |
+| Dependencies (10 typed dep kinds)                           |  ✅   |     ✅     |                                                                                         |
+| Parent-child hierarchy (dot notation IDs)                   |  ✅   |     ✅     |                                                                                         |
+| Search                                                      |  ✅   |     ✅     |                                                                                         |
+| Doctor (consistency checks)                                 |  ✅   |     ✅     |                                                                                         |
+| Stats                                                       |  ✅   |     ✅     |                                                                                         |
+| Compact (prune old closed issues)                           |  ✅   |     ✅     |                                                                                         |
+| Ready / blocked views                                       |  ✅   |     ✅     |                                                                                         |
+| Batch close with `--continue`/`--suggest-next`              |  ✅   |     ✅     |                                                                                         |
+| `bd edit` (open in `$EDITOR`)                               |  ✅   |     ✅     |                                                                                         |
+| `bd label` management                                       |  ✅   |     ✅     |                                                                                         |
+| `bd rename` (rename issue ID)                               |  ✅   |     ⬜     |                                                                                         |
+| `bd move` / `bd refile` (move between rigs)                 |  ✅   |     ⬜     |                                                                                         |
+| `bd duplicate` / `bd duplicates`                            |  ✅   |     ⬜     |                                                                                         |
+| `bd stale` (not updated recently)                           |  ✅   |     ⬜     |                                                                                         |
+| `bd lint` (check template sections)                         |  ✅   |     ⬜     |                                                                                         |
+| `bd graph` (dependency graph)                               |  ✅   |     🟡     | `internal/graph` pkg exists, no CLI command                                             |
+| `bd activity` (real-time mutation feed)                     |  ✅   |     ⬜     | Accepted as no-op; supports `--follow`, `--town`, `--json` flags but produces no output |
+| Export / import (JSONL)                                     |  ✅   |     ⬜     |                                                                                         |
 
 > 🟡 **graph**: The `internal/graph` package implements the dependency graph logic, but no `bd graph` CLI command exposes it yet.
 
 ### Molecular Expression of Work (MEOW)
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| Formulas (template definitions) | ✅ | ✅ | `internal/meow/` |
-| `bd formula list` / `show` / `convert` | ✅ | ✅ | |
-| `bd mol pour` (instantiate formula) | ✅ | ✅ | |
-| `bd mol wisp` (ephemeral instance) | ✅ | ✅ | |
-| `bd mol burn` (cascade delete) | ✅ | ✅ | |
-| `bd mol squash` (compress to digest) | ✅ | ✅ | |
-| `bd mol current` / `progress` / `stale` | ✅ | ✅ | |
-| `bd mol gc` (clean old wisps) | ✅ | ✅ | |
-| `bd mol bond` (combine protos/mols) | ✅ | ⬜ | |
-| `bd mol distill` (extract formula from epic) | ✅ | ⬜ | |
-| `bd mol seed --patrol` | ✅ | ✅ | |
-| `bd cook` (compile formula to proto) | ✅ | ✅ | |
+| Feature                                      | beads | beads-lite | Notes            |
+| -------------------------------------------- | :---: | :--------: | ---------------- |
+| Formulas (template definitions)              |  ✅   |     ✅     | `internal/meow/` |
+| `bd formula list` / `show` / `convert`       |  ✅   |     ✅     |                  |
+| `bd mol pour` (instantiate formula)          |  ✅   |     ✅     |                  |
+| `bd mol wisp` (ephemeral instance)           |  ✅   |     ✅     |                  |
+| `bd mol burn` (cascade delete)               |  ✅   |     ✅     |                  |
+| `bd mol squash` (compress to digest)         |  ✅   |     ✅     |                  |
+| `bd mol current` / `progress` / `stale`      |  ✅   |     ✅     |                  |
+| `bd mol gc` (clean old wisps)                |  ✅   |     ✅     |                  |
+| `bd mol bond` (combine protos/mols)          |  ✅   |     ⬜     |                  |
+| `bd mol distill` (extract formula from epic) |  ✅   |     ⬜     |                  |
+| `bd mol seed --patrol`                       |  ✅   |     ✅     |                  |
+| `bd cook` (compile formula to proto)         |  ✅   |     ✅     |                  |
 
 ### Gas Town (Multi-Agent Coordination)
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| `bd agent` (state, heartbeat) | ✅ | ✅ | |
-| `bd slot` (set, clear, show) | ✅ | ✅ | Built on KV storage |
-| `bd gate` (async coordination) | ✅ | ✅ | show, list, wait, add-waiter, resolve, check |
-| `bd swarm` (validate, create, status, list) | ✅ | ✅ | |
-| Seed patrol (formula seeding) | ✅ | ✅ | |
-| `bd merge-slot` (serialized conflict resolution) | ✅ | ✅ | |
-| `bd audit` (append-only activity log) | ✅ | ⬜ | |
-| `bd set-state` / `bd state` | ✅ | ⬜ | |
-| `bd mail` | ✅ | ⬜ | Delegates to `gt mail` |
+| Feature                                          | beads | beads-lite | Notes                                        |
+| ------------------------------------------------ | :---: | :--------: | -------------------------------------------- |
+| `bd agent` (state, heartbeat)                    |  ✅   |     ✅     |                                              |
+| `bd slot` (set, clear, show)                     |  ✅   |     ✅     | Built on KV storage                          |
+| `bd gate` (async coordination)                   |  ✅   |     ✅     | show, list, wait, add-waiter, resolve, check |
+| `bd swarm` (validate, create, status, list)      |  ✅   |     ✅     |                                              |
+| Seed patrol (formula seeding)                    |  ✅   |     ✅     |                                              |
+| `bd merge-slot` (serialized conflict resolution) |  ✅   |     ✅     |                                              |
+| `bd audit` (append-only activity log)            |  ✅   |     ⬜     |                                              |
+| `bd set-state` / `bd state`                      |  ✅   |     ⬜     |                                              |
+| `bd mail`                                        |  ✅   |     ⬜     | Delegates to `gt mail`                       |
 
 ### Routing
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| Issue prefix routing (`routes.jsonl`) | ✅ | ✅ | See ROUTING.md |
-| Town root discovery | ✅ | ✅ | |
-| Contributor routing (maintainer/contributor workflows) | ✅ | ⬜ | |
+| Feature                                                | beads | beads-lite | Notes          |
+| ------------------------------------------------------ | :---: | :--------: | -------------- |
+| Issue prefix routing (`routes.jsonl`)                  |  ✅   |     ✅     | See ROUTING.md |
+| Town root discovery                                    |  ✅   |     ✅     |                |
+| Contributor routing (maintainer/contributor workflows) |  ✅   |     ⬜     |                |
 
 ### Compatibility Commands
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| `bd version` | ✅ | ✅ | Returns 0.43.0 (meets gastown minimum) |
-| `bd sync` | ✅ | ✅ | No-op (filesystem storage needs no sync) |
-| `bd migrate` | ✅ | ✅ | No-op (no DB to migrate) |
-| `bd prime` | ✅ | ✅ | No-op |
-| `bd import` | ✅ | ✅ | No-op (accepts flags for compatibility) |
-| `init --prefix` | ✅ | ✅ | |
-| `-q`/`--quiet` global flag | ✅ | ✅ | |
+| Feature                    | beads | beads-lite | Notes                                    |
+| -------------------------- | :---: | :--------: | ---------------------------------------- |
+| `bd version`               |  ✅   |     ✅     | Returns 0.43.0 (meets gastown minimum)   |
+| `bd sync`                  |  ✅   |     ✅     | No-op (filesystem storage needs no sync) |
+| `bd migrate`               |  ✅   |     ✅     | No-op (no DB to migrate)                 |
+| `bd prime`                 |  ✅   |     ✅     | No-op                                    |
+| `bd import`                |  ✅   |     ✅     | No-op (accepts flags for compatibility)  |
+| `init --prefix`            |  ✅   |     ✅     |                                          |
+| `-q`/`--quiet` global flag |  ✅   |     ✅     |                                          |
 
 ### Sync & Integrations
 
-| Feature | beads | beads-lite | Notes |
-|---------|:-----:|:----------:|-------|
-| JSONL sync (`bd sync`) | ✅ | ✅ | Accepted as no-op for compatibility |
-| Daemon (background sync) | ✅ | ✅ | Not needed (single source of truth) |
-| Dolt DB backend | ✅ | ⬜ | |
-| Jira / Linear / GitHub integrations | ✅ | ⬜ | |
-| Federation (peer-to-peer sync) | ✅ | ⬜ | |
-| Git merge driver | ✅ | ⬜ | |
+| Feature                             | beads | beads-lite | Notes                               |
+| ----------------------------------- | :---: | :--------: | ----------------------------------- |
+| JSONL sync (`bd sync`)              |  ✅   |     ✅     | Accepted as no-op for compatibility |
+| Daemon (background sync)            |  ✅   |     ✅     | Not needed (single source of truth) |
+| Dolt DB backend                     |  ✅   |     ⬜     |                                     |
+| Jira / Linear / GitHub integrations |  ✅   |     ⬜     |                                     |
+| Federation (peer-to-peer sync)      |  ✅   |     ⬜     |                                     |
+| Git merge driver                    |  ✅   |     ⬜     |                                     |
 
 **Legend:** ✅ implemented | 🟡 partial | ⬜ not yet
 
