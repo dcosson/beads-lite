@@ -55,10 +55,10 @@ This table tracks implementation status across major feature areas.
 | Create / show / update / delete                             |  ✅   |     ✅     |                                                                                         |
 | List with filters (status, priority, type, label, assignee) |  ✅   |     ✅     |                                                                                         |
 | Issue types (task, bug, feature, epic, chore, molecule)     |  ✅   |     ✅     |                                                                                         |
-| Molecule types (`mol_type`: swarm, patrol, work)            |  ✅   |     ✅     | Filterable via `--mol-type`                                                             |
+| Molecule types (`mol_type`: swarm, patrol, work)            |  ✅   |     ✅     |                                                                                         |
 | Priorities (P0-P4)                                          |  ✅   |     ✅     |                                                                                         |
 | Statuses (open, in_progress, blocked, deferred, closed)     |  ✅   |     ✅     |                                                                                         |
-| `hooked` status                                             |  ✅   |     ✅     | For GUPP protocol (agent hook attachment)                                               |
+| `hooked` status                                             |  ✅   |     ✅     |                                                                                         |
 | Close / reopen                                              |  ✅   |     ✅     |                                                                                         |
 | Assignees                                                   |  ✅   |     ✅     |                                                                                         |
 | Labels                                                      |  ✅   |     ✅     |                                                                                         |
@@ -86,34 +86,34 @@ This table tracks implementation status across major feature areas.
 
 ### Molecular Expression of Work (MEOW)
 
-| Feature                                      | beads | beads-lite | Notes            |
-| -------------------------------------------- | :---: | :--------: | ---------------- |
-| Formulas (template definitions)              |  ✅   |     ✅     | `internal/meow/` |
-| `bd formula list` / `show` / `convert`       |  ✅   |     ✅     |                  |
-| `bd mol pour` (instantiate formula)          |  ✅   |     ✅     |                  |
-| `bd mol wisp` (ephemeral instance)           |  ✅   |     ✅     |                  |
-| `bd mol burn` (cascade delete)               |  ✅   |     ✅     |                  |
-| `bd mol squash` (compress to digest)         |  ✅   |     ✅     |                  |
-| `bd mol current` / `progress` / `stale`      |  ✅   |     ✅     |                  |
-| `bd mol gc` (clean old wisps)                |  ✅   |     ✅     |                  |
-| `bd mol bond` (combine protos/mols)          |  ✅   |     ⬜     |                  |
-| `bd mol distill` (extract formula from epic) |  ✅   |     ⬜     |                  |
-| `bd mol seed --patrol`                       |  ✅   |     ✅     |                  |
-| `bd cook` (compile formula to proto)         |  ✅   |     ✅     |                  |
+| Feature                                      | beads | beads-lite | Notes |
+| -------------------------------------------- | :---: | :--------: | ----- |
+| Formulas (template definitions)              |  ✅   |     ✅     |       |
+| `bd formula list` / `show` / `convert`       |  ✅   |     ✅     |       |
+| `bd mol pour` (instantiate formula)          |  ✅   |     ✅     |       |
+| `bd mol wisp` (ephemeral instance)           |  ✅   |     ✅     |       |
+| `bd mol burn` (cascade delete)               |  ✅   |     ✅     |       |
+| `bd mol squash` (compress to digest)         |  ✅   |     ✅     |       |
+| `bd mol current` / `progress` / `stale`      |  ✅   |     ✅     |       |
+| `bd mol gc` (clean old wisps)                |  ✅   |     ✅     |       |
+| `bd mol bond` (combine protos/mols)          |  ✅   |     ⬜     |       |
+| `bd mol distill` (extract formula from epic) |  ✅   |     ⬜     |       |
+| `bd mol seed --patrol`                       |  ✅   |     ✅     |       |
+| `bd cook` (compile formula to proto)         |  ✅   |     ✅     |       |
 
 ### Gas Town (Multi-Agent Coordination)
 
-| Feature                                          | beads | beads-lite | Notes                                        |
-| ------------------------------------------------ | :---: | :--------: | -------------------------------------------- |
-| `bd agent` (state, heartbeat)                    |  ✅   |     ✅     |                                              |
-| `bd slot` (set, clear, show)                     |  ✅   |     ✅     | Built on KV storage                          |
-| `bd gate` (async coordination)                   |  ✅   |     ✅     | show, list, wait, add-waiter, resolve, check |
-| `bd swarm` (validate, create, status, list)      |  ✅   |     ✅     |                                              |
-| Seed patrol (formula seeding)                    |  ✅   |     ✅     |                                              |
-| `bd merge-slot` (serialized conflict resolution) |  ✅   |     ✅     |                                              |
-| `bd audit` (append-only activity log)            |  ✅   |     ⬜     |                                              |
-| `bd set-state` / `bd state`                      |  ✅   |     ⬜     |                                              |
-| `bd mail`                                        |  ✅   |     ⬜     | Delegates to `gt mail`                       |
+| Feature                                          | beads | beads-lite | Notes                  |
+| ------------------------------------------------ | :---: | :--------: | ---------------------- |
+| `bd agent` (state, heartbeat)                    |  ✅   |     ✅     |                        |
+| `bd slot` (set, clear, show)                     |  ✅   |     ✅     |                        |
+| `bd gate` (async coordination)                   |  ✅   |     ✅     |                        |
+| `bd swarm` (validate, create, status, list)      |  ✅   |     ✅     |                        |
+| Seed patrol (formula seeding)                    |  ✅   |     ✅     |                        |
+| `bd merge-slot` (serialized conflict resolution) |  ✅   |     ✅     |                        |
+| `bd audit` (append-only activity log)            |  ✅   |     ⬜     |                        |
+| `bd set-state` / `bd state`                      |  ✅   |     ⬜     |                        |
+| `bd mail`                                        |  ✅   |     ⬜     | Delegates to `gt mail` |
 
 ### Routing
 
@@ -125,15 +125,15 @@ This table tracks implementation status across major feature areas.
 
 ### Compatibility Commands
 
-| Feature                    | beads | beads-lite | Notes                                    |
-| -------------------------- | :---: | :--------: | ---------------------------------------- |
-| `bd version`               |  ✅   |     ✅     | Returns 0.43.0 (meets gastown minimum)   |
-| `bd sync`                  |  ✅   |     ✅     | No-op (filesystem storage needs no sync) |
-| `bd migrate`               |  ✅   |     ✅     | No-op (no DB to migrate)                 |
-| `bd prime`                 |  ✅   |     ✅     | No-op                                    |
-| `bd import`                |  ✅   |     ✅     | No-op (accepts flags for compatibility)  |
-| `init --prefix`            |  ✅   |     ✅     |                                          |
-| `-q`/`--quiet` global flag |  ✅   |     ✅     |                                          |
+| Feature                    | beads | beads-lite | Notes                                     |
+| -------------------------- | :---: | :--------: | ----------------------------------------- |
+| `bd version`               |  ✅   |     ✅     | Returns 0.49.1 (current upstream version) |
+| `bd sync`                  |  ✅   |     ✅     | No-op (filesystem storage needs no sync)  |
+| `bd migrate`               |  ✅   |     ✅     | No-op (no DB to migrate)                  |
+| `bd prime`                 |  ✅   |     ✅     | No-op                                     |
+| `bd import`                |  ✅   |     ✅     | No-op (accepts flags for compatibility)   |
+| `init --prefix`            |  ✅   |     ✅     |                                           |
+| `-q`/`--quiet` global flag |  ✅   |     ✅     |                                           |
 
 ### Sync & Integrations
 
