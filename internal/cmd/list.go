@@ -167,30 +167,8 @@ Examples:
 				return nil
 			}
 
-			for _, issue := range issues {
-				icon, iconColor := statusIcon(issue.Status)
-				coloredIcon := app.Colorize(icon, iconColor)
-
-				priDisplay := issue.Priority.Display()
-				priColor := priorityColor(issue.Priority)
-				var priBracket string
-				if issue.Status == issuestorage.StatusClosed {
-					priBracket = "[" + app.Colorize(priDisplay, priColor) + "]"
-				} else {
-					priBracket = "[" + app.Colorize("● "+priDisplay, priColor) + "]"
-				}
-
-				typeStr := string(issue.Type)
-				typeColor := issueTypeColor(issue.Type)
-				typeBracket := "[" + app.Colorize(typeStr, typeColor) + "]"
-
-				assigneeStr := ""
-				if issue.Assignee != "" {
-					assigneeStr = " @" + issue.Assignee
-				}
-
-				fmt.Fprintf(app.Out, "%s %s %s %s%s - %s\n",
-					coloredIcon, issue.ID, priBracket, typeBracket, assigneeStr, issue.Title)
+			for _, line := range formatAlignedIssueLines(app, issues) {
+				fmt.Fprintln(app.Out, line)
 			}
 
 			if limited {
@@ -215,6 +193,94 @@ Examples:
 	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum number of issues to return (0 for all)")
 
 	return cmd
+}
+
+// formatAlignedIssueLines formats a slice of issues with aligned columns.
+// Aligns ID, priority bracket, and type bracket columns. Assignee and title
+// follow immediately after with no extra padding.
+func formatAlignedIssueLines(app *App, issues []*issuestorage.Issue) []string {
+	const maxIDWidth = 30
+
+	// First pass: compute column widths for ID and type
+	idW, typeW := 0, 0
+	for _, issue := range issues {
+		if w := len(issue.ID); w > idW {
+			idW = w
+		}
+		if w := len(string(issue.Type)); w > typeW {
+			typeW = w
+		}
+	}
+	if idW > maxIDWidth {
+		idW = maxIDWidth
+	}
+
+	// Second pass: build aligned lines
+	lines := make([]string, len(issues))
+	for i, issue := range issues {
+		icon, iconColor := statusIcon(issue.Status)
+		coloredIcon := app.Colorize(icon, iconColor)
+
+		// Pad ID
+		visID := issue.ID
+		if len(visID) > maxIDWidth {
+			visID = visID[:maxIDWidth]
+		}
+		paddedID := visID + strings.Repeat(" ", idW-len(visID))
+
+		// Priority bracket — always 6 visible chars: [● P#] or [P#  ]
+		priDisplay := issue.Priority.Display()
+		priColor := priorityColor(issue.Priority)
+		var priBracket string
+		if issue.Status == issuestorage.StatusClosed {
+			priBracket = "[" + app.Colorize(priDisplay, priColor) + "]  "
+		} else {
+			priBracket = "[" + app.Colorize("● "+priDisplay, priColor) + "]"
+		}
+
+		// Pad type bracket
+		typeStr := string(issue.Type)
+		typeColor := issueTypeColor(issue.Type)
+		typeBracket := "[" + app.Colorize(typeStr, typeColor) + "]" + strings.Repeat(" ", typeW-len(typeStr))
+
+		assigneeStr := ""
+		if issue.Assignee != "" {
+			assigneeStr = " @" + issue.Assignee
+		}
+
+		lines[i] = fmt.Sprintf("%s %s %s %s%s - %s",
+			coloredIcon, paddedID, priBracket, typeBracket, assigneeStr, issue.Title)
+	}
+	return lines
+}
+
+// formatIssueLine produces a single-line summary of an issue suitable for
+// dependency/children lines in show output (no column alignment).
+// Format: <icon> <id> [● P#] [type] @assignee - title
+func formatIssueLine(app *App, issue *issuestorage.Issue) string {
+	icon, iconColor := statusIcon(issue.Status)
+	coloredIcon := app.Colorize(icon, iconColor)
+
+	priDisplay := issue.Priority.Display()
+	priColor := priorityColor(issue.Priority)
+	var priBracket string
+	if issue.Status == issuestorage.StatusClosed {
+		priBracket = "[" + app.Colorize(priDisplay, priColor) + "]"
+	} else {
+		priBracket = "[" + app.Colorize("● "+priDisplay, priColor) + "]"
+	}
+
+	typeStr := string(issue.Type)
+	typeColor := issueTypeColor(issue.Type)
+	typeBracket := "[" + app.Colorize(typeStr, typeColor) + "]"
+
+	assigneeStr := ""
+	if issue.Assignee != "" {
+		assigneeStr = " @" + issue.Assignee
+	}
+
+	return fmt.Sprintf("%s %s %s %s%s - %s",
+		coloredIcon, issue.ID, priBracket, typeBracket, assigneeStr, issue.Title)
 }
 
 // statusIcon returns the icon and ANSI color code for a status.

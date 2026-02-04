@@ -65,92 +65,153 @@ Examples:
 	return cmd
 }
 
-// outputIssue formats and outputs the issue details.
+// outputIssue formats and outputs the issue details with colored formatting.
 func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error {
 	if app.JSON {
 		return outputIssueJSON(app, ctx, issue)
 	}
 
-	// Header: ID and Title with status
-	if issue.Status == issuestorage.StatusTombstone {
-		fmt.Fprintf(app.Out, "%s: %s [TOMBSTONE]\n", issue.ID, issue.Title)
+	w := app.Out
+
+	// --- Header line ---
+	// <icon> <id> [EPIC] · <title>   [● P# · STATUS]
+	icon, iconColor := statusIcon(issue.Status)
+	coloredIcon := app.Colorize(icon, iconColor)
+
+	epicTag := ""
+	if issue.Type == issuestorage.TypeEpic {
+		epicTag = " " + "[" + app.Colorize("EPIC", issueTypeColor(issue.Type)) + "]"
+	}
+
+	priDisplay := issue.Priority.Display()
+	priColor := priorityColor(issue.Priority)
+	statusStr := strings.ToUpper(string(issue.Status))
+	_, statusColor := statusIcon(issue.Status)
+	var statusBracket string
+	if issue.Status == issuestorage.StatusClosed {
+		statusBracket = "[" + app.Colorize(priDisplay, priColor) + " · " + app.Colorize(statusStr, statusColor) + "]"
 	} else {
-		fmt.Fprintf(app.Out, "%s: %s\n", issue.ID, issue.Title)
+		statusBracket = "[" + app.Colorize("● "+priDisplay, priColor) + " · " + app.Colorize(statusStr, statusColor) + "]"
 	}
-	fmt.Fprintln(app.Out, strings.Repeat("-", len(issue.ID)+len(issue.Title)+2))
 
-	// Basic metadata
-	fmt.Fprintf(app.Out, "Status:   %s\n", issue.Status)
-	fmt.Fprintf(app.Out, "Priority: %s\n", issue.Priority.Display())
-	fmt.Fprintf(app.Out, "Type:     %s\n", issue.Type)
+	if issue.Status == issuestorage.StatusTombstone {
+		fmt.Fprintf(w, "%s %s%s · %s   [TOMBSTONE]\n", coloredIcon, issue.ID, epicTag, issue.Title)
+	} else {
+		fmt.Fprintf(w, "%s %s%s · %s   %s\n", coloredIcon, issue.ID, epicTag, issue.Title, statusBracket)
+	}
 
+	// --- Metadata line ---
+	// Owner: X · Assignee: Y · Type: Z
+	var meta []string
+	if issue.Owner != "" {
+		meta = append(meta, "Owner: "+issue.Owner)
+	}
 	if issue.Assignee != "" {
-		fmt.Fprintf(app.Out, "Assignee: %s\n", issue.Assignee)
+		meta = append(meta, "Assignee: "+issue.Assignee)
 	}
+	meta = append(meta, "Type: "+string(issue.Type))
+	fmt.Fprintln(w, strings.Join(meta, " · "))
 
-	if len(issue.Labels) > 0 {
-		fmt.Fprintf(app.Out, "Labels:   %s\n", strings.Join(issue.Labels, ", "))
-	}
+	// --- Dates line ---
+	fmt.Fprintf(w, "Created: %s · Updated: %s\n", issue.CreatedAt.Format("2006-01-02"), issue.UpdatedAt.Format("2006-01-02"))
 
-	// Timestamps
-	fmt.Fprintf(app.Out, "Created:  %s\n", issue.CreatedAt.Format("2006-01-02 15:04:05"))
-	fmt.Fprintf(app.Out, "Updated:  %s\n", issue.UpdatedAt.Format("2006-01-02 15:04:05"))
-	if issue.ClosedAt != nil {
-		fmt.Fprintf(app.Out, "Closed:   %s\n", issue.ClosedAt.Format("2006-01-02 15:04:05"))
-	}
+	// --- Tombstone metadata ---
 	if issue.DeletedAt != nil {
-		fmt.Fprintf(app.Out, "Deleted:  %s\n", issue.DeletedAt.Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(w, "Deleted: %s\n", issue.DeletedAt.Format("2006-01-02"))
 		if issue.DeletedBy != "" {
-			fmt.Fprintf(app.Out, "Deleted By: %s\n", issue.DeletedBy)
+			fmt.Fprintf(w, "Deleted By: %s\n", issue.DeletedBy)
 		}
 		if issue.DeleteReason != "" {
-			fmt.Fprintf(app.Out, "Reason:   %s\n", issue.DeleteReason)
+			fmt.Fprintf(w, "Reason: %s\n", issue.DeleteReason)
 		}
 		if issue.OriginalType != "" {
-			fmt.Fprintf(app.Out, "Original Type: %s\n", issue.OriginalType)
+			fmt.Fprintf(w, "Original Type: %s\n", issue.OriginalType)
 		}
 	}
 
-	// Hierarchy
-	if issue.Parent != "" {
-		fmt.Fprintf(app.Out, "\nParent:   %s\n", issue.Parent)
+	// --- Description ---
+	if issue.Description != "" {
+		fmt.Fprintf(w, "\nDescription\n\n")
+		for _, line := range strings.Split(issue.Description, "\n") {
+			fmt.Fprintf(w, "  %s\n", line)
+		}
 	}
+
+	// --- Labels ---
+	if len(issue.Labels) > 0 {
+		fmt.Fprintf(w, "\nLabels: %s\n", strings.Join(issue.Labels, ", "))
+	}
+
+	// --- Parent ---
+	if issue.Parent != "" {
+		parentIssue, err := app.Storage.Get(ctx, issue.Parent)
+		if err == nil {
+			fmt.Fprintf(w, "\nParent\n")
+			fmt.Fprintf(w, "  %s\n", formatIssueLine(app, parentIssue))
+		} else {
+			fmt.Fprintf(w, "\nParent: %s\n", issue.Parent)
+		}
+	}
+
+	// --- Children (parent-child dependents only) ---
 	children := issue.Children()
 	if len(children) > 0 {
-		fmt.Fprintf(app.Out, "\nChildren:\n")
-		for _, child := range children {
-			fmt.Fprintf(app.Out, "  - %s\n", child)
+		fmt.Fprintf(w, "\nChildren\n")
+		for _, childID := range children {
+			childIssue, err := app.Storage.Get(ctx, childID)
+			if err == nil {
+				fmt.Fprintf(w, "  ↳ %s\n", formatIssueLine(app, childIssue))
+			} else {
+				fmt.Fprintf(w, "  ↳ %s\n", childID)
+			}
 		}
 	}
 
-	// Dependencies
-	if len(issue.Dependencies) > 0 {
-		fmt.Fprintf(app.Out, "\nDepends On:\n")
-		for _, dep := range issue.Dependencies {
-			fmt.Fprintf(app.Out, "  - %s [%s]\n", dep.ID, dep.Type)
+	// --- Depends On (non-parent-child dependencies) ---
+	var deps []issuestorage.Dependency
+	for _, dep := range issue.Dependencies {
+		if dep.Type != issuestorage.DepTypeParentChild {
+			deps = append(deps, dep)
 		}
 	}
-	if len(issue.Dependents) > 0 {
-		fmt.Fprintf(app.Out, "\nDependents:\n")
-		for _, dep := range issue.Dependents {
-			fmt.Fprintf(app.Out, "  - %s [%s]\n", dep.ID, dep.Type)
+	if len(deps) > 0 {
+		fmt.Fprintf(w, "\nDepends On\n")
+		for _, dep := range deps {
+			depIssue, err := app.Storage.Get(ctx, dep.ID)
+			if err == nil {
+				fmt.Fprintf(w, "  → %s\n", formatIssueLine(app, depIssue))
+			} else {
+				fmt.Fprintf(w, "  → %s\n", dep.ID)
+			}
 		}
 	}
 
-	// Description
-	if issue.Description != "" {
-		fmt.Fprintf(app.Out, "\nDescription:\n%s\n", issue.Description)
+	// --- Blocks (non-parent-child dependents) ---
+	var blocks []issuestorage.Dependency
+	for _, dep := range issue.Dependents {
+		if dep.Type != issuestorage.DepTypeParentChild {
+			blocks = append(blocks, dep)
+		}
+	}
+	if len(blocks) > 0 {
+		fmt.Fprintf(w, "\nBlocks\n")
+		for _, dep := range blocks {
+			depIssue, err := app.Storage.Get(ctx, dep.ID)
+			if err == nil {
+				fmt.Fprintf(w, "  ← %s\n", formatIssueLine(app, depIssue))
+			} else {
+				fmt.Fprintf(w, "  ← %s\n", dep.ID)
+			}
+		}
 	}
 
-	// Comments
+	// --- Comments ---
 	if len(issue.Comments) > 0 {
-		fmt.Fprintf(app.Out, "\nComments (%d):\n", len(issue.Comments))
+		fmt.Fprintf(w, "\nComments (%d)\n", len(issue.Comments))
 		for _, comment := range issue.Comments {
-			fmt.Fprintf(app.Out, "\n  [%d] %s (%s):\n", comment.ID, comment.Author, comment.CreatedAt.Format("2006-01-02 15:04"))
-			// Indent comment body
-			lines := strings.Split(comment.Text, "\n")
-			for _, line := range lines {
-				fmt.Fprintf(app.Out, "    %s\n", line)
+			fmt.Fprintf(w, "\n  [%d] %s (%s):\n", comment.ID, comment.Author, comment.CreatedAt.Format("2006-01-02 15:04"))
+			for _, line := range strings.Split(comment.Text, "\n") {
+				fmt.Fprintf(w, "    %s\n", line)
 			}
 		}
 	}

@@ -28,6 +28,7 @@ func TestShowCommand(t *testing.T) {
 		Type:        issuestorage.TypeBug,
 		Labels:      []string{"urgent", "backend"},
 		Assignee:    "alice",
+		Owner:       "bob",
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
@@ -49,26 +50,48 @@ func TestShowCommand(t *testing.T) {
 	}
 
 	output := out.String()
-	if !strings.Contains(output, id) {
-		t.Errorf("expected output to contain ID %s, got: %s", id, output)
+
+	// Header line: icon + id + · + title + status bracket
+	if !strings.Contains(output, "○") {
+		t.Errorf("expected status icon ○, got: %s", output)
 	}
-	if !strings.Contains(output, "Test Issue") {
-		t.Errorf("expected output to contain title, got: %s", output)
-	}
-	if !strings.Contains(output, "This is a test description") {
-		t.Errorf("expected output to contain description, got: %s", output)
+	if !strings.Contains(output, id+" · Test Issue") {
+		t.Errorf("expected 'id · Test Issue' in header, got: %s", output)
 	}
 	if !strings.Contains(output, "P1") {
-		t.Errorf("expected output to contain priority P1, got: %s", output)
+		t.Errorf("expected P1 in priority bracket, got: %s", output)
 	}
-	if !strings.Contains(output, "bug") {
-		t.Errorf("expected output to contain type, got: %s", output)
+	if !strings.Contains(output, "OPEN") {
+		t.Errorf("expected OPEN in status bracket, got: %s", output)
 	}
-	if !strings.Contains(output, "alice") {
-		t.Errorf("expected output to contain assignee, got: %s", output)
+
+	// Metadata line
+	if !strings.Contains(output, "Owner: bob") {
+		t.Errorf("expected 'Owner: bob' in metadata, got: %s", output)
 	}
-	if !strings.Contains(output, "urgent") || !strings.Contains(output, "backend") {
-		t.Errorf("expected output to contain labels, got: %s", output)
+	if !strings.Contains(output, "Assignee: alice") {
+		t.Errorf("expected 'Assignee: alice' in metadata, got: %s", output)
+	}
+	if !strings.Contains(output, "Type: bug") {
+		t.Errorf("expected 'Type: bug' in metadata, got: %s", output)
+	}
+
+	// Dates line
+	if !strings.Contains(output, "Created:") || !strings.Contains(output, "Updated:") {
+		t.Errorf("expected dates line, got: %s", output)
+	}
+
+	// Description section
+	if !strings.Contains(output, "Description") {
+		t.Errorf("expected Description section, got: %s", output)
+	}
+	if !strings.Contains(output, "  This is a test description") {
+		t.Errorf("expected indented description, got: %s", output)
+	}
+
+	// Labels section
+	if !strings.Contains(output, "Labels: urgent, backend") {
+		t.Errorf("expected labels line, got: %s", output)
 	}
 }
 
@@ -291,8 +314,17 @@ func TestShowClosedIssue(t *testing.T) {
 	if !strings.Contains(output, id) {
 		t.Errorf("expected output to contain ID %s, got: %s", id, output)
 	}
-	if !strings.Contains(output, "closed") {
-		t.Errorf("expected output to show closed status, got: %s", output)
+	if !strings.Contains(output, "CLOSED") {
+		t.Errorf("expected output to show CLOSED status, got: %s", output)
+	}
+	if !strings.Contains(output, "✓") {
+		t.Errorf("expected closed status icon ✓, got: %s", output)
+	}
+	// Closed issues should NOT have ● in the priority bracket
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, "Closed Issue") && strings.Contains(line, "●") {
+			t.Errorf("closed issue should not have ● in priority bracket, got: %s", line)
+		}
 	}
 }
 
@@ -309,6 +341,7 @@ func TestShowWithDependencies(t *testing.T) {
 	depID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency Issue",
 		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create dependency issue: %v", err)
@@ -317,12 +350,13 @@ func TestShowWithDependencies(t *testing.T) {
 	mainID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Main Issue",
 		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
 	})
 	if err != nil {
 		t.Fatalf("failed to create main issue: %v", err)
 	}
 
-	// Add dependency relationship
+	// Add dependency relationship (mainID depends on depID)
 	if err := store.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
@@ -335,7 +369,7 @@ func TestShowWithDependencies(t *testing.T) {
 		JSON:    false,
 	}
 
-	// Test show main issue
+	// Test show main issue — should have "Depends On" with enriched dep line
 	cmd := newShowCmd(NewTestProvider(app))
 	cmd.SetArgs([]string{mainID})
 	if err := cmd.Execute(); err != nil {
@@ -344,10 +378,124 @@ func TestShowWithDependencies(t *testing.T) {
 
 	output := out.String()
 	if !strings.Contains(output, "Depends On") {
-		t.Errorf("expected output to contain 'Depends On' section, got: %s", output)
+		t.Errorf("expected 'Depends On' section, got: %s", output)
+	}
+	if !strings.Contains(output, "→") {
+		t.Errorf("expected → prefix in depends on section, got: %s", output)
 	}
 	if !strings.Contains(output, depID) {
-		t.Errorf("expected output to contain dependency ID %s, got: %s", depID, output)
+		t.Errorf("expected dependency ID %s, got: %s", depID, output)
+	}
+	if !strings.Contains(output, "Dependency Issue") {
+		t.Errorf("expected dependency title in output, got: %s", output)
+	}
+
+	// Test show dependency issue — should have "Blocks" section
+	out.Reset()
+	cmd = newShowCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{depID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("show dep issue failed: %v", err)
+	}
+
+	output = out.String()
+	if !strings.Contains(output, "Blocks") {
+		t.Errorf("expected 'Blocks' section, got: %s", output)
+	}
+	if !strings.Contains(output, "←") {
+		t.Errorf("expected ← prefix in blocks section, got: %s", output)
+	}
+	if !strings.Contains(output, mainID) {
+		t.Errorf("expected blocker ID %s, got: %s", mainID, output)
+	}
+}
+
+func TestShowWithChildren(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+
+	// Create parent epic
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Parent Epic",
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeEpic,
+	})
+	if err != nil {
+		t.Fatalf("failed to create parent: %v", err)
+	}
+
+	// Create child task
+	childID, err := store.Create(ctx, &issuestorage.Issue{
+		Title:    "Child Task",
+		Priority: issuestorage.PriorityHigh,
+		Type:     issuestorage.TypeTask,
+	})
+	if err != nil {
+		t.Fatalf("failed to create child: %v", err)
+	}
+
+	// Add parent-child relationship
+	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{
+		Storage: store,
+		Out:     &out,
+		JSON:    false,
+	}
+
+	// Show parent — should have Children section, NOT Blocks
+	cmd := newShowCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{parentID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("show parent failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "[EPIC]") {
+		t.Errorf("expected [EPIC] tag in header, got: %s", output)
+	}
+	if !strings.Contains(output, "Children") {
+		t.Errorf("expected Children section, got: %s", output)
+	}
+	if !strings.Contains(output, "↳") {
+		t.Errorf("expected ↳ prefix in children section, got: %s", output)
+	}
+	if !strings.Contains(output, childID) {
+		t.Errorf("expected child ID %s in children section, got: %s", childID, output)
+	}
+	if !strings.Contains(output, "Child Task") {
+		t.Errorf("expected child title in children section, got: %s", output)
+	}
+	// Parent-child deps should NOT appear in Blocks
+	if strings.Contains(output, "Blocks") {
+		t.Errorf("parent-child dep should not appear in Blocks section, got: %s", output)
+	}
+
+	// Show child — should have Parent section, NOT Depends On
+	out.Reset()
+	cmd = newShowCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{childID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("show child failed: %v", err)
+	}
+
+	output = out.String()
+	if !strings.Contains(output, "Parent") {
+		t.Errorf("expected Parent section, got: %s", output)
+	}
+	if !strings.Contains(output, parentID) {
+		t.Errorf("expected parent ID %s, got: %s", parentID, output)
+	}
+	// Parent-child deps should NOT appear in Depends On
+	if strings.Contains(output, "Depends On") {
+		t.Errorf("parent-child dep should not appear in Depends On section, got: %s", output)
 	}
 }
 
@@ -394,12 +542,12 @@ func TestShowWithComments(t *testing.T) {
 
 	output := out.String()
 	if !strings.Contains(output, "Comments (1)") {
-		t.Errorf("expected output to contain 'Comments (1)' section, got: %s", output)
+		t.Errorf("expected 'Comments (1)' section, got: %s", output)
 	}
 	if !strings.Contains(output, "bob") {
-		t.Errorf("expected output to contain comment author, got: %s", output)
+		t.Errorf("expected comment author, got: %s", output)
 	}
 	if !strings.Contains(output, "This is a test comment") {
-		t.Errorf("expected output to contain comment body, got: %s", output)
+		t.Errorf("expected comment body, got: %s", output)
 	}
 }
