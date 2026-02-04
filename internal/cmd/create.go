@@ -29,6 +29,7 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		molType     string
 		idFlag      string
 		forceFlag   bool
+		ephemeral   bool
 	)
 
 	cmd := &cobra.Command{
@@ -141,6 +142,7 @@ Examples:
 				Owner:       owner,
 				Labels:      labels,
 				Assignee:    assignee,
+				Ephemeral:   ephemeral,
 			}
 
 			// When --id is specified, use the explicit ID
@@ -229,6 +231,7 @@ Examples:
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Molecule type (swarm, patrol, work)")
 	cmd.Flags().StringVar(&idFlag, "id", "", "Explicit issue ID (must match configured prefix)")
 	cmd.Flags().BoolVar(&forceFlag, "force", false, "Bypass prefix validation for --id")
+	cmd.Flags().BoolVar(&ephemeral, "ephemeral", false, "Mark issue as ephemeral (not exported to JSONL)")
 
 	return cmd
 }

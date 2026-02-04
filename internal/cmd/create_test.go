@@ -228,6 +228,40 @@ func TestCreateWithLabelsAndLabelAliasCombined(t *testing.T) {
 	}
 }
 
+func TestCreateWithEphemeral(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Ephemeral issue", "--ephemeral"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if !issue.Ephemeral {
+		t.Error("expected Ephemeral=true, got false")
+	}
+}
+
+func TestCreateWithoutEphemeral(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Normal issue"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if issue.Ephemeral {
+		t.Error("expected Ephemeral=false, got true")
+	}
+}
+
 func TestCreateWithAssignee(t *testing.T) {
 	app, store := setupTestApp(t)
 	out := app.Out.(*bytes.Buffer)
