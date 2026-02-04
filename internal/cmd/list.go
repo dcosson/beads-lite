@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"beads-lite/internal/issuestorage"
@@ -145,6 +146,11 @@ Examples:
 				}
 				issues = append(issues, closedIssues...)
 			}
+
+			// Sort by priority (P0 first)
+			sort.Slice(issues, func(i, j int) bool {
+				return issues[i].Priority < issues[j].Priority
+			})
 
 			// Apply limit
 			limited := limit > 0 && len(issues) > limit
