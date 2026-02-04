@@ -58,8 +58,8 @@ func TestShowCommand(t *testing.T) {
 	if !strings.Contains(output, "This is a test description") {
 		t.Errorf("expected output to contain description, got: %s", output)
 	}
-	if !strings.Contains(output, "high") {
-		t.Errorf("expected output to contain priority, got: %s", output)
+	if !strings.Contains(output, "P1") {
+		t.Errorf("expected output to contain priority P1, got: %s", output)
 	}
 	if !strings.Contains(output, "bug") {
 		t.Errorf("expected output to contain type, got: %s", output)

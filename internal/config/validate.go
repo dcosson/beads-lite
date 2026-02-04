@@ -9,7 +9,7 @@ import (
 // validValues maps known keys to their allowed values.
 // An empty slice means any non-empty string is accepted.
 var validValues = map[string][]string{
-	"defaults.priority":   {"critical", "high", "medium", "low", "backlog"},
+	"defaults.priority":   {"0", "1", "2", "3", "4", "P0", "P1", "P2", "P3", "P4", "critical", "high", "medium", "low", "backlog"},
 	"defaults.type":       {"task", "bug", "feature", "epic", "chore"},
 	"issue_prefix":        {},
 	"actor":               {},

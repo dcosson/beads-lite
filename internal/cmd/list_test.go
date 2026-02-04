@@ -305,7 +305,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 	}
 
 	cmd := newListCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"--priority=high"})
+	cmd.SetArgs([]string{"--priority=P1"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("list command failed: %v", err)
 	}

@@ -81,7 +81,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 
 	// Basic metadata
 	fmt.Fprintf(app.Out, "Status:   %s\n", issue.Status)
-	fmt.Fprintf(app.Out, "Priority: %s\n", issue.Priority)
+	fmt.Fprintf(app.Out, "Priority: %s\n", issue.Priority.Display())
 	fmt.Fprintf(app.Out, "Type:     %s\n", issue.Type)
 
 	if issue.Assignee != "" {

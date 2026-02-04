@@ -274,7 +274,7 @@ func TestConfigList_WithEntries(t *testing.T) {
 	app, out := setupConfigTestApp(t)
 	seedConfigStore(t, app.ConfigDir, map[string]string{
 		"actor":             "alice",
-		"defaults.priority": "high",
+		"defaults.priority": "P1",
 	})
 
 	cmd := newConfigListCmd(NewTestProvider(app))
@@ -289,13 +289,13 @@ func TestConfigList_WithEntries(t *testing.T) {
 	if !strings.Contains(output, "  actor = alice") {
 		t.Errorf("missing actor line in: %s", output)
 	}
-	if !strings.Contains(output, "  defaults.priority = high") {
+	if !strings.Contains(output, "  defaults.priority = P1") {
 		t.Errorf("missing priority line in: %s", output)
 	}
 
 	// Verify sorted order: actor comes before defaults.priority
 	actorIdx := strings.Index(output, "  actor = alice")
-	priorityIdx := strings.Index(output, "  defaults.priority = high")
+	priorityIdx := strings.Index(output, "  defaults.priority = P1")
 	if actorIdx >= priorityIdx {
 		t.Errorf("entries not sorted: actor at %d, defaults.priority at %d", actorIdx, priorityIdx)
 	}
@@ -324,7 +324,7 @@ func TestConfigList_JSON_WithEntries(t *testing.T) {
 	app.JSON = true
 	seedConfigStore(t, app.ConfigDir, map[string]string{
 		"actor":             "alice",
-		"defaults.priority": "high",
+		"defaults.priority": "P1",
 	})
 
 	cmd := newConfigListCmd(NewTestProvider(app))
@@ -339,8 +339,8 @@ func TestConfigList_JSON_WithEntries(t *testing.T) {
 	if result["actor"] != "alice" {
 		t.Errorf("actor = %q, want alice", result["actor"])
 	}
-	if result["defaults.priority"] != "high" {
-		t.Errorf("defaults.priority = %q, want high", result["defaults.priority"])
+	if result["defaults.priority"] != "P1" {
+		t.Errorf("defaults.priority = %q, want P1", result["defaults.priority"])
 	}
 }
 
@@ -348,7 +348,7 @@ func TestConfigValidate_Clean(t *testing.T) {
 	app, out := setupConfigTestApp(t)
 	seedConfigStore(t, app.ConfigDir, map[string]string{
 		"actor":             "alice",
-		"defaults.priority": "high",
+		"defaults.priority": "P1",
 		"defaults.type":     "task",
 	})
 

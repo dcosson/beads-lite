@@ -122,7 +122,7 @@ are supported.
 
 Examples:
   bd config set actor alice
-  bd config set defaults.priority high
+  bd config set defaults.priority P1
   bd config set custom.key myvalue`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -259,6 +259,17 @@ Examples:
 
 // validPriorities is the set of valid priority values.
 var validPriorities = map[string]bool{
+	"0":  true,
+	"1":  true,
+	"2":  true,
+	"3":  true,
+	"4":  true,
+	"P0": true,
+	"P1": true,
+	"P2": true,
+	"P3": true,
+	"P4": true,
+	// Legacy word forms accepted for backward compatibility.
 	"critical": true,
 	"high":     true,
 	"medium":   true,

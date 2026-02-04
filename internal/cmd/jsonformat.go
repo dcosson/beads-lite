@@ -126,20 +126,7 @@ func ToIssueSimpleJSON(issue *issuestorage.Issue) IssueSimpleJSON {
 
 // priorityToInt converts issuestorage.Priority to numeric value (0-4).
 func priorityToInt(p issuestorage.Priority) int {
-	switch p {
-	case issuestorage.PriorityCritical:
-		return 0
-	case issuestorage.PriorityHigh:
-		return 1
-	case issuestorage.PriorityMedium:
-		return 2
-	case issuestorage.PriorityLow:
-		return 3
-	case issuestorage.PriorityBacklog:
-		return 4
-	default:
-		return 2 // default to medium
-	}
+	return int(p)
 }
 
 // formatTime formats a time.Time to RFC3339 with nanoseconds.

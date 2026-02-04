@@ -249,7 +249,7 @@ func parsePriorityInput(s string) (issuestorage.Priority, error) {
 	case "4", "p4":
 		return issuestorage.PriorityBacklog, nil
 	default:
-		return "", fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
+		return -1, fmt.Errorf("invalid priority %q (expected 0-4 or P0-P4, not words like high/medium/low)", s)
 	}
 }
 

@@ -48,7 +48,10 @@ are shown, along with parallel group info.`,
 
 			// Apply priority filter if specified
 			if priority != "" {
-				p := issuestorage.Priority(priority)
+				p, err := parsePriority(priority)
+				if err != nil {
+					return err
+				}
 				filter.Priority = &p
 			}
 
@@ -134,12 +137,12 @@ are shown, along with parallel group info.`,
 					fmt.Fprintf(app.Out, "  ⚡ %d steps can run in parallel:\n", len(ready))
 				}
 				for _, issue := range ready {
-					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority.Display(), issue.Title)
 				}
 			} else {
 				fmt.Fprintf(app.Out, "Ready issues (%d):\n\n", len(ready))
 				for _, issue := range ready {
-					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority, issue.Title)
+					fmt.Fprintf(app.Out, "  %s  [%s] %s\n", issue.ID, issue.Priority.Display(), issue.Title)
 				}
 			}
 
@@ -147,7 +150,7 @@ are shown, along with parallel group info.`,
 		},
 	}
 
-	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (0-4 or P0-P4)")
 	cmd.Flags().StringVar(&molID, "mol", "", "Restrict to ready steps within a molecule")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee")

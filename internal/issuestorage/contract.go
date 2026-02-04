@@ -63,7 +63,7 @@ func testCreate(t *testing.T, s IssueStore) {
 		t.Errorf("Status mismatch: got %q, want %q", got.Status, issue.Status)
 	}
 	if got.Priority != issue.Priority {
-		t.Errorf("Priority mismatch: got %q, want %q", got.Priority, issue.Priority)
+		t.Errorf("Priority mismatch: got %d, want %d", got.Priority, issue.Priority)
 	}
 	if got.Type != issue.Type {
 		t.Errorf("Type mismatch: got %q, want %q", got.Type, issue.Type)
@@ -167,7 +167,7 @@ func testModify(t *testing.T, s IssueStore) {
 		t.Errorf("Status mismatch: got %q, want %q", got.Status, updated.Status)
 	}
 	if got.Priority != updated.Priority {
-		t.Errorf("Priority mismatch: got %q, want %q", got.Priority, updated.Priority)
+		t.Errorf("Priority mismatch: got %d, want %d", got.Priority, updated.Priority)
 	}
 	if got.Assignee != updated.Assignee {
 		t.Errorf("Assignee mismatch: got %q, want %q", got.Assignee, updated.Assignee)

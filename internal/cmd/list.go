@@ -91,7 +91,10 @@ Examples:
 			}
 
 			if priority != "" {
-				p := issuestorage.Priority(priority)
+				p, err := parsePriority(priority)
+				if err != nil {
+					return err
+				}
 				filter.Priority = &p
 			}
 
@@ -199,7 +202,7 @@ Examples:
 	}
 
 	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status ("+statusNames(nil)+")")
-	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (critical, high, medium, low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (0-4 or P0-P4)")
 	cmd.Flags().StringVarP(&issueType, "type", "t", "", "Filter by type (task, bug, feature, epic, chore)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
 	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Filter by labels (comma-separated or repeated, must have all)")

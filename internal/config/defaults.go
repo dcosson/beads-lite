@@ -10,7 +10,7 @@ import (
 func DefaultValues() map[string]string {
 	return map[string]string{
 		"create.require-description": "false",
-		"defaults.priority":          "medium",
+		"defaults.priority":          "2",
 		"defaults.type":              "task",
 		"issue_prefix":               "bd",
 		"actor":                      "${USER}",

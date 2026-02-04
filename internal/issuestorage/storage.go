@@ -4,6 +4,7 @@ package issuestorage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -225,32 +226,75 @@ var BuiltinStatuses = []Status{
 	StatusHooked, StatusPinned, StatusClosed,
 }
 
-// Priority represents the urgency of an issue.
-type Priority string
+// Priority represents the urgency of an issue (0=critical .. 4=backlog).
+type Priority int
 
 const (
-	PriorityCritical Priority = "critical"
-	PriorityHigh     Priority = "high"
-	PriorityMedium   Priority = "medium"
-	PriorityLow      Priority = "low"
-	PriorityBacklog  Priority = "backlog"
+	PriorityCritical Priority = 0
+	PriorityHigh     Priority = 1
+	PriorityMedium   Priority = 2
+	PriorityLow      Priority = 3
+	PriorityBacklog  Priority = 4
 )
 
 // Display returns the priority in P0-P4 format for human-readable output.
 func (p Priority) Display() string {
-	switch p {
-	case PriorityCritical:
-		return "P0"
-	case PriorityHigh:
-		return "P1"
-	case PriorityMedium:
-		return "P2"
-	case PriorityLow:
-		return "P3"
-	case PriorityBacklog:
-		return "P4"
+	return fmt.Sprintf("P%d", p)
+}
+
+// MarshalJSON writes priority as an integer.
+func (p Priority) MarshalJSON() ([]byte, error) {
+	return json.Marshal(int(p))
+}
+
+// UnmarshalJSON reads priority from an integer or a legacy word-form string
+// ("critical", "high", "medium", "low", "backlog") for backward compatibility
+// with on-disk JSON written before the int conversion.
+func (p *Priority) UnmarshalJSON(data []byte) error {
+	var n int
+	if err := json.Unmarshal(data, &n); err == nil {
+		*p = Priority(n)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("priority must be int or string, got %s", string(data))
+	}
+	switch strings.ToLower(s) {
+	case "critical":
+		*p = PriorityCritical
+	case "high":
+		*p = PriorityHigh
+	case "medium":
+		*p = PriorityMedium
+	case "low":
+		*p = PriorityLow
+	case "backlog":
+		*p = PriorityBacklog
 	default:
-		return string(p)
+		return fmt.Errorf("unknown priority %q", s)
+	}
+	return nil
+}
+
+// ParsePriority converts a string to a Priority value.
+// Accepts numeric ("0"-"4"), P-format ("P0"-"P4"), or legacy word forms
+// ("critical", "high", "medium", "low", "backlog").
+// Returns PriorityMedium and an error for unrecognized input.
+func ParsePriority(s string) (Priority, error) {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "0", "p0", "critical":
+		return PriorityCritical, nil
+	case "1", "p1", "high":
+		return PriorityHigh, nil
+	case "2", "p2", "medium", "":
+		return PriorityMedium, nil
+	case "3", "p3", "low":
+		return PriorityLow, nil
+	case "4", "p4", "backlog":
+		return PriorityBacklog, nil
+	default:
+		return PriorityMedium, fmt.Errorf("unknown priority %q", s)
 	}
 }
 

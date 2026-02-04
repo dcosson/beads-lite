@@ -10,7 +10,7 @@ func TestDefaultValues(t *testing.T) {
 
 	expected := map[string]string{
 		"create.require-description": "false",
-		"defaults.priority":          "medium",
+		"defaults.priority":          "2",
 		"defaults.type":              "task",
 		"issue_prefix":                  "bd",
 		"actor":                      "${USER}",
@@ -46,8 +46,8 @@ func TestApplyDefaults(t *testing.T) {
 	}
 
 	// Missing keys should be filled from defaults
-	if v, ok := s.Get("defaults.priority"); !ok || v != "medium" {
-		t.Errorf("defaults.priority = %q, %v; want %q, true", v, ok, "medium")
+	if v, ok := s.Get("defaults.priority"); !ok || v != "2" {
+		t.Errorf("defaults.priority = %q, %v; want %q, true", v, ok, "2")
 	}
 	if v, ok := s.Get("issue_prefix"); !ok || v != "bd" {
 		t.Errorf("issue_prefix = %q, %v; want %q, true", v, ok, "bd")

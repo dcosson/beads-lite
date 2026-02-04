@@ -59,6 +59,7 @@ func Pour(ctx context.Context, store issuestorage.IssueStore, opts PourOptions) 
 		Type:        issuestorage.TypeEpic,
 		Title:       formula.Formula,
 		Description: formula.Description,
+		Priority:    issuestorage.PriorityMedium,
 		Ephemeral:   opts.Ephemeral,
 		CreatedBy:   actor,
 	}
@@ -82,12 +83,14 @@ func Pour(ctx context.Context, store issuestorage.IssueStore, opts PourOptions) 
 			issueType = issuestorage.IssueType(step.Type)
 		}
 
+		stepPriority, _ := issuestorage.ParsePriority(step.Priority)
+
 		child := &issuestorage.Issue{
 			ID:          childID,
 			Type:        issueType,
 			Title:       step.Title,
 			Description: step.Description,
-			Priority:    issuestorage.Priority(step.Priority),
+			Priority:    stepPriority,
 			Labels:      step.Labels,
 			Assignee:    step.Assignee,
 			Ephemeral:   opts.Ephemeral,

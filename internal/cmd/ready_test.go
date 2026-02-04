@@ -78,7 +78,7 @@ func TestReadyCommand(t *testing.T) {
 	// Test with priority filter
 	out.Reset()
 	cmd = newReadyCmd(NewTestProvider(app))
-	cmd.SetArgs([]string{"--priority", "high"})
+	cmd.SetArgs([]string{"--priority", "P1"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("ready command with priority failed: %v", err)
 	}
