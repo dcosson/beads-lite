@@ -1181,6 +1181,43 @@ func TestCreateWithCustomID_ForceNoHyphen(t *testing.T) {
 	}
 }
 
+func TestCreateWithActorFlag(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--actor", "custom-actor"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if issue.CreatedBy != "custom-actor" {
+		t.Errorf("expected created_by %q, got %q", "custom-actor", issue.CreatedBy)
+	}
+}
+
+func TestCreateWithActorFlagOverridesEnv(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	// Set BD_ACTOR which normally takes precedence in resolveActor
+	t.Setenv("BD_ACTOR", "env-actor")
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Test issue", "--actor", "flag-actor"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	id := extractCreatedID(out.String())
+	issue, _ := store.Get(context.Background(), id)
+	if issue.CreatedBy != "flag-actor" {
+		t.Errorf("expected --actor to override BD_ACTOR: got created_by %q, want %q", issue.CreatedBy, "flag-actor")
+	}
+}
+
 func TestCreateWithCustomID_TombstoneResurrection(t *testing.T) {
 	app, store := setupTestApp(t)
 

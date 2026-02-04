@@ -30,6 +30,7 @@ func newCreateCmd(provider *AppProvider) *cobra.Command {
 		idFlag      string
 		forceFlag   bool
 		ephemeral   bool
+		actorFlag   string
 	)
 
 	cmd := &cobra.Command{
@@ -128,7 +129,12 @@ Examples:
 			}
 
 			// Resolve actor identity for created_by/owner
-			actor, _ := resolveActor(app)
+			var actor string
+			if actorFlag != "" {
+				actor = actorFlag
+			} else {
+				actor, _ = resolveActor(app)
+			}
 			owner := resolveOwner()
 
 			// Create the issue
@@ -232,6 +238,7 @@ Examples:
 	cmd.Flags().StringVar(&idFlag, "id", "", "Explicit issue ID (must match configured prefix)")
 	cmd.Flags().BoolVar(&forceFlag, "force", false, "Bypass prefix validation for --id")
 	cmd.Flags().BoolVar(&ephemeral, "ephemeral", false, "Mark issue as ephemeral (not exported to JSONL)")
+	cmd.Flags().StringVar(&actorFlag, "actor", "", "Override actor identity for created_by")
 
 	return cmd
 }
