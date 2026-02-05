@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +19,10 @@ const (
 	benchListCount      = 20
 	benchShowPerID      = 1
 	benchListFinalCount = 20
+
+	// Multi-repo benchmark constants
+	multiRepoCount         = 4
+	multiRepoIssuesPerRepo = 5
 )
 
 type phaseResult struct {
@@ -158,32 +164,263 @@ func runBenchmarkWorkflow(t *testing.T, r *Runner, label string) []phaseResult {
 		duration: time.Since(start),
 	})
 
+	// Phase 7-8: Multi-repo benchmark (setup + show)
+	multiRepoResults := runMultiRepoPhases(t, r, label)
+	results = append(results, multiRepoResults...)
+
 	return results
+}
+
+// multiRepoConfig describes a repo in the multi-repo setup
+type multiRepoConfig struct {
+	path   string // relative path from root (empty string for root)
+	prefix string // issue prefix
+}
+
+// runMultiRepoPhases sets up a multi-repo environment and benchmarks
+// creating and showing issues across repos via routing.
+// Tests both BEADS_DIR (fast path) and cwd-based discovery variants.
+func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
+	t.Helper()
+
+	// Create a temp directory for the multi-repo setup
+	rootDir, err := os.MkdirTemp("", "bd-multirepo-*")
+	if err != nil {
+		t.Fatalf("[%s] create temp dir: %v", label, err)
+	}
+	t.Cleanup(func() { os.RemoveAll(rootDir) })
+
+	// Initialize git repo (needed for beads-lite cwd discovery)
+	gitInit := exec.Command("git", "init")
+	gitInit.Dir = rootDir
+	if err := gitInit.Run(); err != nil {
+		t.Fatalf("[%s] git init: %v", label, err)
+	}
+
+	// Define the repos
+	repos := []multiRepoConfig{
+		{path: "", prefix: "root"},
+		{path: "repo1", prefix: "r1"},
+		{path: "repo2", prefix: "r2"},
+		{path: "repo2/repo3", prefix: "r3"},
+	}
+
+	// Create directories and init each repo (not timed - setup only)
+	for _, repo := range repos {
+		repoPath := rootDir
+		if repo.path != "" {
+			repoPath = filepath.Join(rootDir, repo.path)
+			if err := os.MkdirAll(repoPath, 0755); err != nil {
+				t.Fatalf("[%s] create dir %s: %v", label, repo.path, err)
+			}
+		}
+		beadsDir := filepath.Join(repoPath, ".beads")
+		result := r.RunWithBeadsDir(beadsDir, "init", "--prefix", repo.prefix)
+		if result.ExitCode != 0 {
+			t.Fatalf("[%s] init %s: exit %d, stderr: %s", label, repo.path, result.ExitCode, result.Stderr)
+		}
+	}
+
+	// Write routes.jsonl in root .beads directory
+	routesContent := `{"prefix": "root-", "path": "."}
+{"prefix": "r1-", "path": "repo1"}
+{"prefix": "r2-", "path": "repo2"}
+{"prefix": "r3-", "path": "repo2/repo3"}
+`
+	routesPath := filepath.Join(rootDir, ".beads", "routes.jsonl")
+	if err := os.WriteFile(routesPath, []byte(routesContent), 0644); err != nil {
+		t.Fatalf("[%s] write routes.jsonl: %v", label, err)
+	}
+
+	var results []phaseResult
+	totalIssues := len(repos) * multiRepoIssuesPerRepo
+	rootBeadsDir := filepath.Join(rootDir, ".beads")
+	childDir := filepath.Join(rootDir, "repo2", "repo3")
+
+	// === BEADS_DIR variants (fast path) ===
+
+	var beadsDirIDs []string
+
+	// Phase: Create issues using BEADS_DIR
+	start := time.Now()
+	for _, repo := range repos {
+		repoPath := rootDir
+		if repo.path != "" {
+			repoPath = filepath.Join(rootDir, repo.path)
+		}
+		beadsDir := filepath.Join(repoPath, ".beads")
+		for i := 1; i <= multiRepoIssuesPerRepo; i++ {
+			result := r.RunWithBeadsDir(beadsDir, "create", fmt.Sprintf("%s task %d", repo.prefix, i), "--json")
+			if result.ExitCode != 0 {
+				t.Fatalf("[%s] create %s task %d: exit %d, stderr: %s", label, repo.prefix, i, result.ExitCode, result.Stderr)
+			}
+			id := ExtractID([]byte(result.Stdout))
+			if id == "" {
+				t.Fatalf("[%s] create %s task %d: could not extract ID from: %s", label, repo.prefix, i, result.Stdout)
+			}
+			beadsDirIDs = append(beadsDirIDs, id)
+		}
+	}
+	results = append(results, phaseResult{
+		name:     fmt.Sprintf("create (BEADS_DIR, %dx%d)", multiRepoCount, multiRepoIssuesPerRepo),
+		duration: time.Since(start),
+	})
+
+	// Phase: Show all issues using BEADS_DIR
+	start = time.Now()
+	for _, id := range beadsDirIDs {
+		result := r.RunWithBeadsDir(rootBeadsDir, "show", id, "--json")
+		if result.ExitCode != 0 {
+			t.Fatalf("[%s] show %s: exit %d, stderr: %s", label, id, result.ExitCode, result.Stderr)
+		}
+	}
+	results = append(results, phaseResult{
+		name:     fmt.Sprintf("show (BEADS_DIR, %d)", totalIssues),
+		duration: time.Since(start),
+	})
+
+	// === cwd variants (discovery path) ===
+
+	var cwdIDs []string
+
+	// Phase: Create issues using cwd (cd to each repo dir)
+	start = time.Now()
+	for _, repo := range repos {
+		repoPath := rootDir
+		if repo.path != "" {
+			repoPath = filepath.Join(rootDir, repo.path)
+		}
+		for i := 1; i <= multiRepoIssuesPerRepo; i++ {
+			result := r.RunInDir(repoPath, "create", fmt.Sprintf("%s task %d", repo.prefix, i), "--json")
+			if result.ExitCode != 0 {
+				t.Fatalf("[%s] create %s task %d: exit %d, stderr: %s", label, repo.prefix, i, result.ExitCode, result.Stderr)
+			}
+			id := ExtractID([]byte(result.Stdout))
+			if id == "" {
+				t.Fatalf("[%s] create %s task %d: could not extract ID from: %s", label, repo.prefix, i, result.Stdout)
+			}
+			cwdIDs = append(cwdIDs, id)
+		}
+	}
+	results = append(results, phaseResult{
+		name:     fmt.Sprintf("create (cwd, %dx%d)", multiRepoCount, multiRepoIssuesPerRepo),
+		duration: time.Since(start),
+	})
+
+	// Phase: Show all issues from root directory (cwd)
+	start = time.Now()
+	for _, id := range cwdIDs {
+		result := r.RunInDir(rootDir, "show", id, "--json")
+		if result.ExitCode != 0 {
+			t.Fatalf("[%s] show %s from root: exit %d, stderr: %s", label, id, result.ExitCode, result.Stderr)
+		}
+	}
+	results = append(results, phaseResult{
+		name:     fmt.Sprintf("show (cwd root, %d)", totalIssues),
+		duration: time.Since(start),
+	})
+
+	// Phase: Show all issues from child directory (cwd)
+	start = time.Now()
+	for _, id := range cwdIDs {
+		result := r.RunInDir(childDir, "show", id, "--json")
+		if result.ExitCode != 0 {
+			t.Fatalf("[%s] show %s from child: exit %d, stderr: %s", label, id, result.ExitCode, result.Stderr)
+		}
+	}
+	results = append(results, phaseResult{
+		name:     fmt.Sprintf("show (cwd child, %d)", totalIssues),
+		duration: time.Since(start),
+	})
+
+	return results
+}
+
+// RunInDir executes a bd command in a specific directory without setting BEADS_DIR.
+// This lets bd discover the .beads directory by walking up from cwd.
+func (r *Runner) RunInDir(dir string, args ...string) RunResult {
+	allArgs := append(r.ExtraArgs, args...)
+	cmd := exec.Command(r.BdCmd, allArgs...)
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	for _, env := range r.ExtraEnv {
+		cmd.Env = append(cmd.Env, env)
+	}
+
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			exitCode = -1
+		}
+	}
+
+	return RunResult{
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
+		ExitCode: exitCode,
+	}
+}
+
+// RunWithBeadsDir executes a bd command with BEADS_DIR set to the specified path.
+func (r *Runner) RunWithBeadsDir(beadsDir string, args ...string) RunResult {
+	allArgs := append(r.ExtraArgs, args...)
+	cmd := exec.Command(r.BdCmd, allArgs...)
+	cmd.Env = append(os.Environ(), "BEADS_DIR="+beadsDir)
+	for _, env := range r.ExtraEnv {
+		cmd.Env = append(cmd.Env, env)
+	}
+
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			exitCode = -1
+		}
+	}
+
+	return RunResult{
+		Stdout:   stdout.String(),
+		Stderr:   stderr.String(),
+		ExitCode: exitCode,
+	}
 }
 
 func printSingleResults(t *testing.T, results []phaseResult) {
 	t.Helper()
 
 	var total time.Duration
-	t.Logf("%-20s %s", "Phase", "Time")
-	t.Logf("%s", strings.Repeat("─", 35))
+	t.Logf("%-25s %s", "Phase", "Time")
+	t.Logf("%s", strings.Repeat("─", 40))
 	for _, r := range results {
-		t.Logf("%-20s %s", r.name, formatDuration(r.duration))
+		t.Logf("%-25s %s", r.name, formatDuration(r.duration))
 		total += r.duration
 	}
-	t.Logf("%s", strings.Repeat("─", 35))
-	t.Logf("%-20s %s", "TOTAL", formatDuration(total))
+	t.Logf("%s", strings.Repeat("─", 40))
+	t.Logf("%-25s %s", "TOTAL", formatDuration(total))
 }
 
 func printComparisonTable(t *testing.T, lite, ref []phaseResult) {
 	t.Helper()
 
 	var liteTotal, refTotal time.Duration
-	t.Logf("%-20s %14s %14s %10s", "Phase", "beads-lite", "bd (reference)", "diff")
-	t.Logf("%s", strings.Repeat("─", 62))
+	t.Logf("%-25s %14s %14s %10s", "Phase", "beads-lite", "bd (reference)", "diff")
+	t.Logf("%s", strings.Repeat("─", 67))
 	for i := range lite {
 		diff := percentDiff(lite[i].duration, ref[i].duration)
-		t.Logf("%-20s %14s %14s %10s",
+		t.Logf("%-25s %14s %14s %10s",
 			lite[i].name,
 			formatDuration(lite[i].duration),
 			formatDuration(ref[i].duration),
@@ -192,8 +429,8 @@ func printComparisonTable(t *testing.T, lite, ref []phaseResult) {
 		liteTotal += lite[i].duration
 		refTotal += ref[i].duration
 	}
-	t.Logf("%s", strings.Repeat("─", 62))
-	t.Logf("%-20s %14s %14s %10s",
+	t.Logf("%s", strings.Repeat("─", 67))
+	t.Logf("%-25s %14s %14s %10s",
 		"TOTAL",
 		formatDuration(liteTotal),
 		formatDuration(refTotal),

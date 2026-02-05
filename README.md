@@ -163,20 +163,29 @@ make bench-comparison-e2e  # benchmark against reference bd (requires bd in PATH
 ### Benchmark
 
 `make test-e2e` includes a happy-path benchmark that exercises create, list, show,
-update, and close across 20 issues. `make bench-comparison-e2e` runs the same
-workflow against the reference `bd` binary for a side-by-side comparison.
+update, and close across 20 issues, plus multi-repo routing tests. `make bench-comparison-e2e`
+runs the same workflow against the reference `bd` binary for a side-by-side comparison.
 
 Sample `make bench-comparison-e2e` output:
 
 ```
-Phase                    beads-lite bd (reference)       diff
-──────────────────────────────────────────────────────────────
-create (20)                   0.21s          2.34s     -91.1%
-list (20x)                    0.11s          1.56s     -92.9%
-show (20x)                    0.10s          1.71s     -94.2%
-update (20)                   0.20s          1.62s     -87.7%
-close (20)                    0.20s          1.58s     -87.2%
-final list (20x)              0.10s          1.55s     -93.6%
-──────────────────────────────────────────────────────────────
-TOTAL                         0.92s         10.35s     -91.1%
+Phase                         beads-lite bd (reference)       diff
+───────────────────────────────────────────────────────────────────
+create (20)                        0.20s          1.80s     -88.7%
+list (20x)                         0.09s          1.33s     -93.1%
+show (20x)                         0.07s          1.35s     -94.5%
+update (20)                        0.19s          1.36s     -86.3%
+close (20)                         0.19s          1.32s     -85.9%
+final list (20x)                   0.08s          1.29s     -93.5%
+create (BEADS_DIR, 4x5)            0.20s        103.77s     -99.8%
+show (BEADS_DIR, 20)               0.09s        103.41s     -99.9%
+create (cwd, 4x5)                  0.31s        103.89s     -99.7%
+show (cwd root, 20)                0.19s        103.53s     -99.8%
+show (cwd child, 20)               0.19s        103.35s     -99.8%
+───────────────────────────────────────────────────────────────────
+TOTAL                              1.79s        526.42s     -99.7%
 ```
+
+The multi-repo tests create 4 nested repos with routing and exercise cross-repo
+issue lookups. The `BEADS_DIR` variants set the env var directly; the `cwd` variants
+rely on directory discovery (walking up to find `.beads/`). Both are fast in beads-lite.
