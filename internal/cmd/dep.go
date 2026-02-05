@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -84,7 +85,13 @@ Examples:
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			dependency, err := resolveIssue(store, ctx, dependencyID)
+			// Route dependency separately — it may live in a different rig
+			depStore, err := app.StorageFor(ctx, dependencyID)
+			if err != nil {
+				return fmt.Errorf("routing dependency %s: %w", dependencyID, err)
+			}
+
+			dependency, err := resolveIssue(depStore, ctx, dependencyID)
 			if err != nil {
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
@@ -97,12 +104,23 @@ Examples:
 				return fmt.Errorf("cannot add dependency on tombstoned issue %s", dependency.ID)
 			}
 
-			// Add the typed dependency (parent-child is handled automatically by AddDependency)
-			if err := store.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
-				if err == issuestorage.ErrCycle {
-					return fmt.Errorf("cannot add dependency: would create a cycle")
+			// Add the typed dependency.
+			if app.Router.SameStore(issue.ID, dependency.ID) {
+				// Same rig: use store's AddDependency (handles cycles, parent-child atomically)
+				if err := store.AddDependency(ctx, issue.ID, dependency.ID, dt); err != nil {
+					if err == issuestorage.ErrCycle {
+						return fmt.Errorf("cannot add dependency: would create a cycle")
+					}
+					return fmt.Errorf("adding dependency: %w", err)
 				}
-				return fmt.Errorf("adding dependency: %w", err)
+			} else {
+				// Cross-store: parent-child must stay same-rig
+				if dt == issuestorage.DepTypeParentChild {
+					return fmt.Errorf("cannot add parent-child dependency across different rigs")
+				}
+				if err := addCrossStoreDep(ctx, routing.NewGetter(app.Router, app.Storage), store, depStore, issue.ID, dependency.ID, dt); err != nil {
+					return err
+				}
 			}
 
 			// Output the result
@@ -161,14 +179,28 @@ Examples:
 				return fmt.Errorf("resolving issue %s: %w", issueID, err)
 			}
 
-			dependency, err := resolveIssue(store, ctx, dependencyID)
+			// Route dependency separately — it may live in a different rig
+			depStore, err := app.StorageFor(ctx, dependencyID)
+			if err != nil {
+				return fmt.Errorf("routing dependency %s: %w", dependencyID, err)
+			}
+
+			dependency, err := resolveIssue(depStore, ctx, dependencyID)
 			if err != nil {
 				return fmt.Errorf("resolving dependency %s: %w", dependencyID, err)
 			}
 
-			// RemoveDependency handles parent-child cleanup automatically
-			if err := store.RemoveDependency(ctx, issue.ID, dependency.ID); err != nil {
-				return fmt.Errorf("removing dependency: %w", err)
+			// Remove the dependency.
+			if app.Router.SameStore(issue.ID, dependency.ID) {
+				// Same rig: use store's RemoveDependency (handles parent-child cleanup)
+				if err := store.RemoveDependency(ctx, issue.ID, dependency.ID); err != nil {
+					return fmt.Errorf("removing dependency: %w", err)
+				}
+			} else {
+				// Cross-store: update each side independently
+				if err := removeCrossStoreDep(ctx, store, depStore, issue.ID, dependency.ID); err != nil {
+					return fmt.Errorf("removing dependency: %w", err)
+				}
 			}
 
 			// Output the result
@@ -301,7 +333,7 @@ func outputDepListJSON(app *App, ctx context.Context, issue *issuestorage.Issue,
 	}
 
 	// Return array of enriched dependencies (like show --json format)
-	result := enrichDependencies(ctx, app.Storage, deps)
+	result := enrichDependencies(ctx, routing.NewGetter(app.Router, app.Storage), deps)
 
 	return json.NewEncoder(app.Out).Encode(result)
 }
@@ -315,6 +347,7 @@ func outputDepListText(app *App, ctx context.Context, issue *issuestorage.Issue,
 		return outputDepTree(app, ctx, issue, 0, make(map[string]bool))
 	}
 
+	getter := routing.NewGetter(app.Router, app.Storage)
 	showDown := direction == "" || direction == "down"
 	showUp := direction == "" || direction == "up"
 
@@ -326,7 +359,7 @@ func outputDepListText(app *App, ctx context.Context, issue *issuestorage.Issue,
 		} else {
 			fmt.Fprintln(app.Out, "\nDependencies:")
 			for _, d := range deps {
-				dep, err := app.Storage.Get(ctx, d.ID)
+				dep, err := getter.Get(ctx, d.ID)
 				if err != nil {
 					fmt.Fprintf(app.Out, "  → %s [%s] (error: %v)\n", d.ID, d.Type, err)
 				} else {
@@ -345,7 +378,7 @@ func outputDepListText(app *App, ctx context.Context, issue *issuestorage.Issue,
 		} else {
 			fmt.Fprintln(app.Out, "\nDependents:")
 			for _, d := range deps {
-				dep, err := app.Storage.Get(ctx, d.ID)
+				dep, err := getter.Get(ctx, d.ID)
 				if err != nil {
 					fmt.Fprintf(app.Out, "  ← %s [%s] (error: %v)\n", d.ID, d.Type, err)
 				} else {
@@ -381,9 +414,10 @@ func outputDepTree(app *App, ctx context.Context, issue *issuestorage.Issue, dep
 	}
 	visited[issue.ID] = true
 
+	getter := routing.NewGetter(app.Router, app.Storage)
 	// Recursively show dependencies
 	for _, dep := range issue.Dependencies {
-		depIssue, err := app.Storage.Get(ctx, dep.ID)
+		depIssue, err := getter.Get(ctx, dep.ID)
 		if err != nil {
 			fmt.Fprintf(app.Out, "%s  └─ %s (error: %v)\n", indent, dep.ID, err)
 			continue
@@ -423,4 +457,119 @@ func resolveIssue(store issuestorage.IssueStore, ctx context.Context, idOrPrefix
 
 	// Try prefix matching
 	return findByPrefix(store, ctx, idOrPrefix)
+}
+
+// addCrossStoreDep adds a dependency where the issue and dependency live in
+// different rigs. It performs routing-aware cycle detection, then updates each
+// side in its own store. The two Modify calls are not atomic — bd doctor
+// handles any resulting asymmetries.
+func addCrossStoreDep(ctx context.Context, getter issuestorage.IssueGetter, store, depStore issuestorage.IssueStore, issueID, depID string, dt issuestorage.DependencyType) error {
+	hasCycle, err := hasCrossStoreCycle(ctx, getter, issueID, depID)
+	if err != nil {
+		return fmt.Errorf("checking for cycles: %w", err)
+	}
+	if hasCycle {
+		return fmt.Errorf("cannot add dependency: would create a cycle")
+	}
+
+	// Add dependency entry to the issue
+	if err := store.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		if !issue.HasDependency(depID) {
+			issue.Dependencies = append(issue.Dependencies, issuestorage.Dependency{ID: depID, Type: dt})
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("updating issue %s: %w", issueID, err)
+	}
+
+	// Add inverse dependent entry to the dependency
+	if err := depStore.Modify(ctx, depID, func(dep *issuestorage.Issue) error {
+		if !dep.HasDependent(issueID) {
+			dep.Dependents = append(dep.Dependents, issuestorage.Dependency{ID: issueID, Type: dt})
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("updating dependency %s: %w", depID, err)
+	}
+
+	return nil
+}
+
+// removeCrossStoreDep removes a dependency where the issue and dependency live
+// in different rigs. Updates each side in its own store.
+func removeCrossStoreDep(ctx context.Context, store, depStore issuestorage.IssueStore, issueID, depID string) error {
+	if err := store.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		// Check if this was a parent-child dep — clear Parent field
+		for _, dep := range issue.Dependencies {
+			if dep.ID == depID && dep.Type == issuestorage.DepTypeParentChild {
+				issue.Parent = ""
+				break
+			}
+		}
+		issue.Dependencies = filterOutDep(issue.Dependencies, depID)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("updating issue %s: %w", issueID, err)
+	}
+
+	if err := depStore.Modify(ctx, depID, func(dep *issuestorage.Issue) error {
+		dep.Dependents = filterOutDep(dep.Dependents, issueID)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("updating dependency %s: %w", depID, err)
+	}
+
+	return nil
+}
+
+// hasCrossStoreCycle checks whether adding a dependency from issueID to depID
+// would create a cycle. It does BFS from depID through dependencies using the
+// routing-aware getter so it can traverse cross-store edges.
+func hasCrossStoreCycle(ctx context.Context, getter issuestorage.IssueGetter, issueID, depID string) (bool, error) {
+	if issueID == depID {
+		return true, nil
+	}
+
+	visited := make(map[string]bool)
+	queue := []string{depID}
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current] {
+			continue
+		}
+		visited[current] = true
+
+		issue, err := getter.Get(ctx, current)
+		if err != nil {
+			if err == issuestorage.ErrNotFound {
+				continue
+			}
+			return false, err
+		}
+
+		for _, dep := range issue.Dependencies {
+			if dep.ID == issueID {
+				return true, nil
+			}
+			if !visited[dep.ID] {
+				queue = append(queue, dep.ID)
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// filterOutDep removes a dependency entry by ID from a slice.
+func filterOutDep(deps []issuestorage.Dependency, id string) []issuestorage.Dependency {
+	result := make([]issuestorage.Dependency, 0, len(deps))
+	for _, d := range deps {
+		if d.ID != id {
+			result = append(result, d)
+		}
+	}
+	return result
 }

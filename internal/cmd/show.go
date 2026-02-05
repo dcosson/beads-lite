@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -142,9 +143,12 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 		fmt.Fprintf(w, "\nLabels: %s\n", strings.Join(issue.Labels, ", "))
 	}
 
+	// Use routing-aware getter for dependency lookups (may be cross-rig).
+	getter := routing.NewGetter(app.Router, app.Storage)
+
 	// --- Parent ---
 	if issue.Parent != "" {
-		parentIssue, err := app.Storage.Get(ctx, issue.Parent)
+		parentIssue, err := getter.Get(ctx, issue.Parent)
 		if err == nil {
 			fmt.Fprintf(w, "\nParent\n")
 			fmt.Fprintf(w, "  %s\n", formatIssueLine(app, parentIssue))
@@ -158,7 +162,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 	if len(children) > 0 {
 		fmt.Fprintf(w, "\nChildren\n")
 		for _, childID := range children {
-			childIssue, err := app.Storage.Get(ctx, childID)
+			childIssue, err := getter.Get(ctx, childID)
 			if err == nil {
 				fmt.Fprintf(w, "  ↳ %s\n", formatIssueLine(app, childIssue))
 			} else {
@@ -177,7 +181,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 	if len(deps) > 0 {
 		fmt.Fprintf(w, "\nDepends On\n")
 		for _, dep := range deps {
-			depIssue, err := app.Storage.Get(ctx, dep.ID)
+			depIssue, err := getter.Get(ctx, dep.ID)
 			if err == nil {
 				fmt.Fprintf(w, "  → %s\n", formatIssueLine(app, depIssue))
 			} else {
@@ -196,7 +200,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 	if len(blocks) > 0 {
 		fmt.Fprintf(w, "\nBlocks\n")
 		for _, dep := range blocks {
-			depIssue, err := app.Storage.Get(ctx, dep.ID)
+			depIssue, err := getter.Get(ctx, dep.ID)
 			if err == nil {
 				fmt.Fprintf(w, "  ← %s\n", formatIssueLine(app, depIssue))
 			} else {
@@ -222,7 +226,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 // outputIssueJSON outputs the issue in JSON format matching original beads.
 // Returns an array with the single issue, with enriched dependencies.
 func outputIssueJSON(app *App, ctx context.Context, issue *issuestorage.Issue) error {
-	out := ToIssueJSON(ctx, app.Storage, issue, true, false)
+	out := ToIssueJSON(ctx, routing.NewGetter(app.Router, app.Storage), issue, true, false)
 	// Original beads returns an array for show
 	return json.NewEncoder(app.Out).Encode([]IssueJSON{out})
 }

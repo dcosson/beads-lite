@@ -367,6 +367,14 @@ func BuildPrefix(base, addition string) string {
 	return base + "-" + addition + "-"
 }
 
+// IssueGetter provides read-only access to issues by ID.
+// IssueStore embeds this implicitly (it has a Get method), so any IssueStore
+// value satisfies IssueGetter. A separate implementation can provide
+// routing-aware lookups that dispatch to different stores based on ID prefix.
+type IssueGetter interface {
+	Get(ctx context.Context, id string) (*Issue, error)
+}
+
 // IssueStore defines the interface for issue persistence.
 // All storage engines must implement this interface.
 type IssueStore interface {

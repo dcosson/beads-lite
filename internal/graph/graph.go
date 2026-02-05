@@ -23,7 +23,7 @@ const (
 
 // FindMoleculeRoot walks the parent chain (via DepParentChild dependencies) to
 // find the root epic of a molecule. The root is an issue with no parent.
-func FindMoleculeRoot(ctx context.Context, store issuestorage.IssueStore, issueID string) (*issuestorage.Issue, error) {
+func FindMoleculeRoot(ctx context.Context, store issuestorage.IssueGetter, issueID string) (*issuestorage.Issue, error) {
 	visited := make(map[string]bool)
 	currentID := issueID
 
@@ -47,7 +47,7 @@ func FindMoleculeRoot(ctx context.Context, store issuestorage.IssueStore, issueI
 
 // CollectMoleculeChildren recursively collects all descendants of rootID via
 // DepParentChild dependencies. Returns all descendants (not including the root).
-func CollectMoleculeChildren(ctx context.Context, store issuestorage.IssueStore, rootID string) ([]*issuestorage.Issue, error) {
+func CollectMoleculeChildren(ctx context.Context, store issuestorage.IssueGetter, rootID string) ([]*issuestorage.Issue, error) {
 	root, err := store.Get(ctx, rootID)
 	if err != nil {
 		return nil, fmt.Errorf("get root %s: %w", rootID, err)

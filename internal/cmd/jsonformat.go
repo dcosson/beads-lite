@@ -137,7 +137,7 @@ func formatTime(t time.Time) string {
 // ToIssueJSON converts a issuestorage.Issue to IssueJSON format.
 // If enrichDeps is true, fetches full issue details for dependencies.
 // If useCounts is true, uses dependency_count/dependent_count instead of full arrays.
-func ToIssueJSON(ctx context.Context, store issuestorage.IssueStore, issue *issuestorage.Issue, enrichDeps bool, useCounts bool) IssueJSON {
+func ToIssueJSON(ctx context.Context, store issuestorage.IssueGetter, issue *issuestorage.Issue, enrichDeps bool, useCounts bool) IssueJSON {
 	out := IssueJSON{
 		Assignee:    issue.Assignee,
 		CreatedAt:   formatTime(issue.CreatedAt),
@@ -351,7 +351,7 @@ type MolProgressJSON struct {
 }
 
 // enrichDependencies fetches full issue details for each dependency.
-func enrichDependencies(ctx context.Context, store issuestorage.IssueStore, deps []issuestorage.Dependency) []EnrichedDepJSON {
+func enrichDependencies(ctx context.Context, store issuestorage.IssueGetter, deps []issuestorage.Dependency) []EnrichedDepJSON {
 	result := make([]EnrichedDepJSON, 0, len(deps))
 
 	for _, dep := range deps {
