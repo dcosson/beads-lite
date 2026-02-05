@@ -131,10 +131,7 @@ Examples:
 			ctx := cmd.Context()
 			epicID := args[0]
 
-			store, err := app.StorageFor(ctx, epicID)
-			if err != nil {
-				return err
-			}
+			store := app.Storage
 
 			epic, err := store.Get(ctx, epicID)
 			if err != nil {
@@ -256,10 +253,7 @@ Examples:
 			ctx := cmd.Context()
 			targetID := args[0]
 
-			store, err := app.StorageFor(ctx, targetID)
-			if err != nil {
-				return err
-			}
+			store := app.Storage
 
 			target, err := store.Get(ctx, targetID)
 			if err != nil {
@@ -368,10 +362,7 @@ Examples:
 			ctx := cmd.Context()
 			inputID := args[0]
 
-			store, err := app.StorageFor(ctx, inputID)
-			if err != nil {
-				return err
-			}
+			store := app.Storage
 
 			issue, err := store.Get(ctx, inputID)
 			if err != nil {

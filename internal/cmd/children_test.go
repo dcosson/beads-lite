@@ -9,6 +9,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 func TestChildrenCommand(t *testing.T) {
@@ -19,6 +20,7 @@ func TestChildrenCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -47,17 +49,17 @@ func TestChildrenCommand(t *testing.T) {
 	}
 
 	// Set parent relationships
-	if err := store.AddDependency(ctx, child1ID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, child1ID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 1: %v", err)
 	}
-	if err := store.AddDependency(ctx, child2ID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, child2ID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child 2: %v", err)
 	}
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -95,6 +97,7 @@ func TestChildrenNoChildren(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issue with no children
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -108,7 +111,7 @@ func TestChildrenNoChildren(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -134,6 +137,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -161,17 +165,17 @@ func TestChildrenTreeFlag(t *testing.T) {
 	}
 
 	// Set parent relationships
-	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -207,6 +211,7 @@ func TestChildrenJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent and child
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -225,14 +230,14 @@ func TestChildrenJSON(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
 	// Create app with JSON output
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -265,6 +270,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -291,17 +297,17 @@ func TestChildrenTreeJSON(t *testing.T) {
 		t.Fatalf("failed to create grandchild: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for child: %v", err)
 	}
-	if err := store.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, grandchildID, childID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent for grandchild: %v", err)
 	}
 
 	// Create app with JSON output
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -340,6 +346,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent and child
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -358,14 +365,14 @@ func TestChildrenPrefixMatch(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to set parent: %v", err)
 	}
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -397,11 +404,12 @@ func TestChildrenNotFound(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -428,6 +436,7 @@ func TestChildrenEmptyJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issue with no children
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -441,7 +450,7 @@ func TestChildrenEmptyJSON(t *testing.T) {
 	// Create app with JSON output
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}

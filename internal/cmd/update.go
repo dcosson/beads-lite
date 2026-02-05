@@ -55,11 +55,7 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
-			// Route to correct storage
-			store, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			store := app.Storage
 
 			// Pre-parse flags that can fail before taking the lock.
 			var parsedPriority issuestorage.Priority

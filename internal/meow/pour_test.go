@@ -8,17 +8,18 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-// newTestStore returns an initialised FilesystemStorage backed by a temp dir.
-func newTestStore(t *testing.T) issuestorage.IssueStore {
+// newTestStore returns an initialised routing IssueStore backed by a temp dir.
+func newTestStore(t *testing.T) *routing.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
 	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	return s
+	return routing.NewIssueStore(nil, s)
 }
 
 // writeTestFormula writes a JSON formula file to dir and returns the search path.

@@ -8,6 +8,7 @@ import (
 
 	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/routing"
 )
 
 // SquashOptions configures a Squash operation (digest creation).
@@ -32,7 +33,7 @@ type SquashResult struct {
 //
 // If the molecule has no ephemeral children, Squash is a no-op and returns
 // (nil, nil). The caller can print "No ephemeral children found" in that case.
-func Squash(ctx context.Context, store issuestorage.IssueStore, opts SquashOptions) (*SquashResult, error) {
+func Squash(ctx context.Context, store *routing.IssueStore, opts SquashOptions) (*SquashResult, error) {
 	// 1. Load root issue.
 	root, err := store.Get(ctx, opts.MoleculeID)
 	if err != nil {

@@ -11,20 +11,22 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-func setupTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
+func setupTestApp(t *testing.T) (*App, *routing.IssueStore) {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 	return &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &bytes.Buffer{},
 		Err:     &bytes.Buffer{},
-	}, store
+	}, rs
 }
 
 // extractCreatedID extracts the issue ID from create command output.
@@ -750,10 +752,11 @@ func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	cfg := &mapConfigStore{data: map[string]string{"hierarchy.max_depth": "1"}}
 	app := &App{
-		Storage:     store,
+		Storage:     rs,
 		ConfigStore: cfg,
 		Out:         &bytes.Buffer{},
 		Err:         &bytes.Buffer{},

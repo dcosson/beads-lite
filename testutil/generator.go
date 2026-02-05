@@ -7,16 +7,17 @@ import (
 	"math/rand"
 
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/routing"
 )
 
 // IssueGenerator creates test issues with various relationship patterns.
 type IssueGenerator struct {
-	storage issuestorage.IssueStore
+	storage *routing.IssueStore
 	ids     []string
 }
 
 // NewIssueGenerator creates a new generator with the given storage.
-func NewIssueGenerator(s issuestorage.IssueStore) *IssueGenerator {
+func NewIssueGenerator(s *routing.IssueStore) *IssueGenerator {
 	return &IssueGenerator{
 		storage: s,
 		ids:     make([]string, 0),

@@ -36,10 +36,7 @@ Examples:
 			ctx := cmd.Context()
 			query := args[0]
 
-			store, err := app.StorageFor(ctx, query)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", query, err)
-			}
+			store := app.Storage
 
 			// Try exact match first, then prefix
 			issue, err := store.Get(ctx, query)

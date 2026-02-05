@@ -46,11 +46,7 @@ Examples:
 			ctx := cmd.Context()
 			query := args[0]
 
-			// Route to correct storage
-			store, err := app.StorageFor(ctx, query)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", query, err)
-			}
+			store := app.Storage
 
 			// Try exact match first
 			issue, err := store.Get(ctx, query)

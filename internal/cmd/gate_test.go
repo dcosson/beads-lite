@@ -10,6 +10,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 func TestGateShowCommand(t *testing.T) {
@@ -19,6 +20,7 @@ func TestGateShowCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
@@ -35,7 +37,7 @@ func TestGateShowCommand(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -77,6 +79,7 @@ func TestGateShowNotGateType(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Regular Task",
@@ -89,7 +92,7 @@ func TestGateShowNotGateType(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -112,10 +115,11 @@ func TestGateShowNotFound(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -138,6 +142,7 @@ func TestGateShowPrefixMatch(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Prefix Gate",
@@ -152,7 +157,7 @@ func TestGateShowPrefixMatch(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -177,6 +182,7 @@ func TestGateShowJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "JSON Gate",
@@ -193,7 +199,7 @@ func TestGateShowJSON(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -243,6 +249,7 @@ func TestGateShowMinimalFields(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Minimal Gate",
@@ -255,7 +262,7 @@ func TestGateShowMinimalFields(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -473,6 +480,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create an open gate
 	openGateID, err := store.Create(ctx, &issuestorage.Issue{
@@ -516,7 +524,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -546,6 +554,7 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	openGateID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Open gate",
@@ -576,7 +585,7 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -603,6 +612,7 @@ func TestGateListCommand_NoGates(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Regular task",
@@ -615,7 +625,7 @@ func TestGateListCommand_NoGates(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -639,6 +649,7 @@ func TestGateListCommand_JSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
@@ -654,7 +665,7 @@ func TestGateListCommand_JSON(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -697,6 +708,7 @@ func TestGateListCommand_TextTableOutput(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
@@ -712,7 +724,7 @@ func TestGateListCommand_TextTableOutput(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}

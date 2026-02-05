@@ -43,12 +43,7 @@ Examples:
 			var errors []error
 
 			for _, issueID := range args {
-				store, err := app.StorageFor(ctx, issueID)
-				if err != nil {
-					errors = append(errors, fmt.Errorf("routing %s: %w", issueID, err))
-					continue
-				}
-				if err := store.Modify(ctx, issueID, func(i *issuestorage.Issue) error {
+				if err := app.Storage.Modify(ctx, issueID, func(i *issuestorage.Issue) error {
 					i.Status = issuestorage.StatusClosed
 					if reason != "" {
 						i.CloseReason = reason
@@ -68,15 +63,11 @@ Examples:
 			if app.JSON {
 				var issues []IssueJSON
 				for _, id := range closed {
-					s, err := app.StorageFor(ctx, id)
+					issue, err := app.Storage.Get(ctx, id)
 					if err != nil {
 						continue
 					}
-					issue, err := s.Get(ctx, id)
-					if err != nil {
-						continue
-					}
-					issues = append(issues, ToIssueJSON(ctx, s, issue, false, false))
+					issues = append(issues, ToIssueJSON(ctx, app.Storage, issue, false, false))
 				}
 
 				// --continue logic (JSON): wrap in {closed, continue} format

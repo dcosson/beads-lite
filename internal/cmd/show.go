@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -36,21 +35,15 @@ Examples:
 			ctx := cmd.Context()
 			query := args[0]
 
-			// Route to correct storage
-			store, err := app.StorageFor(ctx, query)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", query, err)
-			}
-
 			// Try exact match first
-			issue, err := store.Get(ctx, query)
+			issue, err := app.Storage.Get(ctx, query)
 			if err == nil && issue.Status == issuestorage.StatusTombstone {
 				// Tombstoned issues are not visible to show
 				err = issuestorage.ErrNotFound
 			}
 			if err == issuestorage.ErrNotFound {
 				// Exact match failed (or tombstoned), try prefix matching
-				issue, err = findByPrefix(store, ctx, query)
+				issue, err = findByPrefix(app.Storage, ctx, query)
 			}
 			if err != nil {
 				if err == issuestorage.ErrNotFound {
@@ -143,8 +136,8 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 		fmt.Fprintf(w, "\nLabels: %s\n", strings.Join(issue.Labels, ", "))
 	}
 
-	// Use routing-aware getter for dependency lookups (may be cross-rig).
-	getter := routing.NewGetter(app.Router, app.Storage)
+	// Use routing-aware store for dependency lookups (may be cross-rig).
+	getter := app.Storage
 
 	// --- Parent ---
 	if issue.Parent != "" {
@@ -226,7 +219,7 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 // outputIssueJSON outputs the issue in JSON format matching original beads.
 // Returns an array with the single issue, with enriched dependencies.
 func outputIssueJSON(app *App, ctx context.Context, issue *issuestorage.Issue) error {
-	out := ToIssueJSON(ctx, routing.NewGetter(app.Router, app.Storage), issue, true, false)
+	out := ToIssueJSON(ctx, app.Storage, issue, true, false)
 	// Original beads returns an array for show
 	return json.NewEncoder(app.Out).Encode([]IssueJSON{out})
 }

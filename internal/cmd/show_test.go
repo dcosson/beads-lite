@@ -9,6 +9,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 func TestShowCommand(t *testing.T) {
@@ -19,6 +20,7 @@ func TestShowCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a test issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -37,7 +39,7 @@ func TestShowCommand(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -103,6 +105,7 @@ func TestShowPrefixMatch(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a test issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -116,7 +119,7 @@ func TestShowPrefixMatch(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -146,6 +149,7 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create two issues (both will start with "bd-")
 	id1, err := store.Create(ctx, &issuestorage.Issue{
@@ -167,7 +171,7 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -197,11 +201,12 @@ func TestShowNotFound(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -228,6 +233,7 @@ func TestShowJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a test issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -243,7 +249,7 @@ func TestShowJSON(t *testing.T) {
 	// Create app with JSON output
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -281,6 +287,7 @@ func TestShowClosedIssue(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create and close an issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -298,7 +305,7 @@ func TestShowClosedIssue(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -336,6 +343,7 @@ func TestShowWithDependencies(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issues with dependencies
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -357,14 +365,14 @@ func TestShowWithDependencies(t *testing.T) {
 	}
 
 	// Add dependency relationship (mainID depends on depID)
-	if err := store.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
+	if err := rs.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -417,6 +425,7 @@ func TestShowWithChildren(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent epic
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -439,13 +448,13 @@ func TestShowWithChildren(t *testing.T) {
 	}
 
 	// Add parent-child relationship
-	if err := store.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, childID, parentID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child: %v", err)
 	}
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -507,6 +516,7 @@ func TestShowWithComments(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create an issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -528,7 +538,7 @@ func TestShowWithComments(t *testing.T) {
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}

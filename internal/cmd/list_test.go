@@ -10,6 +10,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
@@ -19,6 +20,7 @@ func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issues in every non-closed status to verify the default list
 	// includes all of them, not just "open".
@@ -76,7 +78,7 @@ func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -115,6 +117,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create open, in-progress, and closed issues — --all should show all of them
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -149,7 +152,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -179,6 +182,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create open and closed issues
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -202,7 +206,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -229,6 +233,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issues with different statuses
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -253,7 +258,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -280,6 +285,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	highID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "High priority",
@@ -299,7 +305,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -326,6 +332,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	bugID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Bug issue",
@@ -347,7 +354,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -374,6 +381,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	labeledID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Labeled issue",
@@ -394,7 +402,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -421,6 +429,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	aliceID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Alice's issue",
@@ -442,7 +451,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -469,6 +478,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -501,7 +511,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -528,6 +538,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -551,7 +562,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -579,6 +590,7 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
@@ -590,7 +602,7 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -619,6 +631,7 @@ func TestListCommand_JSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
@@ -631,7 +644,7 @@ func TestListCommand_JSON(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -668,10 +681,11 @@ func TestListCommand_NoIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -694,6 +708,7 @@ func TestListCommand_StatusAll(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issues with different statuses
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -734,7 +749,7 @@ func TestListCommand_StatusAll(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -767,6 +782,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	swarmID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:   "Swarm issue",
@@ -794,7 +810,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -825,10 +841,11 @@ func TestListCommand_MolTypeInvalid(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -851,6 +868,7 @@ func TestListCommand_DefaultLimit(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create 55 issues (more than the default limit of 50)
 	for i := 0; i < 55; i++ {
@@ -865,7 +883,7 @@ func TestListCommand_DefaultLimit(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -891,6 +909,7 @@ func TestListCommand_LimitZeroReturnsAll(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	for i := 0; i < 5; i++ {
 		_, err := store.Create(ctx, &issuestorage.Issue{
@@ -904,7 +923,7 @@ func TestListCommand_LimitZeroReturnsAll(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}
@@ -931,6 +950,7 @@ func TestListCommand_CustomLimit(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	for i := 0; i < 5; i++ {
 		_, err := store.Create(ctx, &issuestorage.Issue{
@@ -944,7 +964,7 @@ func TestListCommand_CustomLimit(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}

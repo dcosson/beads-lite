@@ -8,16 +8,17 @@ import (
 	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-func newMolStore(t *testing.T) issuestorage.IssueStore {
+func newMolStore(t *testing.T) *routing.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	return s
+	return routing.NewIssueStore(nil, s)
 }
 
 func createMolIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, typ issuestorage.IssueType) *issuestorage.Issue {
@@ -37,7 +38,7 @@ func createMolIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore
 }
 
 // buildTestMolecule creates: root (epic) -> [A, B, C] where B blocks->A, C blocks->B.
-func buildTestMolecule(t *testing.T, ctx context.Context, s issuestorage.IssueStore) (root *issuestorage.Issue, children map[string]*issuestorage.Issue) {
+func buildTestMolecule(t *testing.T, ctx context.Context, s *routing.IssueStore) (root *issuestorage.Issue, children map[string]*issuestorage.Issue) {
 	t.Helper()
 	root = createMolIssue(t, ctx, s, "Test Molecule", issuestorage.TypeEpic)
 	a := createMolIssue(t, ctx, s, "Step A", issuestorage.TypeTask)

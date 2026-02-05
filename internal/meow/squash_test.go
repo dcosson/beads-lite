@@ -9,16 +9,17 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-func newSquashStore(t *testing.T) issuestorage.IssueStore {
+func newSquashStore(t *testing.T) *routing.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir, "bd-")
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	return s
+	return routing.NewIssueStore(nil, s)
 }
 
 func createSquashIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, ephemeral bool) *issuestorage.Issue {

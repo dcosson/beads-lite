@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/routing"
 
 	"github.com/spf13/cobra"
 )
@@ -192,25 +191,9 @@ Examples:
 					app.Storage.Delete(context.Background(), id)
 					return err
 				}
-				if app.Router.SameStore(id, depID) {
-					if err := app.Storage.AddDependency(ctx, id, depID, depType); err != nil {
-						app.Storage.Delete(context.Background(), id)
-						return fmt.Errorf("adding dependency on %s: %w", depID, err)
-					}
-				} else {
-					if depType == issuestorage.DepTypeParentChild {
-						app.Storage.Delete(context.Background(), id)
-						return fmt.Errorf("cannot add parent-child dependency across different rigs")
-					}
-					depStore, err := app.StorageFor(ctx, depID)
-					if err != nil {
-						app.Storage.Delete(context.Background(), id)
-						return fmt.Errorf("routing dependency %s: %w", depID, err)
-					}
-					if err := addCrossStoreDep(ctx, routing.NewGetter(app.Router, app.Storage), app.Storage, depStore, id, depID, depType); err != nil {
-						app.Storage.Delete(context.Background(), id)
-						return fmt.Errorf("adding dependency on %s: %w", depID, err)
-					}
+				if err := app.Storage.AddDependency(ctx, id, depID, depType); err != nil {
+					app.Storage.Delete(context.Background(), id)
+					return fmt.Errorf("adding dependency on %s: %w", depID, err)
 				}
 			}
 
@@ -221,7 +204,7 @@ Examples:
 				if err != nil {
 					return fmt.Errorf("fetching created issue: %w", err)
 				}
-				result := ToIssueJSON(ctx, routing.NewGetter(app.Router, app.Storage), createdIssue, false, false)
+				result := ToIssueJSON(ctx, app.Storage, createdIssue, false, false)
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 

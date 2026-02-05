@@ -7,9 +7,10 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-func newStore(t *testing.T) issuestorage.IssueStore {
+func newStore(t *testing.T) *routing.IssueStore {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	s := filesystem.New(dir, "bd-")
@@ -17,7 +18,7 @@ func newStore(t *testing.T) issuestorage.IssueStore {
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	return s
+	return routing.NewIssueStore(nil, s)
 }
 
 // createIssue is a test helper that creates an issue and fails the test on error.
@@ -40,7 +41,7 @@ func createIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, t
 // buildMolecule creates a root epic with children and optional DepBlocks edges.
 // Returns (root, children). The children are created with parent-child deps to root.
 // blockEdges maps childTitle → []blockerTitle for DepBlocks dependencies.
-func buildMolecule(t *testing.T, ctx context.Context, s issuestorage.IssueStore, rootTitle string, childTitles []string, blockEdges map[string][]string) (*issuestorage.Issue, []*issuestorage.Issue) {
+func buildMolecule(t *testing.T, ctx context.Context, s *routing.IssueStore, rootTitle string, childTitles []string, blockEdges map[string][]string) (*issuestorage.Issue, []*issuestorage.Issue) {
 	t.Helper()
 	root := createIssue(t, ctx, s, rootTitle, issuestorage.TypeEpic)
 

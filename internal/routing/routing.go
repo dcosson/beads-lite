@@ -4,7 +4,6 @@ package routing
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,8 +12,6 @@ import (
 	"strings"
 
 	"beads-lite/internal/config"
-	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/issuestorage/filesystem"
 )
 
 // routesFileName is the name of the routes file in a .beads directory.
@@ -121,37 +118,6 @@ func (r *Router) SameStore(id1, id2 string) bool {
 		return false // one local, one remote
 	}
 	return p1.DataDir == p2.DataDir
-}
-
-// Getter implements issuestorage.IssueGetter by dispatching Get calls
-// to the correct store based on issue ID prefix routing.
-type Getter struct {
-	router *Router
-	local  issuestorage.IssueGetter
-}
-
-// NewGetter creates a routing-aware IssueGetter. When router is nil or an ID
-// doesn't match any route, lookups fall through to the local store.
-func NewGetter(router *Router, local issuestorage.IssueGetter) *Getter {
-	return &Getter{router: router, local: local}
-}
-
-// Get retrieves an issue by routing to the correct store for the given ID.
-func (g *Getter) Get(ctx context.Context, id string) (*issuestorage.Issue, error) {
-	if g.router == nil {
-		return g.local.Get(ctx, id)
-	}
-
-	paths, prefix, isRemote, err := g.router.Resolve(id)
-	if err != nil {
-		return nil, err
-	}
-	if !isRemote {
-		return g.local.Get(ctx, id)
-	}
-
-	store := filesystem.New(paths.DataDir, prefix)
-	return store.Get(ctx, id)
 }
 
 // LoadRoutes reads a routes.jsonl file and returns the prefix→route map.

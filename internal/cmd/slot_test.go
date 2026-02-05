@@ -10,15 +10,17 @@ import (
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
-func setupSlotTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
+func setupSlotTestApp(t *testing.T) (*App, *routing.IssueStore) {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 	slotStore, err := kvfs.New(dir, "slots")
 	if err != nil {
 		t.Fatalf("failed to create slot store: %v", err)
@@ -27,11 +29,11 @@ func setupSlotTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
 		t.Fatalf("failed to init slot store: %v", err)
 	}
 	return &App{
-		Storage:   store,
+		Storage:   rs,
 		SlotStore: slotStore,
 		Out:       &bytes.Buffer{},
 		Err:       &bytes.Buffer{},
-	}, store
+	}, rs
 }
 
 func TestSlotShowEmpty(t *testing.T) {

@@ -443,10 +443,10 @@ func setupCrossStoreTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage, 
 
 	localStore := filesystem.New(filepath.Join(localBeads, "issues"), "bl-")
 	remoteStore := filesystem.New(filepath.Join(remoteBeads, "issues"), "hq-")
+	rs := routing.NewIssueStore(router, localStore)
 
 	app := &App{
-		Storage: localStore,
-		Router:  router,
+		Storage: rs,
 		Out:     &bytes.Buffer{},
 		Err:     &bytes.Buffer{},
 	}

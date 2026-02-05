@@ -113,11 +113,7 @@ func newSlotSetCmd(provider *AppProvider) *cobra.Command {
 			}
 
 			// Validate the target bead exists
-			store, err := app.StorageFor(ctx, beadID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", beadID, err)
-			}
-			if _, err := store.Get(ctx, beadID); err != nil {
+			if _, err := app.Storage.Get(ctx, beadID); err != nil {
 				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("bead %s not found", beadID)
 				}
@@ -130,7 +126,7 @@ func newSlotSetCmd(provider *AppProvider) *cobra.Command {
 
 			// GUPP: setting the hook slot marks the target bead as hooked
 			if slotName == "hook" {
-				if err := store.Modify(ctx, beadID, func(i *issuestorage.Issue) error {
+				if err := app.Storage.Modify(ctx, beadID, func(i *issuestorage.Issue) error {
 					i.Status = issuestorage.StatusHooked
 					return nil
 				}); err != nil {
@@ -202,11 +198,7 @@ func newSlotClearCmd(provider *AppProvider) *cobra.Command {
 // lookupTitle tries to fetch a bead's title from the issue store.
 // Returns "" if the lookup fails for any reason.
 func lookupTitle(app *App, ctx context.Context, beadID string) string {
-	store, err := app.StorageFor(ctx, beadID)
-	if err != nil {
-		return ""
-	}
-	issue, err := store.Get(ctx, beadID)
+	issue, err := app.Storage.Get(ctx, beadID)
 	if err != nil {
 		return ""
 	}

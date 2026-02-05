@@ -11,6 +11,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 // mockExecutor returns a commandExecutor that returns canned responses
@@ -28,18 +29,19 @@ func mockExecutor(responses map[string]struct {
 	}
 }
 
-func setupCheckTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage) {
+func setupCheckTestApp(t *testing.T) (*App, *routing.IssueStore) {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 	return &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &bytes.Buffer{},
 		Err:     &bytes.Buffer{},
-	}, store
+	}, rs
 }
 
 func TestGateCheckTimerExpired(t *testing.T) {

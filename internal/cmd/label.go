@@ -51,10 +51,7 @@ Examples:
 			issueID := args[0]
 			label := args[1]
 
-			store, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			store := app.Storage
 
 			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {
@@ -117,10 +114,7 @@ Examples:
 			issueID := args[0]
 			label := args[1]
 
-			store, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			store := app.Storage
 
 			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {
@@ -174,10 +168,7 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
-			store, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			store := app.Storage
 
 			issue, err := resolveIssue(store, ctx, issueID)
 			if err != nil {

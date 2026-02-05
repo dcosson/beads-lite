@@ -1605,9 +1605,19 @@ func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Add dependency
-	if err := s.AddDependency(ctx, id1, id2, issuestorage.DepTypeBlocks); err != nil {
-		t.Fatalf("AddDependency failed: %v", err)
+	// Add dependency by directly modifying both sides (AddDependency is on
+	// routing.IssueStore which can't be imported here due to import cycle).
+	if err := s.Modify(ctx, id1, func(i *issuestorage.Issue) error {
+		i.Dependencies = append(i.Dependencies, issuestorage.Dependency{ID: id2, Type: issuestorage.DepTypeBlocks})
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify id1 failed: %v", err)
+	}
+	if err := s.Modify(ctx, id2, func(i *issuestorage.Issue) error {
+		i.Dependents = append(i.Dependents, issuestorage.Dependency{ID: id1, Type: issuestorage.DepTypeBlocks})
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify id2 failed: %v", err)
 	}
 
 	// Check that no lock files remain

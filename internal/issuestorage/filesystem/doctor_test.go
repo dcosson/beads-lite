@@ -441,8 +441,15 @@ func TestDoctorCleanStorage(t *testing.T) {
 	idA, _ := fs.Create(ctx, issueA)
 	idB, _ := fs.Create(ctx, issueB)
 
-	// Add a proper dependency
-	fs.AddDependency(ctx, idA, idB, issuestorage.DepTypeBlocks)
+	// Add a proper dependency by directly modifying both sides
+	fs.Modify(ctx, idA, func(i *issuestorage.Issue) error {
+		i.Dependencies = append(i.Dependencies, issuestorage.Dependency{ID: idB, Type: issuestorage.DepTypeBlocks})
+		return nil
+	})
+	fs.Modify(ctx, idB, func(i *issuestorage.Issue) error {
+		i.Dependents = append(i.Dependents, issuestorage.Dependency{ID: idA, Type: issuestorage.DepTypeBlocks})
+		return nil
+	})
 
 	// Close one issue properly
 	fs.Modify(ctx, idB, func(i *issuestorage.Issue) error {

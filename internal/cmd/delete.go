@@ -90,11 +90,7 @@ Examples:
 			ctx := cmd.Context()
 			idPrefix := args[0]
 
-			// Route to correct storage
-			store, err := app.StorageFor(ctx, idPrefix)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", idPrefix, err)
-			}
+			store := app.Storage
 
 			// Try exact match first
 			issue, err := store.Get(ctx, idPrefix)

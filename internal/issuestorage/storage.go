@@ -408,19 +408,6 @@ type IssueStore interface {
 	// If filter is nil, returns all open issues.
 	List(ctx context.Context, filter *ListFilter) ([]*Issue, error)
 
-	// AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
-	// Locks both issues, then updates:
-	//   - issueID.dependencies += {dependsOnID, depType}
-	//   - dependsOnID.dependents += {issueID, depType}
-	// When depType is parent-child, also sets issueID.Parent = dependsOnID
-	// and handles reparenting (removes old parent-child dep if child had a previous parent).
-	AddDependency(ctx context.Context, issueID, dependsOnID string, depType DependencyType) error
-
-	// RemoveDependency removes a dependency relationship by ID.
-	// Locks both issues and removes the dep entry from both sides.
-	// If the removed dep was parent-child, also clears issueID.Parent.
-	RemoveDependency(ctx context.Context, issueID, dependsOnID string) error
-
 	// GetNextChildID validates the parent exists, checks hierarchy depth limits,
 	// scans for existing children, and returns the next child ID
 	// (e.g., "bd-a3f8" → "bd-a3f8.1", "bd-a3f8.1" → "bd-a3f8.1.1").

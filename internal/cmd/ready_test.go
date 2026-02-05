@@ -7,6 +7,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 func TestReadyCommand(t *testing.T) {
@@ -17,6 +18,7 @@ func TestReadyCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create some test issues
 	// Issue 1: ready (no dependencies)
@@ -46,14 +48,14 @@ func TestReadyCommand(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: id3 depends on id2 (id2 blocks id3)
-	if err := store.AddDependency(ctx, id3, id2, issuestorage.DepTypeBlocks); err != nil {
+	if err := rs.AddDependency(ctx, id3, id2, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app for testing
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -100,6 +102,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a dependency issue
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -119,14 +122,14 @@ func TestReadyWithClosedDependency(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Add dependency: mainID depends on depID (depID blocks mainID)
-	if err := store.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
+	if err := rs.AddDependency(ctx, mainID, depID, issuestorage.DepTypeBlocks); err != nil {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
 	// Create app
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    false,
 	}
@@ -167,6 +170,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a normal issue (should appear)
 	normalID, err := store.Create(ctx, &issuestorage.Issue{
@@ -189,7 +193,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 	}
 
@@ -214,6 +218,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a molecule root
 	molRootID, err := store.Create(ctx, &issuestorage.Issue{
@@ -233,7 +238,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create step 1: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID1, molRootID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, stepID1, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
@@ -244,7 +249,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create step 2: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID2, molRootID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, stepID2, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
@@ -259,7 +264,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 	}
 
@@ -293,6 +298,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a molecule root
 	molRootID, err := store.Create(ctx, &issuestorage.Issue{
@@ -312,7 +318,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create step: %v", err)
 	}
-	if err := store.AddDependency(ctx, stepID, molRootID, issuestorage.DepTypeParentChild); err != nil {
+	if err := rs.AddDependency(ctx, stepID, molRootID, issuestorage.DepTypeParentChild); err != nil {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
@@ -327,7 +333,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 	}
 
@@ -353,6 +359,7 @@ func TestReadyMolTypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create issues with different mol_types
 	swarmID, err := store.Create(ctx, &issuestorage.Issue{
@@ -375,7 +382,7 @@ func TestReadyMolTypeFilter(t *testing.T) {
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 	}
 
@@ -402,10 +409,11 @@ func TestReadyMolTypeInvalid(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 	}
 
@@ -425,6 +433,7 @@ func TestReadyJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
+	rs := routing.NewIssueStore(nil, store)
 
 	// Create a ready issue
 	_, err := store.Create(ctx, &issuestorage.Issue{
@@ -438,7 +447,7 @@ func TestReadyJSON(t *testing.T) {
 	// Create app with JSON output
 	var out bytes.Buffer
 	app := &App{
-		Storage: store,
+		Storage: rs,
 		Out:     &out,
 		JSON:    true,
 	}

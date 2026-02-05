@@ -61,10 +61,7 @@ Examples:
 			ctx := cmd.Context()
 			issueID := args[0]
 
-			store, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			store := app.Storage
 
 			issue, err := store.Get(ctx, issueID)
 			if err != nil {
@@ -179,10 +176,7 @@ Examples:
 				CreatedAt: time.Now(),
 			}
 
-			commentStore, err := app.StorageFor(ctx, issueID)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", issueID, err)
-			}
+			commentStore := app.Storage
 
 			if err := addComment(ctx, commentStore, issueID, comment); err != nil {
 				if err == issuestorage.ErrNotFound {

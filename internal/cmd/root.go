@@ -99,6 +99,8 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, err
 	}
 
+	routingStore := routing.NewIssueStore(router, store)
+
 	out := p.Out
 	if out == nil {
 		out = os.Stdout
@@ -109,11 +111,10 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	return &App{
-		Storage:        store,
+		Storage:        routingStore,
 		SlotStore:      slotStore,
 		AgentStore:     agentStore,
 		MergeSlotStore: mergeSlotStore,
-		Router:         router,
 		ConfigStore:    configStore,
 		ConfigDir:      paths.ConfigDir,
 		FormulaPath:    meow.DefaultSearchPath(paths.ConfigDir),

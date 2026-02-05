@@ -7,6 +7,7 @@ import (
 
 	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/routing"
 )
 
 // BurnResult contains statistics from a Burn operation.
@@ -28,7 +29,7 @@ type BurnResult struct {
 //     to remotes via bd sync
 //
 // Deletion proceeds from leaves up to avoid dangling parent references.
-func Burn(ctx context.Context, store issuestorage.IssueStore, molID string) (*BurnResult, error) {
+func Burn(ctx context.Context, store *routing.IssueStore, molID string) (*BurnResult, error) {
 	// 1. Load root issue.
 	root, err := store.Get(ctx, molID)
 	if err != nil {
@@ -124,7 +125,7 @@ func burnIssue(ctx context.Context, store issuestorage.IssueStore, issue *issues
 
 // cleanExternalDeps removes dependency links between issue and any issues
 // outside the burn set, preventing dangling references in surviving issues.
-func cleanExternalDeps(ctx context.Context, store issuestorage.IssueStore, issue *issuestorage.Issue, burnSet map[string]bool) error {
+func cleanExternalDeps(ctx context.Context, store *routing.IssueStore, issue *issuestorage.Issue, burnSet map[string]bool) error {
 	for _, dep := range issue.Dependencies {
 		if !burnSet[dep.ID] {
 			if err := store.RemoveDependency(ctx, issue.ID, dep.ID); err != nil && !errors.Is(err, issuestorage.ErrNotFound) {

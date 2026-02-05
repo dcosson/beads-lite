@@ -248,14 +248,7 @@ func (c *gateChecker) evaluateBead(ctx context.Context, gate *issuestorage.Issue
 		return r, false
 	}
 
-	store, err := c.app.StorageFor(ctx, gate.AwaitID)
-	if err != nil {
-		r.Result = "pending"
-		r.Reason = fmt.Sprintf("routing error for %s: %v", gate.AwaitID, err)
-		return r, false
-	}
-
-	target, err := store.Get(ctx, gate.AwaitID)
+	target, err := c.app.Storage.Get(ctx, gate.AwaitID)
 	if err != nil {
 		r.Result = "pending"
 		r.Reason = fmt.Sprintf("cannot find bead %s: %v", gate.AwaitID, err)

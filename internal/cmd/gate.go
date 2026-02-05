@@ -61,11 +61,7 @@ Examples:
 			ctx := cmd.Context()
 			query := args[0]
 
-			// Route to correct storage
-			store, err := app.StorageFor(ctx, query)
-			if err != nil {
-				return fmt.Errorf("routing issue %s: %w", query, err)
-			}
+			store := app.Storage
 
 			// Try exact match first
 			issue, err := store.Get(ctx, query)
@@ -294,10 +290,7 @@ func gateAddWaiter(provider *AppProvider, cmd *cobra.Command, gateID, waiter str
 
 	ctx := cmd.Context()
 
-	store, err := app.StorageFor(ctx, gateID)
-	if err != nil {
-		return fmt.Errorf("routing issue %s: %w", gateID, err)
-	}
+	store := app.Storage
 
 	issue, err := store.Get(ctx, gateID)
 	if err != nil {
@@ -373,10 +366,7 @@ Examples:
 			ctx := cmd.Context()
 			gateID := args[0]
 
-			store, err := app.StorageFor(ctx, gateID)
-			if err != nil {
-				return fmt.Errorf("routing %s: %w", gateID, err)
-			}
+			store := app.Storage
 
 			// Load the gate issue and validate
 			issue, err := store.Get(ctx, gateID)
