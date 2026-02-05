@@ -1,6 +1,8 @@
 // Package meow implements MEOW formula parsing and resolution.
 package meow
 
+import "fmt"
+
 // FormulaType identifies the kind of formula.
 type FormulaType string
 
@@ -26,6 +28,8 @@ type Formula struct {
 }
 
 // VarDef defines a variable that can be substituted into a formula.
+// In TOML, a VarDef can be either a table ([vars.name] with fields) or a
+// plain string (vars.name = "value"), where the string becomes the default.
 type VarDef struct {
 	Description string   `json:"description,omitempty" toml:"description"`
 	Default     string   `json:"default,omitempty" toml:"default"`
@@ -33,6 +37,42 @@ type VarDef struct {
 	Enum        []string `json:"enum,omitempty" toml:"enum"`
 	Pattern     string   `json:"pattern,omitempty" toml:"pattern"`
 	Type        string   `json:"type,omitempty" toml:"type"`
+}
+
+// UnmarshalTOML implements toml.Unmarshaler so that a VarDef can be decoded
+// from either a plain string (shorthand for default value) or a full table.
+func (v *VarDef) UnmarshalTOML(data any) error {
+	switch val := data.(type) {
+	case string:
+		v.Default = val
+		return nil
+	case map[string]any:
+		if s, ok := val["description"].(string); ok {
+			v.Description = s
+		}
+		if s, ok := val["default"].(string); ok {
+			v.Default = s
+		}
+		if b, ok := val["required"].(bool); ok {
+			v.Required = b
+		}
+		if arr, ok := val["enum"].([]any); ok {
+			for _, item := range arr {
+				if s, ok := item.(string); ok {
+					v.Enum = append(v.Enum, s)
+				}
+			}
+		}
+		if s, ok := val["pattern"].(string); ok {
+			v.Pattern = s
+		}
+		if s, ok := val["type"].(string); ok {
+			v.Type = s
+		}
+		return nil
+	default:
+		return fmt.Errorf("expected string or table for VarDef, got %T", data)
+	}
 }
 
 // Step is a single work item within a formula.

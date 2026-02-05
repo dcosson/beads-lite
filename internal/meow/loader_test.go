@@ -113,6 +113,100 @@ title = "First step"
 	}
 }
 
+func TestLoadFormulaTOMLVarsStringShorthand(t *testing.T) {
+	dir := t.TempDir()
+	content := `formula = "test-shorthand"
+description = "Test string shorthand vars"
+version = 1
+type = "workflow"
+
+[vars]
+wisp_type = "patrol"
+repo_url = "https://example.com"
+
+[[steps]]
+id = "s1"
+title = "First step"
+`
+	if err := os.WriteFile(filepath.Join(dir, "test-shorthand.formula.toml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := LoadFormula("test-shorthand", FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("LoadFormula() error = %v", err)
+	}
+
+	if len(f.Vars) != 2 {
+		t.Fatalf("len(Vars) = %d, want 2", len(f.Vars))
+	}
+	wt := f.Vars["wisp_type"]
+	if wt == nil {
+		t.Fatal("Vars[\"wisp_type\"] is nil")
+	}
+	if wt.Default != "patrol" {
+		t.Errorf("Vars[\"wisp_type\"].Default = %q, want %q", wt.Default, "patrol")
+	}
+	ru := f.Vars["repo_url"]
+	if ru == nil {
+		t.Fatal("Vars[\"repo_url\"] is nil")
+	}
+	if ru.Default != "https://example.com" {
+		t.Errorf("Vars[\"repo_url\"].Default = %q, want %q", ru.Default, "https://example.com")
+	}
+}
+
+func TestLoadFormulaTOMLVarsMixed(t *testing.T) {
+	dir := t.TempDir()
+	// Mix of string shorthand and table format in same formula
+	content := `formula = "test-mixed"
+description = "Test mixed vars"
+version = 1
+type = "workflow"
+
+[vars]
+simple_var = "hello"
+
+[vars.complex_var]
+default = "world"
+description = "A complex variable"
+required = false
+
+[[steps]]
+id = "s1"
+title = "First step"
+`
+	if err := os.WriteFile(filepath.Join(dir, "test-mixed.formula.toml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := LoadFormula("test-mixed", FormulaSearchPath{dir})
+	if err != nil {
+		t.Fatalf("LoadFormula() error = %v", err)
+	}
+
+	if len(f.Vars) != 2 {
+		t.Fatalf("len(Vars) = %d, want 2", len(f.Vars))
+	}
+	sv := f.Vars["simple_var"]
+	if sv == nil {
+		t.Fatal("Vars[\"simple_var\"] is nil")
+	}
+	if sv.Default != "hello" {
+		t.Errorf("Vars[\"simple_var\"].Default = %q, want %q", sv.Default, "hello")
+	}
+	cv := f.Vars["complex_var"]
+	if cv == nil {
+		t.Fatal("Vars[\"complex_var\"] is nil")
+	}
+	if cv.Default != "world" {
+		t.Errorf("Vars[\"complex_var\"].Default = %q, want %q", cv.Default, "world")
+	}
+	if cv.Description != "A complex variable" {
+		t.Errorf("Vars[\"complex_var\"].Description = %q, want %q", cv.Description, "A complex variable")
+	}
+}
+
 func TestSearchPathPriority(t *testing.T) {
 	projectDir := t.TempDir()
 	userDir := t.TempDir()
