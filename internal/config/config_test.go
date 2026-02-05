@@ -9,10 +9,11 @@ func TestDefaultValues(t *testing.T) {
 	defaults := DefaultValues()
 
 	expected := map[string]string{
+		"beads_variant":              "beads-lite",
 		"create.require-description": "false",
 		"defaults.priority":          "2",
 		"defaults.type":              "task",
-		"issue_prefix":                  "bd",
+		"issue_prefix":               "bd",
 		"actor":                      "${USER}",
 		"hierarchy.max_depth":        "3",
 	}

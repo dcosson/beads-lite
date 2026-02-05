@@ -11,6 +11,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/configservice"
 	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
@@ -54,7 +55,7 @@ func NewTestProvider(app *App) *AppProvider {
 }
 
 func (p *AppProvider) init() (*App, error) {
-	paths, err := config.ResolvePaths()
+	paths, err := configservice.ResolvePaths()
 	if err != nil {
 		return nil, err
 	}

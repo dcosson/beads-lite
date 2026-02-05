@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/configservice"
 )
 
 // routesFileName is the name of the routes file in a .beads directory.
@@ -87,7 +88,7 @@ func (r *Router) Resolve(issueID string) (config.Paths, string, bool, error) {
 	targetBeads := filepath.Join(r.townRoot, route.Path, ".beads")
 	targetBeads = filepath.Clean(targetBeads)
 
-	paths, err := config.ResolveFromBase(targetBeads)
+	paths, err := configservice.ResolveFromBase(targetBeads)
 	if err != nil {
 		return config.Paths{}, "", false, err
 	}

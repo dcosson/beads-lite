@@ -1,4 +1,4 @@
-package config
+package configservice
 
 import (
 	"os"
@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"beads-lite/internal/config"
 )
 
 func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
@@ -16,7 +18,7 @@ func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	}
 	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 
-	t.Setenv(EnvBeadsDir, beadsDir)
+	t.Setenv(config.EnvBeadsDir, beadsDir)
 
 	paths, err := ResolvePaths()
 	if err != nil {
@@ -108,7 +110,7 @@ func TestResolvePaths_ConfigExists(t *testing.T) {
 	}
 	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
 
-	t.Setenv(EnvBeadsDir, beadsDir)
+	t.Setenv(config.EnvBeadsDir, beadsDir)
 
 	paths, err := ResolvePaths()
 	if err != nil {
@@ -137,7 +139,7 @@ func TestResolvePaths_BEADS_DIR(t *testing.T) {
 	beadsDir := setupBeadsDir(t, tmpDir)
 
 	// Set BEADS_DIR env var
-	t.Setenv(EnvBeadsDir, beadsDir)
+	t.Setenv(config.EnvBeadsDir, beadsDir)
 
 	// cd to a different temp dir with no .beads
 	otherDir := t.TempDir()
@@ -332,23 +334,23 @@ func TestFindGitRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	root, err := findGitRoot(subDir)
+	root, err := FindGitRoot(subDir)
 	if err != nil {
-		t.Fatalf("findGitRoot error: %v", err)
+		t.Fatalf("FindGitRoot error: %v", err)
 	}
 
 	gotRoot := resolvePath(root)
 	wantRoot := resolvePath(repoDir)
 	if gotRoot != wantRoot {
-		t.Errorf("findGitRoot = %q, want %q", gotRoot, wantRoot)
+		t.Errorf("FindGitRoot = %q, want %q", gotRoot, wantRoot)
 	}
 }
 
 func TestFindGitRoot_NotGitRepo(t *testing.T) {
 	tmpDir := t.TempDir()
-	root, err := findGitRoot(tmpDir)
+	root, err := FindGitRoot(tmpDir)
 	if err == nil && root != "" {
-		t.Errorf("findGitRoot in non-git dir should fail, got root=%q", root)
+		t.Errorf("FindGitRoot in non-git dir should fail, got root=%q", root)
 	}
 }
 
@@ -356,10 +358,10 @@ func TestReadRedirect_NoFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	result, err := ReadRedirect(tmpDir)
 	if err != nil {
-		t.Fatalf("readRedirect error: %v", err)
+		t.Fatalf("ReadRedirect error: %v", err)
 	}
 	if result != "" {
-		t.Errorf("readRedirect with no file = %q, want empty", result)
+		t.Errorf("ReadRedirect with no file = %q, want empty", result)
 	}
 }
 
@@ -370,10 +372,10 @@ func TestReadRedirect_EmptyFile(t *testing.T) {
 	}
 	result, err := ReadRedirect(tmpDir)
 	if err != nil {
-		t.Fatalf("readRedirect error: %v", err)
+		t.Fatalf("ReadRedirect error: %v", err)
 	}
 	if result != "" {
-		t.Errorf("readRedirect with empty file = %q, want empty", result)
+		t.Errorf("ReadRedirect with empty file = %q, want empty", result)
 	}
 }
 
@@ -385,12 +387,12 @@ func TestReadRedirect_AbsolutePath(t *testing.T) {
 	}
 	result, err := ReadRedirect(srcDir)
 	if err != nil {
-		t.Fatalf("readRedirect error: %v", err)
+		t.Fatalf("ReadRedirect error: %v", err)
 	}
 	gotResult := resolvePath(result)
 	wantResult := resolvePath(targetDir)
 	if gotResult != wantResult {
-		t.Errorf("readRedirect = %q, want %q", gotResult, wantResult)
+		t.Errorf("ReadRedirect = %q, want %q", gotResult, wantResult)
 	}
 }
 
@@ -409,12 +411,12 @@ func TestReadRedirect_RelativePath(t *testing.T) {
 	}
 	result, err := ReadRedirect(srcDir)
 	if err != nil {
-		t.Fatalf("readRedirect error: %v", err)
+		t.Fatalf("ReadRedirect error: %v", err)
 	}
 	gotResult := resolvePath(result)
 	wantResult := resolvePath(targetDir)
 	if gotResult != wantResult {
-		t.Errorf("readRedirect = %q, want %q", gotResult, wantResult)
+		t.Errorf("ReadRedirect = %q, want %q", gotResult, wantResult)
 	}
 }
 
@@ -425,7 +427,7 @@ func TestReadRedirect_NonexistentTarget(t *testing.T) {
 	}
 	_, err := ReadRedirect(srcDir)
 	if err == nil {
-		t.Fatal("readRedirect should error for nonexistent target")
+		t.Fatal("ReadRedirect should error for nonexistent target")
 	}
 	if !strings.Contains(err.Error(), "redirect target") {
 		t.Fatalf("expected error about redirect target, got: %v", err)
@@ -434,30 +436,27 @@ func TestReadRedirect_NonexistentTarget(t *testing.T) {
 
 func TestIsValidBeadsLiteDir_WithConfig(t *testing.T) {
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte("actor: test\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if !isValidBeadsLiteDir(tmpDir) {
-		t.Error("isValidBeadsLiteDir should return true when config.yaml exists")
+	writeDefaultConfig(t, filepath.Join(tmpDir, "config.yaml"))
+	if !IsValidBeadsLiteDir(tmpDir) {
+		t.Error("IsValidBeadsLiteDir should return true when config.yaml has beads_variant")
 	}
 }
 
-func TestIsValidBeadsLiteDir_WithoutConfig(t *testing.T) {
-	// A .beads directory is only valid if it has config.yaml
-	// Storage directories alone don't make it valid
+func TestIsValidBeadsLiteDir_WithoutVariant(t *testing.T) {
+	// A .beads directory with config.yaml but no beads_variant is not valid beads-lite
 	tmpDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(tmpDir, "issues", "open"), 0755); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte("actor: test\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if isValidBeadsLiteDir(tmpDir) {
-		t.Error("isValidBeadsLiteDir should return false when config.yaml is missing")
+	if IsValidBeadsLiteDir(tmpDir) {
+		t.Error("IsValidBeadsLiteDir should return false when beads_variant is missing")
 	}
 }
 
 func TestIsValidBeadsLiteDir_Empty(t *testing.T) {
 	tmpDir := t.TempDir()
-	if isValidBeadsLiteDir(tmpDir) {
-		t.Error("isValidBeadsLiteDir should return false for empty dir")
+	if IsValidBeadsLiteDir(tmpDir) {
+		t.Error("IsValidBeadsLiteDir should return false for empty dir")
 	}
 }
 
@@ -466,8 +465,8 @@ func TestIsOriginalBeadsDir_MetadataJSON(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmpDir, "metadata.json"), []byte("{}"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if !isOriginalBeadsDir(tmpDir) {
-		t.Error("isOriginalBeadsDir should return true when metadata.json exists")
+	if !IsOriginalBeadsDir(tmpDir) {
+		t.Error("IsOriginalBeadsDir should return true when metadata.json exists")
 	}
 }
 
@@ -476,25 +475,28 @@ func TestIsOriginalBeadsDir_IssuesJSONL(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmpDir, "issues.jsonl"), []byte(""), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if !isOriginalBeadsDir(tmpDir) {
-		t.Error("isOriginalBeadsDir should return true when issues.jsonl exists")
+	if !IsOriginalBeadsDir(tmpDir) {
+		t.Error("IsOriginalBeadsDir should return true when issues.jsonl exists")
 	}
 }
 
 func TestIsOriginalBeadsDir_Neither(t *testing.T) {
 	tmpDir := t.TempDir()
-	if isOriginalBeadsDir(tmpDir) {
-		t.Error("isOriginalBeadsDir should return false for empty dir")
+	if IsOriginalBeadsDir(tmpDir) {
+		t.Error("IsOriginalBeadsDir should return false for empty dir")
 	}
 }
 
 func TestIsOriginalBeadsDir_BeadsLiteDir(t *testing.T) {
+	// A beads-lite dir should not be detected as original beads even if it has marker files
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte("actor: test\n"), 0644); err != nil {
+	writeDefaultConfig(t, filepath.Join(tmpDir, "config.yaml"))
+	// Add an issues.jsonl file (which might be created by third-party apps)
+	if err := os.WriteFile(filepath.Join(tmpDir, "issues.jsonl"), []byte(""), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if isOriginalBeadsDir(tmpDir) {
-		t.Error("isOriginalBeadsDir should return false for beads-lite dir with only config.yaml")
+	if IsOriginalBeadsDir(tmpDir) {
+		t.Error("IsOriginalBeadsDir should return false for beads-lite dir with beads_variant set")
 	}
 }
 
@@ -503,9 +505,9 @@ func TestValidateBeadsDir_OriginalBeads(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(tmpDir, "metadata.json"), []byte("{}"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	err := validateBeadsDir(tmpDir)
+	err := ValidateBeadsDir(tmpDir)
 	if err == nil {
-		t.Fatal("validateBeadsDir should error for original beads dir")
+		t.Fatal("ValidateBeadsDir should error for original beads dir")
 	}
 	if !strings.Contains(err.Error(), "original beads") {
 		t.Errorf("expected error mentioning 'original beads', got: %v", err)
@@ -514,9 +516,9 @@ func TestValidateBeadsDir_OriginalBeads(t *testing.T) {
 
 func TestValidateBeadsDir_InvalidDir(t *testing.T) {
 	tmpDir := t.TempDir()
-	err := validateBeadsDir(tmpDir)
+	err := ValidateBeadsDir(tmpDir)
 	if err == nil {
-		t.Fatal("validateBeadsDir should error for empty/invalid dir")
+		t.Fatal("ValidateBeadsDir should error for empty/invalid dir")
 	}
 	if !strings.Contains(err.Error(), "not a valid beads-lite") {
 		t.Errorf("expected error mentioning 'not a valid beads-lite', got: %v", err)
@@ -525,12 +527,10 @@ func TestValidateBeadsDir_InvalidDir(t *testing.T) {
 
 func TestValidateBeadsDir_ValidBeadsLite(t *testing.T) {
 	tmpDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(tmpDir, "config.yaml"), []byte("actor: test\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	err := validateBeadsDir(tmpDir)
+	writeDefaultConfig(t, filepath.Join(tmpDir, "config.yaml"))
+	err := ValidateBeadsDir(tmpDir)
 	if err != nil {
-		t.Errorf("validateBeadsDir should return nil for valid beads-lite dir, got: %v", err)
+		t.Errorf("ValidateBeadsDir should return nil for valid beads-lite dir, got: %v", err)
 	}
 }
 
@@ -545,7 +545,7 @@ func TestResolvePaths_OriginalBeadsDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Setenv(EnvBeadsDir, beadsDir)
+	t.Setenv(config.EnvBeadsDir, beadsDir)
 
 	_, err := ResolvePaths()
 	if err == nil {
@@ -577,10 +577,10 @@ func TestFindGitWorktreeRoot_NotWorktree(t *testing.T) {
 	}
 }
 
-// writeDefaultConfig writes a flat key-value config file with default values.
+// writeDefaultConfig writes a flat key-value config file with beads_variant set.
 func writeDefaultConfig(t *testing.T, path string) {
 	t.Helper()
-	content := "actor: ${USER}\ndefaults.priority: medium\ndefaults.type: task\nissue_prefix: bd-\n"
+	content := "actor: ${USER}\nbeads_variant: beads-lite\ndefaults.priority: \"2\"\ndefaults.type: task\nissue_prefix: bd\n"
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		t.Fatal(err)
 	}

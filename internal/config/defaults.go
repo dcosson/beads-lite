@@ -6,9 +6,16 @@ import (
 	"beads-lite/internal/idgen"
 )
 
+// BeadsVariantKey is the config key that identifies the beads variant.
+const BeadsVariantKey = "beads_variant"
+
+// BeadsVariantValue is the value for beads-lite repositories.
+const BeadsVariantValue = "beads-lite"
+
 // DefaultValues returns the default config map for the core keys.
 func DefaultValues() map[string]string {
 	return map[string]string{
+		BeadsVariantKey:              BeadsVariantValue,
 		"create.require-description": "false",
 		"defaults.priority":          "2",
 		"defaults.type":              "task",

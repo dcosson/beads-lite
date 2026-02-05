@@ -110,3 +110,44 @@ With this config:
 - `ext-42` → `/path/to/other/repo/.beads`
 
 The IssueService caches opened remote stores for the session lifetime.
+
+## Pluggable Storage Pattern
+
+beads-lite uses a consistent pattern for pluggable storage engines that avoids import cycles:
+
+```
+┌──────────────────────────────┐
+│     Service Layer            │  (issueservice/, configservice/)
+│  - Business logic            │
+│  - Can import storage +      │
+│    storage engines           │
+└──────────────┬───────────────┘
+               │ imports
+               ▼
+┌──────────────────────────────┐
+│     Storage Engine           │  (issuestorage/filesystem/, config/yamlstore/)
+│  - Concrete implementation   │
+│  - Imports base types only   │
+└──────────────┬───────────────┘
+               │ imports
+               ▼
+┌──────────────────────────────┐
+│     Base Types/Interface     │  (issuestorage/, config/)
+│  - Interface definitions     │
+│  - Data types (Issue, Paths) │
+│  - No implementation deps    │
+└──────────────────────────────┘
+```
+
+This three-layer structure allows:
+
+1. **Storage engines to be pluggable** — The interface lives in the base package, implementations in subpackages
+2. **Service layer to use concrete engines** — Services can import both base types and specific engine implementations
+3. **No import cycles** — Base types don't import engines, engines don't import services
+
+Examples:
+
+- **Issue storage**: `issuestorage.IssueStore` interface → `issuestorage/filesystem.Store` implementation → `issueservice.IssueStore` service
+- **Config storage**: `config.Store` interface + `config.Paths` type → `config/yamlstore.YAMLStore` implementation → `configservice.ResolvePaths()` service functions
+
+**Note**: `kvstorage/` (used for slots, agents, merge-slots) intentionally does not follow this pattern. It's a simple key-value store with no business logic, so commands use the storage layer directly without a service wrapper.
