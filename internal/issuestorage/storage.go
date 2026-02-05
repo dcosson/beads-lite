@@ -5,9 +5,20 @@ package issuestorage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+)
+
+// Sentinel errors returned by IssueStore implementations.
+var (
+	ErrNotFound          = errors.New("issue not found")
+	ErrAlreadyExists     = errors.New("issue already exists")
+	ErrLockTimeout       = errors.New("could not acquire lock")
+	ErrInvalidID         = errors.New("invalid issue ID")
+	ErrCycle             = errors.New("operation would create a cycle")
+	ErrAlreadyTombstoned = errors.New("issue is already tombstoned")
 )
 
 // DependencyType represents the type of relationship between two issues.
