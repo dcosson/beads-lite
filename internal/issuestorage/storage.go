@@ -214,20 +214,11 @@ func (p *Priority) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &s); err != nil {
 		return fmt.Errorf("priority must be int or string, got %s", string(data))
 	}
-	switch strings.ToLower(s) {
-	case "critical":
-		*p = PriorityCritical
-	case "high":
-		*p = PriorityHigh
-	case "medium":
-		*p = PriorityMedium
-	case "low":
-		*p = PriorityLow
-	case "backlog":
-		*p = PriorityBacklog
-	default:
-		return fmt.Errorf("unknown priority %q", s)
+	parsed, err := ParsePriority(s)
+	if err != nil {
+		return err
 	}
+	*p = parsed
 	return nil
 }
 
