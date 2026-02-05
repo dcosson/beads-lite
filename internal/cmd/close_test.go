@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestCloseBasic(t *testing.T) {
@@ -375,7 +375,7 @@ func TestCloseAlreadyClosed(t *testing.T) {
 // setupMolecule creates a root epic with 3 child steps (A→B→C chain).
 // Each step is a child of root via parent-child, and B blocks-depends on A, C blocks-depends on B.
 // Returns root ID, step A ID, step B ID, step C ID.
-func setupMolecule(t *testing.T, store *routing.IssueStore) (string, string, string, string) {
+func setupMolecule(t *testing.T, store *issueservice.IssueStore) (string, string, string, string) {
 	t.Helper()
 	ctx := context.Background()
 

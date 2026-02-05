@@ -9,7 +9,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestStatsCmd_Empty(t *testing.T) {
@@ -18,7 +18,7 @@ func TestStatsCmd_Empty(t *testing.T) {
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	var out bytes.Buffer
 	app := &App{
@@ -50,7 +50,7 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	// Create issues with various statuses
 	issues := []issuestorage.Issue{
@@ -123,7 +123,7 @@ func TestStatsCmd_JSON(t *testing.T) {
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	// Create a few issues
 	s.Create(ctx, &issuestorage.Issue{Title: "Issue 1"})

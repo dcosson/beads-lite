@@ -9,17 +9,17 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
-func newSwarmTestApp(t *testing.T) (*App, *routing.IssueStore) {
+func newSwarmTestApp(t *testing.T) (*App, *issueservice.IssueStore) {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".beads")
 	store := filesystem.New(dir, "bl-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 	app := &App{
 		Storage: rs,
 		Out:     &bytes.Buffer{},
@@ -29,7 +29,7 @@ func newSwarmTestApp(t *testing.T) (*App, *routing.IssueStore) {
 }
 
 // buildSwarmEpic creates an epic with children and block edges for swarm testing.
-func buildSwarmEpic(t *testing.T, store *routing.IssueStore, childTitles []string, blockEdges map[string][]string) (string, map[string]string) {
+func buildSwarmEpic(t *testing.T, store *issueservice.IssueStore, childTitles []string, blockEdges map[string][]string) (string, map[string]string) {
 	t.Helper()
 	ctx := context.Background()
 

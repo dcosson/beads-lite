@@ -7,7 +7,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestBlockedCommand(t *testing.T) {
@@ -18,7 +18,7 @@ func TestBlockedCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue (open)
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -85,7 +85,7 @@ func TestBlockedByRelationship(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a blocker issue (open)
 	blockerID, err := store.Create(ctx, &issuestorage.Issue{
@@ -140,7 +140,7 @@ func TestBlockedNoBlockedIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create only unblocked issues
 	_, err := store.Create(ctx, &issuestorage.Issue{
@@ -187,7 +187,7 @@ func TestBlockedClosedDependency(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create and close a dependency issue
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -242,7 +242,7 @@ func TestBlockedJSONOutput(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue (open)
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -301,7 +301,7 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create two open dependency issues
 	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep 1"})
@@ -349,7 +349,7 @@ func TestBlockedIncludesEphemeralIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create an open dependency issue
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -413,7 +413,7 @@ func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create two open dependency issues
 	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep A", Priority: issuestorage.PriorityHigh})

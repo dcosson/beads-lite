@@ -9,7 +9,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestDoctorCmd_NoProblems(t *testing.T) {
@@ -18,7 +18,7 @@ func TestDoctorCmd_NoProblems(t *testing.T) {
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	// Create a valid issue
 	_, err := s.Create(context.Background(), &issuestorage.Issue{
@@ -50,7 +50,7 @@ func TestDoctorCmd_WithProblems(t *testing.T) {
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	// Create an issue with a broken parent reference
 	issue := &issuestorage.Issue{
@@ -95,7 +95,7 @@ func TestDoctorCmd_JSON(t *testing.T) {
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	var out bytes.Buffer
 	app := &App{
@@ -128,7 +128,7 @@ func TestDoctorCmd_Fix(t *testing.T) {
 	if err := s.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, s)
+	rs := issueservice.New(nil, s)
 
 	// Create an issue with a broken parent reference
 	issue := &issuestorage.Issue{

@@ -8,7 +8,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestReopenCommand(t *testing.T) {
@@ -19,7 +19,7 @@ func TestReopenCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create and close an issue
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -94,7 +94,7 @@ func TestReopenNonExistent(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create app for testing
 	var out bytes.Buffer
@@ -121,7 +121,7 @@ func TestReopenJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create and close an issue
 	id, err := store.Create(ctx, &issuestorage.Issue{

@@ -10,7 +10,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
@@ -20,7 +20,7 @@ func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issues in every non-closed status to verify the default list
 	// includes all of them, not just "open".
@@ -117,7 +117,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create open, in-progress, and closed issues — --all should show all of them
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -182,7 +182,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create open and closed issues
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -233,7 +233,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issues with different statuses
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -285,7 +285,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	highID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "High priority",
@@ -332,7 +332,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	bugID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Bug issue",
@@ -381,7 +381,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	labeledID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Labeled issue",
@@ -429,7 +429,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	aliceID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Alice's issue",
@@ -478,7 +478,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -538,7 +538,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -590,7 +590,7 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
@@ -631,7 +631,7 @@ func TestListCommand_JSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	_, err := store.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
@@ -681,7 +681,7 @@ func TestListCommand_NoIssues(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
@@ -708,7 +708,7 @@ func TestListCommand_StatusAll(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issues with different statuses
 	openID, err := store.Create(ctx, &issuestorage.Issue{
@@ -782,7 +782,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	swarmID, err := store.Create(ctx, &issuestorage.Issue{
 		Title:   "Swarm issue",
@@ -841,7 +841,7 @@ func TestListCommand_MolTypeInvalid(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
@@ -868,7 +868,7 @@ func TestListCommand_DefaultLimit(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create 55 issues (more than the default limit of 50)
 	for i := 0; i < 55; i++ {
@@ -909,7 +909,7 @@ func TestListCommand_LimitZeroReturnsAll(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	for i := 0; i < 5; i++ {
 		_, err := store.Create(ctx, &issuestorage.Issue{
@@ -950,7 +950,7 @@ func TestListCommand_CustomLimit(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	for i := 0; i < 5; i++ {
 		_, err := store.Create(ctx, &issuestorage.Issue{

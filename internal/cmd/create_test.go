@@ -11,17 +11,17 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
-func setupTestApp(t *testing.T) (*App, *routing.IssueStore) {
+func setupTestApp(t *testing.T) (*App, *issueservice.IssueStore) {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 	return &App{
 		Storage: rs,
 		Out:     &bytes.Buffer{},
@@ -752,7 +752,7 @@ func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	cfg := &mapConfigStore{data: map[string]string{"hierarchy.max_depth": "1"}}
 	app := &App{

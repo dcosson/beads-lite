@@ -6,16 +6,16 @@ import (
 	"os"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/kvstorage"
 	"beads-lite/internal/meow"
-	"beads-lite/internal/routing"
 
 	"golang.org/x/term"
 )
 
 // App holds application state shared across commands.
 type App struct {
-	Storage        *routing.IssueStore
+	Storage        *issueservice.IssueStore
 	SlotStore      kvstorage.KVStore
 	AgentStore     kvstorage.KVStore
 	MergeSlotStore kvstorage.KVStore

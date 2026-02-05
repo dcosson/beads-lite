@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
-	"beads-lite/internal/routing"
 )
 
 // PourOptions configures a Pour or Wisp operation.
@@ -32,7 +32,7 @@ type PourResult struct {
 // a root epic issue and child issues in the storage backend.
 // When opts.Ephemeral is true the operation is a "wisp" — all created issues
 // are marked ephemeral.
-func Pour(ctx context.Context, store *routing.IssueStore, opts PourOptions) (*PourResult, error) {
+func Pour(ctx context.Context, store *issueservice.IssueStore, opts PourOptions) (*PourResult, error) {
 	// 1. Resolve formula (load + resolve inheritance).
 	formula, err := ResolveFormula(opts.FormulaName, opts.SearchPath)
 	if err != nil {

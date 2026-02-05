@@ -11,7 +11,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 // makeEditorScript creates a shell script that replaces temp file contents
@@ -74,7 +74,7 @@ func TestEditCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -122,7 +122,7 @@ func TestEditNoChanges(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -170,7 +170,7 @@ func TestEditEditorFails(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -217,7 +217,7 @@ func TestEditNotFound(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
@@ -243,7 +243,7 @@ func TestEditJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -292,7 +292,7 @@ func TestEditJSONNoChanges(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -338,7 +338,7 @@ func TestEditEmptyDescription(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
@@ -382,7 +382,7 @@ func TestEditFallbackToVisual(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	id, err := store.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",

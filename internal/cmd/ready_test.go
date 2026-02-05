@@ -7,7 +7,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestReadyCommand(t *testing.T) {
@@ -18,7 +18,7 @@ func TestReadyCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create some test issues
 	// Issue 1: ready (no dependencies)
@@ -102,7 +102,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue
 	depID, err := store.Create(ctx, &issuestorage.Issue{
@@ -170,7 +170,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a normal issue (should appear)
 	normalID, err := store.Create(ctx, &issuestorage.Issue{
@@ -218,7 +218,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a molecule root
 	molRootID, err := store.Create(ctx, &issuestorage.Issue{
@@ -298,7 +298,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a molecule root
 	molRootID, err := store.Create(ctx, &issuestorage.Issue{
@@ -359,7 +359,7 @@ func TestReadyMolTypeFilter(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issues with different mol_types
 	swarmID, err := store.Create(ctx, &issuestorage.Issue{
@@ -409,7 +409,7 @@ func TestReadyMolTypeInvalid(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	var out bytes.Buffer
 	app := &App{
@@ -433,7 +433,7 @@ func TestReadyJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create a ready issue
 	_, err := store.Create(ctx, &issuestorage.Issue{

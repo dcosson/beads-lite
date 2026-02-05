@@ -11,17 +11,17 @@ import (
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
-func setupAgentTestApp(t *testing.T) (*App, *routing.IssueStore) {
+func setupAgentTestApp(t *testing.T) (*App, *issueservice.IssueStore) {
 	t.Helper()
 	dir := t.TempDir()
 	store := filesystem.New(dir, "bd-")
 	if err := store.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 	slotStore, err := kvfs.New(dir, "slots")
 	if err != nil {
 		t.Fatalf("failed to create slot store: %v", err)

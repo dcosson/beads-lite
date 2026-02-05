@@ -9,7 +9,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/routing"
+	"beads-lite/internal/issueservice"
 )
 
 func TestChildrenCommand(t *testing.T) {
@@ -20,7 +20,7 @@ func TestChildrenCommand(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create parent issue
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -97,7 +97,7 @@ func TestChildrenNoChildren(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issue with no children
 	id, err := store.Create(ctx, &issuestorage.Issue{
@@ -137,7 +137,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -211,7 +211,7 @@ func TestChildrenJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create parent and child
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -270,7 +270,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -346,7 +346,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create parent and child
 	parentID, err := store.Create(ctx, &issuestorage.Issue{
@@ -404,7 +404,7 @@ func TestChildrenNotFound(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create app for testing
 	var out bytes.Buffer
@@ -436,7 +436,7 @@ func TestChildrenEmptyJSON(t *testing.T) {
 	if err := store.Init(ctx); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	rs := routing.NewIssueStore(nil, store)
+	rs := issueservice.New(nil, store)
 
 	// Create issue with no children
 	id, err := store.Create(ctx, &issuestorage.Issue{

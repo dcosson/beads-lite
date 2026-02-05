@@ -11,6 +11,7 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
 	"beads-lite/internal/meow"
@@ -99,7 +100,7 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, err
 	}
 
-	routingStore := routing.NewIssueStore(router, store)
+	routingStore := issueservice.New(router, store)
 
 	out := p.Out
 	if out == nil {

@@ -1,4 +1,4 @@
-package routing
+package issueservice
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
+	"beads-lite/internal/routing"
 )
 
 // IssueStore routes operations to the correct underlying store based on
@@ -20,14 +21,16 @@ import (
 //
 // When router is nil, all operations delegate straight to the local store.
 type IssueStore struct {
-	router *Router
+	router *routing.Router
 	local  issuestorage.IssueStore
 	stores map[string]issuestorage.IssueStore // cache opened stores by prefix
 }
 
 // NewIssueStore creates a routing-aware IssueStore. When router is nil,
 // all operations pass through to local with no overhead.
-func NewIssueStore(router *Router, local issuestorage.IssueStore) *IssueStore {
+// NewIssueStore creates an IssueStore with optional routing. When router is nil,
+// all operations pass through to local with dependency validation only.
+func New(router *routing.Router, local issuestorage.IssueStore) *IssueStore {
 	return &IssueStore{
 		router: router,
 		local:  local,
@@ -65,7 +68,7 @@ func (s *IssueStore) sameStore(id1, id2 string) bool {
 }
 
 // Router returns the underlying router (may be nil).
-func (s *IssueStore) Router() *Router {
+func (s *IssueStore) Router() *routing.Router {
 	return s.router
 }
 

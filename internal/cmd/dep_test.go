@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	"beads-lite/internal/routing"
@@ -443,7 +444,7 @@ func setupCrossStoreTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage, 
 
 	localStore := filesystem.New(filepath.Join(localBeads, "issues"), "bl-")
 	remoteStore := filesystem.New(filepath.Join(remoteBeads, "issues"), "hq-")
-	rs := routing.NewIssueStore(router, localStore)
+	rs := issueservice.New(router, localStore)
 
 	app := &App{
 		Storage: rs,
