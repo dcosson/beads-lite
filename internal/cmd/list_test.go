@@ -730,7 +730,7 @@ func TestListCommand_StatusAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	store.CreateTombstone(ctx, deletedID, "test", "test deletion")
+	softDelete(ctx, store, deletedID, "test", "test deletion")
 
 	var out bytes.Buffer
 	app := &App{

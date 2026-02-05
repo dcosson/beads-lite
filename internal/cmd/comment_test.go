@@ -26,7 +26,7 @@ func TestCommentListDeprecationWarning(t *testing.T) {
 	}
 
 	comment := &issuestorage.Comment{Author: "alice", Text: "Test comment"}
-	if err := store.AddComment(context.Background(), id, comment); err != nil {
+	if err := addComment(context.Background(), store, id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
 

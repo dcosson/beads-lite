@@ -8,11 +8,30 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
+
+// softDelete converts an issue to a tombstone (soft-delete) via Modify.
+// Sets status to tombstone, records deletion metadata, and moves the issue
+// to deleted storage. Returns ErrAlreadyTombstoned if already tombstoned.
+func softDelete(ctx context.Context, store issuestorage.IssueStore, id string, actor string, reason string) error {
+	return store.Modify(ctx, id, func(issue *issuestorage.Issue) error {
+		if issue.Status == issuestorage.StatusTombstone {
+			return issuestorage.ErrAlreadyTombstoned
+		}
+		issue.OriginalType = issue.Type
+		issue.Status = issuestorage.StatusTombstone
+		now := time.Now()
+		issue.DeletedAt = &now
+		issue.DeletedBy = actor
+		issue.DeleteReason = reason
+		return nil
+	})
+}
 
 // deleteResult holds the JSON output of a delete operation.
 type deleteResult struct {
@@ -229,7 +248,7 @@ Examples:
 						deleteReason = "batch delete"
 					}
 					actor := "batch delete"
-					if err := store.CreateTombstone(ctx, id, actor, deleteReason); err != nil {
+					if err := softDelete(ctx, store, id, actor, deleteReason); err != nil {
 						// Continue trying to process others even if one fails
 					}
 				}

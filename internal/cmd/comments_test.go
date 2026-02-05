@@ -215,10 +215,10 @@ func TestCommentsListBasic(t *testing.T) {
 
 	comment1 := &issuestorage.Comment{Author: "alice", Text: "First comment"}
 	comment2 := &issuestorage.Comment{Author: "bob", Text: "Second comment"}
-	if err := store.AddComment(context.Background(), id, comment1); err != nil {
+	if err := addComment(context.Background(), store, id, comment1); err != nil {
 		t.Fatalf("failed to add comment 1: %v", err)
 	}
-	if err := store.AddComment(context.Background(), id, comment2); err != nil {
+	if err := addComment(context.Background(), store, id, comment2); err != nil {
 		t.Fatalf("failed to add comment 2: %v", err)
 	}
 
@@ -301,7 +301,7 @@ func TestCommentsListJSON(t *testing.T) {
 	}
 
 	comment := &issuestorage.Comment{Author: "alice", Text: "Test comment"}
-	if err := store.AddComment(context.Background(), id, comment); err != nil {
+	if err := addComment(context.Background(), store, id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
 
@@ -343,7 +343,7 @@ func TestCommentsListNoAuthor(t *testing.T) {
 	}
 
 	comment := &issuestorage.Comment{Text: "Anonymous comment"}
-	if err := store.AddComment(context.Background(), id, comment); err != nil {
+	if err := addComment(context.Background(), store, id, comment); err != nil {
 		t.Fatalf("failed to add comment: %v", err)
 	}
 

@@ -58,9 +58,13 @@ const (
 var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted, DirEphemeral}
 
 // DirForIssue returns the appropriate directory for an issue based on its
-// ephemeral flag and status. Ephemeral issues go to DirEphemeral; others
-// go to the directory matching their status.
+// status and ephemeral flag. Tombstoned issues always go to DirDeleted.
+// Non-tombstone ephemeral issues go to DirEphemeral; others go to the
+// directory matching their status.
 func DirForIssue(issue *Issue) string {
+	if issue.Status == StatusTombstone {
+		return DirDeleted
+	}
 	if issue.Ephemeral {
 		return DirEphemeral
 	}
@@ -417,9 +421,6 @@ type IssueStore interface {
 	// If the removed dep was parent-child, also clears issueID.Parent.
 	RemoveDependency(ctx context.Context, issueID, dependsOnID string) error
 
-	// AddComment adds a comment to an issue.
-	AddComment(ctx context.Context, issueID string, comment *Comment) error
-
 	// GetNextChildID validates the parent exists, checks hierarchy depth limits,
 	// scans for existing children, and returns the next child ID
 	// (e.g., "bd-a3f8" → "bd-a3f8.1", "bd-a3f8.1" → "bd-a3f8.1.1").
@@ -428,14 +429,6 @@ type IssueStore interface {
 	// Returns ErrNotFound if parent doesn't exist, ErrMaxDepthExceeded if
 	// the parent is already at the maximum hierarchy depth.
 	GetNextChildID(ctx context.Context, parentID string) (string, error)
-
-	// CreateTombstone converts an issue to a tombstone (soft-delete).
-	// Sets status to tombstone, records deletion metadata, and moves
-	// the issue to deleted storage. The issue remains retrievable via
-	// Get() but is excluded from List() by default.
-	// Returns ErrNotFound if the issue doesn't exist.
-	// Returns ErrAlreadyTombstoned if the issue is already a tombstone.
-	CreateTombstone(ctx context.Context, id string, actor string, reason string) error
 
 	// Init initializes the storage (creates directories, etc.).
 	Init(ctx context.Context) error

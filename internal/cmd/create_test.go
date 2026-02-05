@@ -1226,7 +1226,7 @@ func TestCreateWithCustomID_TombstoneResurrection(t *testing.T) {
 	if _, err := store.Create(context.Background(), original); err != nil {
 		t.Fatalf("failed to create original issue: %v", err)
 	}
-	if err := store.CreateTombstone(context.Background(), "bd-tomb1", "test", "testing"); err != nil {
+	if err := softDelete(context.Background(), store, "bd-tomb1", "test", "testing"); err != nil {
 		t.Fatalf("failed to tombstone issue: %v", err)
 	}
 

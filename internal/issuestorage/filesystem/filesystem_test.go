@@ -1910,8 +1910,8 @@ func TestDeleteEphemeral(t *testing.T) {
 	}
 }
 
-// TestCreateTombstoneEphemeral verifies tombstoning removes from ephemeral/.
-func TestCreateTombstoneEphemeral(t *testing.T) {
+// TestTombstoneEphemeral verifies tombstoning via Modify moves ephemeral issues to deleted/.
+func TestTombstoneEphemeral(t *testing.T) {
 	s := setupTestStorage(t)
 	ctx := context.Background()
 
@@ -1924,8 +1924,11 @@ func TestCreateTombstoneEphemeral(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	if err := s.CreateTombstone(ctx, id, "test", "testing"); err != nil {
-		t.Fatalf("CreateTombstone failed: %v", err)
+	if err := s.Modify(ctx, id, func(issue *issuestorage.Issue) error {
+		issue.Status = issuestorage.StatusTombstone
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify to tombstone failed: %v", err)
 	}
 
 	// Should be in deleted/ now

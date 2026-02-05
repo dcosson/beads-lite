@@ -20,10 +20,9 @@ func RunContractTests(t *testing.T, factory func() IssueStore) {
 	t.Run("Dependencies", func(t *testing.T) { testDependencies(t, factory()) })
 	t.Run("Hierarchy", func(t *testing.T) { testHierarchy(t, factory()) })
 	t.Run("CycleDetection", func(t *testing.T) { testCycleDetection(t, factory()) })
-	t.Run("Comments", func(t *testing.T) { testComments(t, factory()) })
 	t.Run("ChildCounters", func(t *testing.T) { testChildCounters(t, factory()) })
 	t.Run("HierarchyDepthLimit", func(t *testing.T) { testHierarchyDepthLimit(t, factory()) })
-	t.Run("CreateTombstone", func(t *testing.T) { testCreateTombstone(t, factory()) })
+	t.Run("TombstoneStatus", func(t *testing.T) { testTombstoneStatus(t, factory()) })
 }
 
 func testCreate(t *testing.T, s IssueStore) {
@@ -642,78 +641,6 @@ func testCycleDetection(t *testing.T, s IssueStore) {
 	}
 }
 
-func testComments(t *testing.T, s IssueStore) {
-	ctx := context.Background()
-	if err := s.Init(ctx); err != nil {
-		t.Fatalf("Init failed: %v", err)
-	}
-
-	// Create an issue
-	issue := &Issue{
-		Title:    "Issue with Comments",
-		Status:   StatusOpen,
-		Priority: PriorityMedium,
-		Type:     TypeTask,
-	}
-	id, err := s.Create(ctx, issue)
-	if err != nil {
-		t.Fatalf("Create failed: %v", err)
-	}
-
-	// Add a comment
-	comment1 := &Comment{
-		Author:    "alice",
-		Text:      "First comment",
-		CreatedAt: time.Now(),
-	}
-	if err := s.AddComment(ctx, id, comment1); err != nil {
-		t.Fatalf("AddComment failed: %v", err)
-	}
-
-	// Verify comment was added
-	got, err := s.Get(ctx, id)
-	if err != nil {
-		t.Fatalf("Get after AddComment failed: %v", err)
-	}
-	if len(got.Comments) != 1 {
-		t.Fatalf("Expected 1 comment, got %d", len(got.Comments))
-	}
-	if got.Comments[0].Author != "alice" {
-		t.Errorf("Comment author: got %q, want %q", got.Comments[0].Author, "alice")
-	}
-	if got.Comments[0].Text != "First comment" {
-		t.Errorf("Comment body: got %q, want %q", got.Comments[0].Text, "First comment")
-	}
-	if got.Comments[0].ID == 0 {
-		t.Error("Comment ID should be set")
-	}
-
-	// Add another comment
-	comment2 := &Comment{
-		Author:    "bob",
-		Text:      "Second comment",
-		CreatedAt: time.Now(),
-	}
-	if err := s.AddComment(ctx, id, comment2); err != nil {
-		t.Fatalf("AddComment 2 failed: %v", err)
-	}
-
-	// Verify both comments exist
-	got, err = s.Get(ctx, id)
-	if err != nil {
-		t.Fatalf("Get after second AddComment failed: %v", err)
-	}
-	if len(got.Comments) != 2 {
-		t.Fatalf("Expected 2 comments, got %d", len(got.Comments))
-	}
-
-	// AddComment on non-existent issue should return ErrNotFound
-	err = s.AddComment(ctx, "nonexistent-id", comment1)
-	if err != ErrNotFound {
-		t.Errorf("AddComment on non-existent issue: got %v, want ErrNotFound", err)
-	}
-}
-
 func testChildCounters(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
@@ -832,7 +759,7 @@ func testHierarchyDepthLimit(t *testing.T, s IssueStore) {
 	}
 }
 
-func testCreateTombstone(t *testing.T, s IssueStore) {
+func testTombstoneStatus(t *testing.T, s IssueStore) {
 	ctx := context.Background()
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init failed: %v", err)
@@ -850,9 +777,17 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Tombstone it
-	if err := s.CreateTombstone(ctx, id, "test-actor", "no longer needed"); err != nil {
-		t.Fatalf("CreateTombstone failed: %v", err)
+	// Tombstone it via Modify
+	if err := s.Modify(ctx, id, func(issue *Issue) error {
+		issue.OriginalType = issue.Type
+		issue.Status = StatusTombstone
+		now := time.Now()
+		issue.DeletedAt = &now
+		issue.DeletedBy = "test-actor"
+		issue.DeleteReason = "no longer needed"
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify to tombstone failed: %v", err)
 	}
 
 	// Get() should still return the issue
@@ -908,18 +843,6 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 		t.Error("Tombstoned issue should appear when filtering by tombstone status")
 	}
 
-	// Tombstone a non-existent issue should return ErrNotFound
-	err = s.CreateTombstone(ctx, "nonexistent-id", "actor", "reason")
-	if err != ErrNotFound {
-		t.Errorf("CreateTombstone non-existent: got %v, want ErrNotFound", err)
-	}
-
-	// Tombstone an already-tombstoned issue should return ErrAlreadyTombstoned
-	err = s.CreateTombstone(ctx, id, "actor", "reason")
-	if !errors.Is(err, ErrAlreadyTombstoned) {
-		t.Errorf("Double tombstone: got %v, want ErrAlreadyTombstoned", err)
-	}
-
 	// Hard Delete() should still work on tombstoned issues
 	if err := s.Delete(ctx, id); err != nil {
 		t.Fatalf("Delete tombstoned issue failed: %v", err)
@@ -929,7 +852,7 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 		t.Errorf("Get after hard delete of tombstone: got %v, want ErrNotFound", err)
 	}
 
-	// Test tombstoning a closed issue
+	// Test tombstoning a closed issue (ClosedAt should be cleared)
 	closedIssue := &Issue{
 		Title:    "Closed then tombstoned",
 		Status:   StatusOpen,
@@ -943,8 +866,11 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 	if err := s.Modify(ctx, closedID, func(i *Issue) error { i.Status = StatusClosed; return nil }); err != nil {
 		t.Fatalf("Close issue failed: %v", err)
 	}
-	if err := s.CreateTombstone(ctx, closedID, "actor", "obsolete"); err != nil {
-		t.Fatalf("CreateTombstone on closed issue failed: %v", err)
+	if err := s.Modify(ctx, closedID, func(i *Issue) error {
+		i.Status = StatusTombstone
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify closed issue to tombstone failed: %v", err)
 	}
 	gotClosed, err := s.Get(ctx, closedID)
 	if err != nil {
@@ -952,6 +878,9 @@ func testCreateTombstone(t *testing.T, s IssueStore) {
 	}
 	if gotClosed.Status != StatusTombstone {
 		t.Errorf("Closed-then-tombstoned status: got %q, want %q", gotClosed.Status, StatusTombstone)
+	}
+	if gotClosed.ClosedAt != nil {
+		t.Error("ClosedAt should be cleared when tombstoning a closed issue")
 	}
 }
 

@@ -640,67 +640,6 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 	return true
 }
 
-// CreateTombstone converts an issue to a tombstone (soft-delete).
-func (fs *FilesystemStorage) CreateTombstone(ctx context.Context, id string, actor string, reason string) error {
-	lock, err := fs.acquireLock(id)
-	if err != nil {
-		return err
-	}
-	defer lock.release()
-
-	issue, err := fs.Get(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	if issue.Status == issuestorage.StatusTombstone {
-		return issuestorage.ErrAlreadyTombstoned
-	}
-
-	// Record original type before overwriting
-	issue.OriginalType = issue.Type
-
-	// Set tombstone metadata
-	issue.Status = issuestorage.StatusTombstone
-	now := time.Now()
-	issue.DeletedAt = &now
-	issue.DeletedBy = actor
-	issue.DeleteReason = reason
-	issue.ClosedAt = nil
-	issue.UpdatedAt = now
-
-	// Write to deleted/ first
-	deletedPath := fs.issuePathInDir(id, issuestorage.DirDeleted)
-	if err := atomicWriteJSON(deletedPath, issue); err != nil {
-		return err
-	}
-
-	// Remove from original location (try open/, ephemeral/, then closed/)
-	var removeErr error
-	removed := false
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed} {
-		removeErr = os.Remove(fs.issuePathInDir(id, dir))
-		if removeErr == nil {
-			removed = true
-			break
-		}
-		if !os.IsNotExist(removeErr) {
-			// Rollback: remove from deleted/
-			os.Remove(deletedPath)
-			return removeErr
-		}
-	}
-	if !removed {
-		// Issue wasn't in open/, ephemeral/, or closed/ — might have been
-		// created directly in deleted/. The write above succeeded, so this is fine.
-	}
-
-	// Clean up lock file
-	os.Remove(fs.lockPath(id))
-
-	return nil
-}
-
 // AddDependency creates a typed dependency relationship (issueID depends on dependsOnID).
 // When depType is parent-child, also sets issueID.Parent and handles reparenting.
 func (fs *FilesystemStorage) AddDependency(ctx context.Context, issueID, dependsOnID string, depType issuestorage.DependencyType) error {
@@ -804,26 +743,6 @@ func (fs *FilesystemStorage) RemoveDependency(ctx context.Context, issueID, depe
 	// Remove inverse dependent from the target issue
 	return fs.Modify(ctx, dependsOnID, func(dep *issuestorage.Issue) error {
 		dep.Dependents = removeDep(dep.Dependents, issueID)
-		return nil
-	})
-}
-
-// AddComment adds a comment to an issue.
-func (fs *FilesystemStorage) AddComment(ctx context.Context, issueID string, comment *issuestorage.Comment) error {
-	return fs.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
-		if comment.ID == 0 {
-			maxID := 0
-			for _, c := range issue.Comments {
-				if c.ID > maxID {
-					maxID = c.ID
-				}
-			}
-			comment.ID = maxID + 1
-		}
-		if comment.CreatedAt.IsZero() {
-			comment.CreatedAt = time.Now()
-		}
-		issue.Comments = append(issue.Comments, *comment)
 		return nil
 	})
 }

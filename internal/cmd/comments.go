@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,27 @@ import (
 
 	"github.com/spf13/cobra"
 )
+
+// addComment adds a comment to an issue via Modify, auto-assigning the next
+// sequential comment ID if comment.ID is zero.
+func addComment(ctx context.Context, store issuestorage.IssueStore, issueID string, comment *issuestorage.Comment) error {
+	return store.Modify(ctx, issueID, func(issue *issuestorage.Issue) error {
+		if comment.ID == 0 {
+			maxID := 0
+			for _, c := range issue.Comments {
+				if c.ID > maxID {
+					maxID = c.ID
+				}
+			}
+			comment.ID = maxID + 1
+		}
+		if comment.CreatedAt.IsZero() {
+			comment.CreatedAt = time.Now()
+		}
+		issue.Comments = append(issue.Comments, *comment)
+		return nil
+	})
+}
 
 // newCommentsCmd creates the comments command.
 // `bd comments <issue-id>` lists comments (default behavior).
@@ -162,7 +184,7 @@ Examples:
 				return fmt.Errorf("routing issue %s: %w", issueID, err)
 			}
 
-			if err := commentStore.AddComment(ctx, issueID, comment); err != nil {
+			if err := addComment(ctx, commentStore, issueID, comment); err != nil {
 				if err == issuestorage.ErrNotFound {
 					return fmt.Errorf("issue %s not found", issueID)
 				}

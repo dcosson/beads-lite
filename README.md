@@ -121,6 +121,7 @@ This table tracks implementation status across major feature areas.
 | ------------------------------------------------------ | :---: | :--------: | -------------- |
 | Issue prefix routing (`routes.jsonl`)                  |  ✅   |     ✅     | See ROUTING.md |
 | Town root discovery                                    |  ✅   |     ✅     |                |
+| Cross-repo dependencies                                |  ✅   |     ✅     |                |
 | Contributor routing (maintainer/contributor workflows) |  ✅   |     ⬜     |                |
 
 ### Compatibility Commands
