@@ -10,39 +10,6 @@ import (
 	"time"
 )
 
-// ApplyStatusDefaults sets side-effect fields for status transitions.
-// Called by Modify implementations after fn() returns, before writing.
-func ApplyStatusDefaults(old, updated *Issue) {
-	if updated.Status == StatusClosed && old.Status != StatusClosed {
-		now := time.Now()
-		updated.ClosedAt = &now
-		if updated.CloseReason == "" {
-			updated.CloseReason = "Closed"
-		}
-	}
-	if old.Status == StatusClosed && updated.Status != StatusClosed {
-		updated.ClosedAt = nil
-		updated.CloseReason = ""
-	}
-}
-
-// DefaultMaxHierarchyDepth is the maximum number of dot-notation levels
-// allowed in hierarchical child IDs (e.g., bd-a3f8.1.2.3 = depth 3).
-const DefaultMaxHierarchyDepth = 3
-
-// Directory names used by filesystem storage within the project data dir.
-const (
-	DirIssues    = "issues"
-	DirOpen      = "open"
-	DirClosed    = "closed"
-	DirDeleted   = "deleted"
-	DirEphemeral = "ephemeral"
-)
-
-// ReservedDirs lists all directory names used by issue storage.
-// Other storage systems (e.g., kvstorage) should not use these names.
-var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted, DirEphemeral}
-
 // DependencyType represents the type of relationship between two issues.
 type DependencyType string
 

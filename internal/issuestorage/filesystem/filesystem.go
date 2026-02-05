@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strings"
 	"syscall"
-	"time"
 
 	"beads-lite/internal/idgen"
 	"beads-lite/internal/issuestorage"
@@ -25,15 +24,25 @@ import (
 // P(20 consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
 const MaxIDRetries = 20
 
+// Directory structure constants. The filesystem storage creates these
+// directories under configDir/DataDirName/.
+const (
+	DataDirName  = "issues"   // subdirectory under configDir for issue data
+	DirOpen      = "open"     // open issues
+	DirClosed    = "closed"   // closed issues
+	DirDeleted   = "deleted"  // tombstoned/deleted issues
+	DirEphemeral = "ephemeral" // ephemeral issues (not exported)
+)
+
 // dirForStatus returns the directory name for the given issue status.
 func dirForStatus(status issuestorage.Status) string {
 	switch status {
 	case issuestorage.StatusClosed:
-		return issuestorage.DirClosed
+		return DirClosed
 	case issuestorage.StatusTombstone:
-		return issuestorage.DirDeleted
+		return DirDeleted
 	default:
-		return issuestorage.DirOpen
+		return DirOpen
 	}
 }
 
@@ -41,17 +50,17 @@ func dirForStatus(status issuestorage.Status) string {
 // status and ephemeral flag.
 func dirForIssue(issue *issuestorage.Issue) string {
 	if issue.Status == issuestorage.StatusTombstone {
-		return issuestorage.DirDeleted
+		return DirDeleted
 	}
 	if issue.Ephemeral {
-		return issuestorage.DirEphemeral
+		return DirEphemeral
 	}
 	return dirForStatus(issue.Status)
 }
 
 // FilesystemStorage implements issuestorage.IssueStore using filesystem-based JSON files.
 type FilesystemStorage struct {
-	root              string // path to .beads directory
+	root              string // path to data directory (configDir/issues)
 	maxHierarchyDepth int
 	prefix            string // ID prefix (e.g., "bd-", "bl-")
 }
@@ -66,12 +75,13 @@ func WithMaxHierarchyDepth(n int) Option {
 	}
 }
 
-// New creates a new FilesystemStorage rooted at the given directory.
+// New creates a new FilesystemStorage for the given config directory.
+// The storage creates its data in configDir/issues/.
 // The prefix is prepended to generated IDs (e.g., "bd-", "bl-").
-func New(root, prefix string, opts ...Option) *FilesystemStorage {
+func New(configDir, prefix string, opts ...Option) *FilesystemStorage {
 	fs := &FilesystemStorage{
-		root:              root,
-		maxHierarchyDepth: issuestorage.DefaultMaxHierarchyDepth,
+		root:              filepath.Join(configDir, DataDirName),
+		maxHierarchyDepth: idgen.DefaultMaxHierarchyDepth,
 		prefix:            prefix,
 	}
 	for _, opt := range opts {
@@ -82,7 +92,7 @@ func New(root, prefix string, opts ...Option) *FilesystemStorage {
 
 // Init initializes the storage by creating the required directories.
 func (fs *FilesystemStorage) Init(ctx context.Context) error {
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
+	for _, dir := range []string{DirOpen, DirClosed, DirDeleted, DirEphemeral} {
 		if err := os.MkdirAll(filepath.Join(fs.root, dir), 0755); err != nil {
 			return err
 		}
@@ -97,7 +107,7 @@ func (fs *FilesystemStorage) Init(ctx context.Context) error {
 // recoverBackups restores .json.backup files left by a Modify that
 // crashed between creating the backup and completing the write.
 func (fs *FilesystemStorage) recoverBackups() {
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
+	for _, dir := range []string{DirOpen, DirClosed, DirDeleted, DirEphemeral} {
 		dirPath := filepath.Join(fs.root, dir)
 		entries, err := os.ReadDir(dirPath)
 		if err != nil {
@@ -119,7 +129,7 @@ func (fs *FilesystemStorage) recoverBackups() {
 // CleanupStaleLocks removes lock files that don't have an active flock.
 // This handles the case where a process was killed before it could clean up.
 func (fs *FilesystemStorage) CleanupStaleLocks() {
-	openDir := filepath.Join(fs.root, issuestorage.DirOpen)
+	openDir := filepath.Join(fs.root, DirOpen)
 	entries, err := os.ReadDir(openDir)
 	if err != nil {
 		return // Best effort cleanup
@@ -151,9 +161,9 @@ func (fs *FilesystemStorage) CleanupStaleLocks() {
 }
 
 func (fs *FilesystemStorage) issuePath(id string, closed bool) string {
-	dir := issuestorage.DirOpen
+	dir := DirOpen
 	if closed {
-		dir = issuestorage.DirClosed
+		dir = DirClosed
 	}
 	return filepath.Join(fs.root, dir, id+".json")
 }
@@ -163,7 +173,7 @@ func (fs *FilesystemStorage) issuePathInDir(id string, dir string) string {
 }
 
 func (fs *FilesystemStorage) lockPath(id string) string {
-	return filepath.Join(fs.root, issuestorage.DirOpen, id+".lock")
+	return filepath.Join(fs.root, DirOpen, id+".lock")
 }
 
 // issueLock holds a file lock and its path for cleanup.
@@ -198,7 +208,7 @@ func (fs *FilesystemStorage) acquireLock(id string) (*issueLock, error) {
 // countAllIssues returns the total number of JSON issue files across all directories.
 func (fs *FilesystemStorage) countAllIssues() (int, error) {
 	count := 0
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted, issuestorage.DirEphemeral} {
+	for _, dir := range []string{DirOpen, DirClosed, DirDeleted, DirEphemeral} {
 		entries, err := os.ReadDir(filepath.Join(fs.root, dir))
 		if os.IsNotExist(err) {
 			continue
@@ -266,9 +276,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 			}
 		}
 
-		if issue.Status == "" {
-			issue.Status = issuestorage.StatusOpen
-		}
 		dir := dirForIssue(issue)
 		path := fs.issuePathInDir(issue.ID, dir)
 
@@ -280,9 +287,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 			return "", err
 		}
 		f.Close()
-
-		issue.CreatedAt = time.Now()
-		issue.UpdatedAt = issue.CreatedAt
 
 		if err := atomicWriteJSON(path, issue); err != nil {
 			os.Remove(path)
@@ -300,7 +304,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	}
 
 	length := idgen.AdaptiveLength(count)
-	now := time.Now()
 
 	// Compose the effective prefix, incorporating any PrefixAddition.
 	var prefixAddition string
@@ -309,9 +312,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	}
 	effectivePrefix := idgen.BuildPrefix(fs.prefix, prefixAddition)
 
-	if issue.Status == "" {
-		issue.Status = issuestorage.StatusOpen
-	}
 	dir := dirForIssue(issue)
 
 	// Retry with fresh random IDs on collision.
@@ -335,8 +335,6 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		f.Close()
 
 		issue.ID = id
-		issue.CreatedAt = now
-		issue.UpdatedAt = now
 
 		if err := atomicWriteJSON(path, issue); err != nil {
 			os.Remove(path)
@@ -371,7 +369,7 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.
 	// Search order: open → ephemeral → closed → deleted
 	var data []byte
 	var err error
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{DirOpen, DirEphemeral, DirClosed, DirDeleted} {
 		data, err = readFileSharedLock(fs.issuePathInDir(id, dir))
 		if !os.IsNotExist(err) {
 			break
@@ -399,12 +397,13 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.
 //
 // If fn changes the issue's status such that it belongs in a different
 // directory (e.g., open/ → closed/), Modify handles the file movement
-// automatically. Status transition side effects (ClosedAt, CloseReason)
-// are applied via ApplyStatusDefaults.
+// automatically. The caller (issueservice) is responsible for applying
+// status transition side effects (ClosedAt, CloseReason) and updating
+// timestamps.
 func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
 	// Find the issue file: open → ephemeral → closed → deleted
 	var path string
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{DirOpen, DirEphemeral, DirClosed, DirDeleted} {
 		candidate := fs.issuePathInDir(id, dir)
 		if _, err := os.Stat(candidate); err == nil {
 			path = candidate
@@ -443,12 +442,6 @@ func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*iss
 	if err := fn(&issue); err != nil {
 		return err
 	}
-
-	// Apply status transition side effects.
-	old := issuestorage.Issue{Status: oldStatus}
-	issuestorage.ApplyStatusDefaults(&old, &issue)
-
-	issue.UpdatedAt = time.Now()
 
 	oldDir := dirForIssue(&issuestorage.Issue{Status: oldStatus, Ephemeral: oldEphemeral})
 	newDir := dirForIssue(&issue)
@@ -501,7 +494,7 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 	defer lock.release()
 
 	// Search order: open → ephemeral → closed → deleted
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{DirOpen, DirEphemeral, DirClosed, DirDeleted} {
 		err = os.Remove(fs.issuePathInDir(id, dir))
 		if !os.IsNotExist(err) {
 			break
@@ -539,13 +532,13 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.List
 	}
 
 	if scanOpen {
-		openIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirOpen), filter)
+		openIssues, err := fs.listDir(filepath.Join(fs.root, DirOpen), filter)
 		if err != nil {
 			return nil, err
 		}
 		issues = append(issues, openIssues...)
 
-		ephemeralIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirEphemeral), filter)
+		ephemeralIssues, err := fs.listDir(filepath.Join(fs.root, DirEphemeral), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -553,7 +546,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.List
 	}
 
 	if scanClosed {
-		closedIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirClosed), filter)
+		closedIssues, err := fs.listDir(filepath.Join(fs.root, DirClosed), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -561,7 +554,7 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.List
 	}
 
 	if scanDeleted {
-		deletedIssues, err := fs.listDir(filepath.Join(fs.root, issuestorage.DirDeleted), filter)
+		deletedIssues, err := fs.listDir(filepath.Join(fs.root, DirDeleted), filter)
 		if err != nil {
 			return nil, err
 		}
@@ -677,7 +670,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	allIssues := make(map[string]*issuestorage.Issue)
 
 	// Scan all directories
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirEphemeral, issuestorage.DirClosed} {
+	for _, dir := range []string{DirOpen, DirEphemeral, DirClosed} {
 		entries, err := os.ReadDir(filepath.Join(fs.root, dir))
 		if err != nil && !os.IsNotExist(err) {
 			return nil, err
@@ -697,7 +690,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 			}
 
 			// Check for orphaned lock files (only in open/)
-			if ext == ".lock" && dir == issuestorage.DirOpen {
+			if ext == ".lock" && dir == DirOpen {
 				id := name[:len(name)-5]
 				jsonPath := filepath.Join(fs.root, dir, id+".json")
 				if _, err := os.Stat(jsonPath); os.IsNotExist(err) {
@@ -751,8 +744,8 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	for id, loc := range issuesByID {
 		expectedDir := dirForIssue(loc.issue)
 		if loc.dir != expectedDir {
-			if loc.issue.Ephemeral && loc.dir != issuestorage.DirEphemeral {
-				problems = append(problems, fmt.Sprintf("ephemeral mismatch: %s is ephemeral but is in %s/ (expected %s/)", id, loc.dir, issuestorage.DirEphemeral))
+			if loc.issue.Ephemeral && loc.dir != DirEphemeral {
+				problems = append(problems, fmt.Sprintf("ephemeral mismatch: %s is ephemeral but is in %s/ (expected %s/)", id, loc.dir, DirEphemeral))
 			} else if !loc.issue.Ephemeral {
 				problems = append(problems, fmt.Sprintf("status mismatch: %s has status=%s but is in %s/", id, loc.issue.Status, loc.dir))
 			}
@@ -865,8 +858,8 @@ func removeDep(deps []issuestorage.Dependency, id string) []issuestorage.Depende
 // children exist.
 func (fs *FilesystemStorage) scanMaxChildNumber(parentID string) (int, error) {
 	dirs := []string{
-		issuestorage.DirOpen, issuestorage.DirEphemeral,
-		issuestorage.DirClosed, issuestorage.DirDeleted,
+		DirOpen, DirEphemeral,
+		DirClosed, DirDeleted,
 	}
 	prefix := parentID + "."
 	maxChild := 0

@@ -342,19 +342,21 @@ func TestListSorting(t *testing.T) {
 	}
 
 	var createdIDs []string
-	for _, spec := range issues {
+	baseTime := time.Now()
+	for i, spec := range issues {
+		now := baseTime.Add(time.Duration(i) * 10 * time.Millisecond)
 		id, err := s.Create(ctx, &issuestorage.Issue{
-			Title:    spec.title,
-			Status:   issuestorage.StatusOpen,
-			Priority: issuestorage.PriorityMedium,
-			Type:     issuestorage.TypeTask,
+			Title:     spec.title,
+			Status:    issuestorage.StatusOpen,
+			Priority:  issuestorage.PriorityMedium,
+			Type:      issuestorage.TypeTask,
+			CreatedAt: now,
+			UpdatedAt: now,
 		})
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
 		createdIDs = append(createdIDs, id)
-		// Small delay to ensure different timestamps
-		time.Sleep(10 * time.Millisecond)
 	}
 
 	// List all issues
@@ -389,33 +391,38 @@ func TestListFilteringSorting(t *testing.T) {
 	ctx := context.Background()
 
 	// Create issues with different priorities
+	baseTime := time.Now()
 	_, err := s.Create(ctx, &issuestorage.Issue{
-		Title:    "High Priority 1",
-		Status:   issuestorage.StatusOpen,
-		Priority: issuestorage.PriorityHigh,
-		Type:     issuestorage.TypeTask,
+		Title:     "High Priority 1",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityHigh,
+		Type:      issuestorage.TypeTask,
+		CreatedAt: baseTime,
+		UpdatedAt: baseTime,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
 
 	_, err = s.Create(ctx, &issuestorage.Issue{
-		Title:    "Low Priority",
-		Status:   issuestorage.StatusOpen,
-		Priority: issuestorage.PriorityLow,
-		Type:     issuestorage.TypeTask,
+		Title:     "Low Priority",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityLow,
+		Type:      issuestorage.TypeTask,
+		CreatedAt: baseTime.Add(10 * time.Millisecond),
+		UpdatedAt: baseTime.Add(10 * time.Millisecond),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(10 * time.Millisecond)
 
 	_, err = s.Create(ctx, &issuestorage.Issue{
-		Title:    "High Priority 2",
-		Status:   issuestorage.StatusOpen,
-		Priority: issuestorage.PriorityHigh,
-		Type:     issuestorage.TypeTask,
+		Title:     "High Priority 2",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityHigh,
+		Type:      issuestorage.TypeTask,
+		CreatedAt: baseTime.Add(20 * time.Millisecond),
+		UpdatedAt: baseTime.Add(20 * time.Millisecond),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -490,9 +497,8 @@ func TestClose(t *testing.T) {
 	if got.Status != issuestorage.StatusClosed {
 		t.Errorf("Status after Close: got %q, want %q", got.Status, issuestorage.StatusClosed)
 	}
-	if got.ClosedAt == nil {
-		t.Error("ClosedAt should be set after Close")
-	}
+	// Note: ClosedAt is now set by issueservice, not the storage layer.
+	// This test only verifies the storage correctly persists status changes.
 }
 
 // TestReopen verifies that Reopen updates status and moves the file back.
@@ -1491,7 +1497,7 @@ func TestStaleLockCleanup(t *testing.T) {
 	}
 
 	// Manually create a stale lock file (simulating a killed process)
-	staleLockPath := filepath.Join(dir, "open", id+".lock")
+	staleLockPath := filepath.Join(dir, DataDirName, "open", id+".lock")
 	f, err := os.Create(staleLockPath)
 	if err != nil {
 		t.Fatalf("Failed to create stale lock: %v", err)
@@ -1520,7 +1526,7 @@ func TestStaleLockCleanupOnInit(t *testing.T) {
 	dir := t.TempDir()
 
 	// Create directory structure manually
-	openDir := filepath.Join(dir, "open")
+	openDir := filepath.Join(dir, DataDirName, "open")
 	if err := os.MkdirAll(openDir, 0755); err != nil {
 		t.Fatalf("Failed to create open dir: %v", err)
 	}
@@ -1577,7 +1583,7 @@ func TestLockFileCleanupAfterModify(t *testing.T) {
 	}
 
 	// Check that no lock file remains
-	lockPath := filepath.Join(dir, "open", id+".lock")
+	lockPath := filepath.Join(dir, DataDirName, "open", id+".lock")
 	if fileExists(lockPath) {
 		t.Errorf("Lock file should be cleaned up after Modify, but %s still exists", lockPath)
 	}
@@ -1622,8 +1628,8 @@ func TestLockFileCleanupAfterAddDependency(t *testing.T) {
 	}
 
 	// Check that no lock files remain
-	lockPath1 := filepath.Join(dir, "open", id1+".lock")
-	lockPath2 := filepath.Join(dir, "open", id2+".lock")
+	lockPath1 := filepath.Join(dir, DataDirName, "open", id1+".lock")
+	lockPath2 := filepath.Join(dir, DataDirName, "open", id2+".lock")
 	if fileExists(lockPath1) {
 		t.Errorf("Lock file should be cleaned up after AddDependency, but %s still exists", lockPath1)
 	}
@@ -1753,8 +1759,8 @@ func TestCreateEphemeralIssue(t *testing.T) {
 	}
 
 	// File should be in ephemeral/, not open/
-	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
-	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
+	ephemeralPath := filepath.Join(s.root, DirEphemeral, id+".json")
+	openPath := filepath.Join(s.root, DirOpen, id+".json")
 	if !fileExists(ephemeralPath) {
 		t.Error("ephemeral issue should exist in ephemeral/")
 	}
@@ -1776,8 +1782,8 @@ func TestCreateNonEphemeralIssue(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
-	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	openPath := filepath.Join(s.root, DirOpen, id+".json")
+	ephemeralPath := filepath.Join(s.root, DirEphemeral, id+".json")
 	if !fileExists(openPath) {
 		t.Error("non-ephemeral issue should exist in open/")
 	}
@@ -1801,7 +1807,7 @@ func TestCreateEphemeralWithExplicitID(t *testing.T) {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	ephemeralPath := filepath.Join(s.root, DirEphemeral, id+".json")
 	if !fileExists(ephemeralPath) {
 		t.Error("ephemeral issue with explicit ID should be in ephemeral/")
 	}
@@ -1856,8 +1862,8 @@ func TestModifyEphemeralToNonEphemeral(t *testing.T) {
 		t.Fatalf("Modify failed: %v", err)
 	}
 
-	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
-	openPath := filepath.Join(s.root, issuestorage.DirOpen, id+".json")
+	ephemeralPath := filepath.Join(s.root, DirEphemeral, id+".json")
+	openPath := filepath.Join(s.root, DirOpen, id+".json")
 	if fileExists(ephemeralPath) {
 		t.Error("after promotion, file should NOT be in ephemeral/")
 	}
@@ -1943,8 +1949,8 @@ func TestTombstoneEphemeral(t *testing.T) {
 	}
 
 	// Should be in deleted/ now
-	deletedPath := filepath.Join(s.root, issuestorage.DirDeleted, id+".json")
-	ephemeralPath := filepath.Join(s.root, issuestorage.DirEphemeral, id+".json")
+	deletedPath := filepath.Join(s.root, DirDeleted, id+".json")
+	ephemeralPath := filepath.Join(s.root, DirEphemeral, id+".json")
 	if !fileExists(deletedPath) {
 		t.Error("tombstoned issue should be in deleted/")
 	}
@@ -1961,7 +1967,7 @@ func TestInitCreatesEphemeralDir(t *testing.T) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
-	ephemeralDir := filepath.Join(dir, issuestorage.DirEphemeral)
+	ephemeralDir := filepath.Join(dir, DataDirName, DirEphemeral)
 	info, err := os.Stat(ephemeralDir)
 	if err != nil {
 		t.Fatalf("ephemeral/ directory not created: %v", err)

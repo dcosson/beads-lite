@@ -3,6 +3,7 @@ package issueservice
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
@@ -54,7 +55,7 @@ func (s *IssueStore) storeFor(id string) issuestorage.IssueStore {
 		return store
 	}
 
-	store := filesystem.New(paths.DataDir, prefix)
+	store := filesystem.New(paths.ConfigDir, prefix)
 	s.stores[prefix] = store
 	return store
 }
@@ -79,7 +80,36 @@ func (s *IssueStore) Get(ctx context.Context, id string) (*issuestorage.Issue, e
 }
 
 func (s *IssueStore) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
-	return s.storeFor(id).Modify(ctx, id, fn)
+	// Wrap fn to apply status defaults and update timestamp after user changes
+	wrappedFn := func(issue *issuestorage.Issue) error {
+		oldStatus := issue.Status
+		if err := fn(issue); err != nil {
+			return err
+		}
+		// Apply status transition side effects (ClosedAt, CloseReason)
+		applyStatusDefaults(oldStatus, issue)
+		// Update timestamp
+		issue.UpdatedAt = time.Now()
+		return nil
+	}
+	return s.storeFor(id).Modify(ctx, id, wrappedFn)
+}
+
+// applyStatusDefaults sets side-effect fields for status transitions.
+// When status changes to Closed, sets ClosedAt and default CloseReason.
+// When status changes from Closed, clears ClosedAt and CloseReason.
+func applyStatusDefaults(oldStatus issuestorage.Status, issue *issuestorage.Issue) {
+	if issue.Status == issuestorage.StatusClosed && oldStatus != issuestorage.StatusClosed {
+		now := time.Now()
+		issue.ClosedAt = &now
+		if issue.CloseReason == "" {
+			issue.CloseReason = "Closed"
+		}
+	}
+	if oldStatus == issuestorage.StatusClosed && issue.Status != issuestorage.StatusClosed {
+		issue.ClosedAt = nil
+		issue.CloseReason = ""
+	}
 }
 
 func (s *IssueStore) Delete(ctx context.Context, id string) error {
@@ -93,6 +123,13 @@ func (s *IssueStore) GetNextChildID(ctx context.Context, parentID string) (strin
 // --- issuestorage.IssueStore: always local ---
 
 func (s *IssueStore) Create(ctx context.Context, issue *issuestorage.Issue, opts ...issuestorage.CreateOpts) (string, error) {
+	// Set timestamps and default status before storage
+	now := time.Now()
+	issue.CreatedAt = now
+	issue.UpdatedAt = now
+	if issue.Status == "" {
+		issue.Status = issuestorage.StatusOpen
+	}
 	return s.local.Create(ctx, issue, opts...)
 }
 

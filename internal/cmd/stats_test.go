@@ -63,24 +63,24 @@ func TestStatsCmd_WithIssues(t *testing.T) {
 
 	for _, issue := range issues {
 		issueCopy := issue
-		id, err := s.Create(ctx, &issueCopy)
+		id, err := rs.Create(ctx, &issueCopy)
 		if err != nil {
 			t.Fatalf("failed to create issue: %v", err)
 		}
 		// Update status after create (create sets to open by default)
 		if issue.Status != issuestorage.StatusOpen {
-			if err := s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issue.Status; return nil }); err != nil {
+			if err := rs.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issue.Status; return nil }); err != nil {
 				t.Fatalf("failed to update issue: %v", err)
 			}
 		}
 	}
 
 	// Create and close an issue
-	closeID, err := s.Create(ctx, &issuestorage.Issue{Title: "To be closed"})
+	closeID, err := rs.Create(ctx, &issuestorage.Issue{Title: "To be closed"})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := s.Modify(ctx, closeID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, closeID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -126,10 +126,10 @@ func TestStatsCmd_JSON(t *testing.T) {
 	rs := issueservice.New(nil, s)
 
 	// Create a few issues
-	s.Create(ctx, &issuestorage.Issue{Title: "Issue 1"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Issue 2"})
-	id, _ := s.Create(ctx, &issuestorage.Issue{Title: "Issue 3"})
-	s.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
+	rs.Create(ctx, &issuestorage.Issue{Title: "Issue 1"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Issue 2"})
+	id, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Issue 3"})
+	rs.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	var out bytes.Buffer
 	app := &App{

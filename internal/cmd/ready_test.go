@@ -22,7 +22,7 @@ func TestReadyCommand(t *testing.T) {
 
 	// Create some test issues
 	// Issue 1: ready (no dependencies)
-	id1, err := store.Create(ctx, &issuestorage.Issue{
+	id1, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue 1",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -31,7 +31,7 @@ func TestReadyCommand(t *testing.T) {
 	}
 
 	// Issue 2: ready (no dependencies)
-	id2, err := store.Create(ctx, &issuestorage.Issue{
+	id2, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue 2",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -40,7 +40,7 @@ func TestReadyCommand(t *testing.T) {
 	}
 
 	// Issue 3: blocked (depends on issue 2)
-	id3, err := store.Create(ctx, &issuestorage.Issue{
+	id3, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -105,7 +105,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -114,7 +114,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	}
 
 	// Create an issue that depends on it
-	mainID, err := store.Create(ctx, &issuestorage.Issue{
+	mainID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Main issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -146,7 +146,7 @@ func TestReadyWithClosedDependency(t *testing.T) {
 	}
 
 	// Close the dependency
-	if err := store.Modify(ctx, depID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, depID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close dependency: %v", err)
 	}
 
@@ -173,7 +173,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a normal issue (should appear)
-	normalID, err := store.Create(ctx, &issuestorage.Issue{
+	normalID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Normal issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -182,7 +182,7 @@ func TestReadyExcludesEphemeral(t *testing.T) {
 	}
 
 	// Create an ephemeral issue (should NOT appear)
-	ephID, err := store.Create(ctx, &issuestorage.Issue{
+	ephID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Ephemeral issue",
 		Priority:  issuestorage.PriorityHigh,
 		Ephemeral: true,
@@ -221,7 +221,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a molecule root
-	molRootID, err := store.Create(ctx, &issuestorage.Issue{
+	molRootID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule root",
 		Priority: issuestorage.PriorityMedium,
 		Type:     issuestorage.TypeEpic,
@@ -231,7 +231,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	}
 
 	// Create two molecule steps (children of root)
-	stepID1, err := store.Create(ctx, &issuestorage.Issue{
+	stepID1, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Step 1",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -242,7 +242,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 		t.Fatalf("failed to add parent-child dep: %v", err)
 	}
 
-	stepID2, err := store.Create(ctx, &issuestorage.Issue{
+	stepID2, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Step 2",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -254,7 +254,7 @@ func TestReadyMolShowsOnlyMoleculeSteps(t *testing.T) {
 	}
 
 	// Create a non-molecule issue
-	otherID, err := store.Create(ctx, &issuestorage.Issue{
+	otherID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Other top-level issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -301,7 +301,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a molecule root
-	molRootID, err := store.Create(ctx, &issuestorage.Issue{
+	molRootID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule root",
 		Priority: issuestorage.PriorityMedium,
 		Type:     issuestorage.TypeEpic,
@@ -311,7 +311,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	}
 
 	// Create a molecule step (child of root)
-	stepID, err := store.Create(ctx, &issuestorage.Issue{
+	stepID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Molecule step",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -323,7 +323,7 @@ func TestReadyWithoutMolExcludesMoleculeSteps(t *testing.T) {
 	}
 
 	// Create a top-level issue
-	topID, err := store.Create(ctx, &issuestorage.Issue{
+	topID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Top-level issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -362,7 +362,7 @@ func TestReadyMolTypeFilter(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issues with different mol_types
-	swarmID, err := store.Create(ctx, &issuestorage.Issue{
+	swarmID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Swarm issue",
 		Priority: issuestorage.PriorityHigh,
 		MolType:  issuestorage.MolTypeSwarm,
@@ -371,7 +371,7 @@ func TestReadyMolTypeFilter(t *testing.T) {
 		t.Fatalf("failed to create swarm issue: %v", err)
 	}
 
-	patrolID, err := store.Create(ctx, &issuestorage.Issue{
+	patrolID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Patrol issue",
 		Priority: issuestorage.PriorityHigh,
 		MolType:  issuestorage.MolTypePatrol,
@@ -436,7 +436,7 @@ func TestReadyJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a ready issue
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Ready issue",
 		Priority: issuestorage.PriorityHigh,
 	})

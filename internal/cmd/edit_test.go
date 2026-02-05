@@ -76,7 +76,7 @@ func TestEditCommand(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original description",
 		Priority:    issuestorage.PriorityMedium,
@@ -124,7 +124,7 @@ func TestEditNoChanges(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original description",
 		Priority:    issuestorage.PriorityMedium,
@@ -172,7 +172,7 @@ func TestEditEditorFails(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original description",
 		Priority:    issuestorage.PriorityMedium,
@@ -245,7 +245,7 @@ func TestEditJSON(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original description",
 		Priority:    issuestorage.PriorityMedium,
@@ -294,7 +294,7 @@ func TestEditJSONNoChanges(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original description",
 		Priority:    issuestorage.PriorityMedium,
@@ -340,7 +340,7 @@ func TestEditEmptyDescription(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Some description",
 		Priority:    issuestorage.PriorityMedium,
@@ -384,7 +384,7 @@ func TestEditFallbackToVisual(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test issue",
 		Description: "Original",
 		Priority:    issuestorage.PriorityMedium,

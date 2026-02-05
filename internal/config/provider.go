@@ -8,15 +8,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"beads-lite/internal/issuestorage"
 )
 
-// Paths captures resolved locations for config and data.
+// Paths captures resolved locations for config.
 type Paths struct {
 	ConfigDir  string // path to .beads directory
 	ConfigFile string // path to .beads/config.yaml
-	DataDir    string // path to .beads/<project>
 }
 
 // ResolvePaths resolves config and data paths.
@@ -105,17 +102,11 @@ func ResolveFromBase(basePath string) (Paths, error) {
 	return buildPaths(basePath, configFile)
 }
 
-// buildPaths constructs Paths using the hardcoded "issues" data directory.
+// buildPaths constructs Paths from the config directory and file.
 func buildPaths(configDir, configFile string) (Paths, error) {
-	dataDir := filepath.Join(configDir, issuestorage.DirIssues)
-	if err := ensureDirExists(dataDir); err != nil {
-		return Paths{}, missingDataErr(dataDir)
-	}
-
 	return Paths{
 		ConfigDir:  configDir,
 		ConfigFile: configFile,
-		DataDir:    dataDir,
 	}, nil
 }
 
@@ -257,22 +248,10 @@ func ReadRedirect(beadsDir string) (string, error) {
 }
 
 // isValidBeadsLiteDir checks whether a directory looks like a valid beads-lite .beads directory.
-// It checks for config.yaml or the issues/ subdir with open/closed dirs.
+// A valid beads-lite directory contains a config.yaml file.
 func isValidBeadsLiteDir(dir string) bool {
-	// Check for config.yaml
-	if _, err := os.Stat(filepath.Join(dir, "config.yaml")); err == nil {
-		return true
-	}
-
-	// Check for issues/open or issues/closed
-	issuesDir := filepath.Join(dir, issuestorage.DirIssues)
-	if _, err := os.Stat(filepath.Join(issuesDir, "open")); err == nil {
-		return true
-	}
-	if _, err := os.Stat(filepath.Join(issuesDir, "closed")); err == nil {
-		return true
-	}
-	return false
+	_, err := os.Stat(filepath.Join(dir, "config.yaml"))
+	return err == nil
 }
 
 // isOriginalBeadsDir checks whether a directory looks like an original beads .beads directory
@@ -298,27 +277,12 @@ func validateBeadsDir(dir string) error {
 	}
 	if !isValidBeadsLiteDir(dir) {
 		return fmt.Errorf(
-			".beads directory at %s is not a valid beads-lite repository (missing config.yaml and project directories). "+
+			".beads directory at %s is not a valid beads-lite repository (missing config.yaml). "+
 				"Run `bd init` to initialize it", dir)
-	}
-	return nil
-}
-
-func ensureDirExists(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", path)
 	}
 	return nil
 }
 
 func missingConfigErr(path string) error {
 	return fmt.Errorf("beads config not found at %s (run `bd init`)", path)
-}
-
-func missingDataErr(path string) error {
-	return fmt.Errorf("beads data not found at %s (run `bd init`)", path)
 }

@@ -21,7 +21,7 @@ func TestBlockedCommand(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue (open)
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -30,7 +30,7 @@ func TestBlockedCommand(t *testing.T) {
 	}
 
 	// Create a blocked issue (depends on open issue)
-	blockedID, err := store.Create(ctx, &issuestorage.Issue{
+	blockedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -43,7 +43,7 @@ func TestBlockedCommand(t *testing.T) {
 	}
 
 	// Create an unblocked issue
-	unblockedID, err := store.Create(ctx, &issuestorage.Issue{
+	unblockedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -88,7 +88,7 @@ func TestBlockedByRelationship(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a blocker issue (open)
-	blockerID, err := store.Create(ctx, &issuestorage.Issue{
+	blockerID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocker issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -97,7 +97,7 @@ func TestBlockedByRelationship(t *testing.T) {
 	}
 
 	// Create an issue that is blocked by the blocker
-	blockedID, err := store.Create(ctx, &issuestorage.Issue{
+	blockedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -143,7 +143,7 @@ func TestBlockedNoBlockedIssues(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create only unblocked issues
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue 1",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -151,7 +151,7 @@ func TestBlockedNoBlockedIssues(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	_, err = store.Create(ctx, &issuestorage.Issue{
+	_, err = rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Unblocked issue 2",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -190,19 +190,19 @@ func TestBlockedClosedDependency(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create and close a dependency issue
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed dependency",
 		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, depID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, depID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
 	// Create an issue that depends on the closed issue
-	issueID, err := store.Create(ctx, &issuestorage.Issue{
+	issueID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue with closed dependency",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -245,7 +245,7 @@ func TestBlockedJSONOutput(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a dependency issue (open)
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -254,7 +254,7 @@ func TestBlockedJSONOutput(t *testing.T) {
 	}
 
 	// Create a blocked issue
-	blockedID, err := store.Create(ctx, &issuestorage.Issue{
+	blockedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -304,11 +304,11 @@ func TestBlockedMultipleDependencies(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create two open dependency issues
-	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep 1"})
-	dep2ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep 2"})
+	dep1ID, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Dep 1"})
+	dep2ID, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Dep 2"})
 
 	// Create an issue blocked by both
-	blockedID, _ := store.Create(ctx, &issuestorage.Issue{
+	blockedID, _ := rs.Create(ctx, &issuestorage.Issue{
 		Title: "Multiply blocked",
 	})
 	// Add dependencies: blockedID depends on both dep1ID and dep2ID
@@ -352,7 +352,7 @@ func TestBlockedIncludesEphemeralIssues(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create an open dependency issue
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open dependency",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -361,7 +361,7 @@ func TestBlockedIncludesEphemeralIssues(t *testing.T) {
 	}
 
 	// Create an ephemeral blocked issue — should be included
-	ephID, err := store.Create(ctx, &issuestorage.Issue{
+	ephID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Ephemeral blocked issue",
 		Priority:  issuestorage.PriorityMedium,
 		Ephemeral: true,
@@ -374,7 +374,7 @@ func TestBlockedIncludesEphemeralIssues(t *testing.T) {
 	}
 
 	// Create a persistent blocked issue — should also be included
-	persistID, err := store.Create(ctx, &issuestorage.Issue{
+	persistID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -416,11 +416,11 @@ func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create two open dependency issues
-	dep1ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep A", Priority: issuestorage.PriorityHigh})
-	dep2ID, _ := store.Create(ctx, &issuestorage.Issue{Title: "Dep B", Priority: issuestorage.PriorityHigh})
+	dep1ID, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Dep A", Priority: issuestorage.PriorityHigh})
+	dep2ID, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Dep B", Priority: issuestorage.PriorityHigh})
 
 	// Create two persistent blocked issues
-	blocked1ID, _ := store.Create(ctx, &issuestorage.Issue{
+	blocked1ID, _ := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked 1",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -428,7 +428,7 @@ func TestBlockedPersistentBlockedIssuesStillShown(t *testing.T) {
 		t.Fatalf("failed to add dependency: %v", err)
 	}
 
-	blocked2ID, _ := store.Create(ctx, &issuestorage.Issue{
+	blocked2ID, _ := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Persistent blocked 2",
 		Priority: issuestorage.PriorityLow,
 	})

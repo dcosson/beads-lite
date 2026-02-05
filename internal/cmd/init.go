@@ -12,7 +12,6 @@ import (
 
 	"beads-lite/internal/config"
 	"beads-lite/internal/config/yamlstore"
-	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
 	"beads-lite/internal/routing"
@@ -107,14 +106,14 @@ func runInit(out io.Writer, force bool, prefix string) error {
 		}
 	}
 
-	dataPath := filepath.Join(beadsPath, issuestorage.DirIssues)
+	dataPath := filepath.Join(beadsPath, filesystem.DataDirName)
 	idPrefix := resolvePrefix(prefix, existingPrefix, hasExistingPrefix, dataPath, absPath)
 	if err := store.Set("issue_prefix", idPrefix); err != nil {
 		return fmt.Errorf("setting issue prefix: %w", err)
 	}
 
-	// Create the issue storage
-	issueStore := filesystem.New(dataPath, idPrefix)
+	// Create the issue storage (takes beadsPath, creates issues/ subdir internally)
+	issueStore := filesystem.New(beadsPath, idPrefix)
 	if err := issueStore.Init(context.Background()); err != nil {
 		return fmt.Errorf("initializing storage: %w", err)
 	}
@@ -178,7 +177,7 @@ func resolvePrefix(flagValue, existingConfig string, hasExistingConfig bool, dat
 // extractPrefixFromExistingIssues scans the data directory for existing issue
 // JSON files and extracts the ID prefix from the first one found.
 func extractPrefixFromExistingIssues(dataPath string) string {
-	for _, dir := range []string{issuestorage.DirOpen, issuestorage.DirClosed, issuestorage.DirDeleted} {
+	for _, dir := range []string{filesystem.DirOpen, filesystem.DirClosed, filesystem.DirDeleted} {
 		dirPath := filepath.Join(dataPath, dir)
 		entries, err := os.ReadDir(dirPath)
 		if err != nil {

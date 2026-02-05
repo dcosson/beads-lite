@@ -42,8 +42,8 @@ func TestSearchCmd_NoMatches(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{Title: "First issue"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Second issue"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "First issue"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Second issue"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -71,9 +71,9 @@ func TestSearchCmd_MatchTitle(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{Title: "Fix authentication bug"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Add login feature"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Update docs"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Fix authentication bug"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Add login feature"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Update docs"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -105,11 +105,11 @@ func TestSearchCmd_MatchDescription(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{
+	rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Generic issue",
 		Description: "This issue involves authentication changes",
 	})
-	s.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -141,11 +141,11 @@ func TestSearchCmd_TitleOnly(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{
+	rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Generic issue",
 		Description: "This issue involves authentication changes",
 	})
-	s.Create(ctx, &issuestorage.Issue{Title: "Authentication fix"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Authentication fix"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -181,9 +181,9 @@ func TestSearchCmd_StatusFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{Title: "Open auth issue"})
-	closedID, _ := s.Create(ctx, &issuestorage.Issue{Title: "Closed auth issue"})
-	s.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
+	rs.Create(ctx, &issuestorage.Issue{Title: "Open auth issue"})
+	closedID, _ := rs.Create(ctx, &issuestorage.Issue{Title: "Closed auth issue"})
+	rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	// Default search includes closed issues.
 	var out bytes.Buffer
@@ -248,7 +248,7 @@ func TestSearchCmd_CaseInsensitive(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{Title: "Fix AUTHENTICATION bug"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Fix AUTHENTICATION bug"})
 
 	var out bytes.Buffer
 	app := &App{
@@ -276,9 +276,9 @@ func TestSearchCmd_JSON(t *testing.T) {
 	}
 	rs := issueservice.New(nil, s)
 
-	s.Create(ctx, &issuestorage.Issue{Title: "Auth issue 1"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Auth issue 2"})
-	s.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Auth issue 1"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Auth issue 2"})
+	rs.Create(ctx, &issuestorage.Issue{Title: "Other issue"})
 
 	var out bytes.Buffer
 	app := &App{

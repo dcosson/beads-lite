@@ -22,7 +22,7 @@ func TestReopenCommand(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue to reopen",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -30,7 +30,7 @@ func TestReopenCommand(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+	if err := rs.Modify(ctx, id, func(i *issuestorage.Issue) error {
 		i.Status = issuestorage.StatusClosed
 		return nil
 	}); err != nil {
@@ -124,7 +124,7 @@ func TestReopenJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue to reopen",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -132,7 +132,7 @@ func TestReopenJSON(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error {
+	if err := rs.Modify(ctx, id, func(i *issuestorage.Issue) error {
 		i.Status = issuestorage.StatusClosed
 		return nil
 	}); err != nil {

@@ -117,7 +117,7 @@ func (r *Router) SameStore(id1, id2 string) bool {
 	if r1 != r2 {
 		return false // one local, one remote
 	}
-	return p1.DataDir == p2.DataDir
+	return p1.ConfigDir == p2.ConfigDir
 }
 
 // LoadRoutes reads a routes.jsonl file and returns the prefix→route map.

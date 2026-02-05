@@ -145,6 +145,10 @@ func RootParentID(id string) string {
 
 // --- Hierarchy depth validation ---
 
+// DefaultMaxHierarchyDepth is the default maximum number of dot-notation levels
+// allowed in hierarchical child IDs (e.g., bd-a3f8.1.2.3 = depth 3).
+const DefaultMaxHierarchyDepth = 3
+
 // ErrMaxDepthExceeded is returned when an operation would exceed the maximum
 // hierarchy depth for child IDs.
 var ErrMaxDepthExceeded = fmt.Errorf("maximum hierarchy depth exceeded")

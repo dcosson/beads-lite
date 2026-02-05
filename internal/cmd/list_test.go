@@ -24,7 +24,7 @@ func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 
 	// Create issues in every non-closed status to verify the default list
 	// includes all of them, not just "open".
-	openID, err := store.Create(ctx, &issuestorage.Issue{
+	openID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -32,47 +32,47 @@ func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+	inProgressID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "In-progress issue",
 		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
+	if err := rs.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
 		t.Fatalf("failed to set in-progress: %v", err)
 	}
 
-	blockedID, err := store.Create(ctx, &issuestorage.Issue{
+	blockedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Blocked issue",
 		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, blockedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusBlocked; return nil }); err != nil {
+	if err := rs.Modify(ctx, blockedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusBlocked; return nil }); err != nil {
 		t.Fatalf("failed to set blocked: %v", err)
 	}
 
-	deferredID, err := store.Create(ctx, &issuestorage.Issue{
+	deferredID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Deferred issue",
 		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, deferredID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusDeferred; return nil }); err != nil {
+	if err := rs.Modify(ctx, deferredID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusDeferred; return nil }); err != nil {
 		t.Fatalf("failed to set deferred: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &issuestorage.Issue{
+	closedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
 		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -120,7 +120,7 @@ func TestListCommand_AllFlag(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create open, in-progress, and closed issues — --all should show all of them
-	openID, err := store.Create(ctx, &issuestorage.Issue{
+	openID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -128,25 +128,25 @@ func TestListCommand_AllFlag(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+	inProgressID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "In-progress issue",
 		Priority: issuestorage.PriorityHigh,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
+	if err := rs.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil }); err != nil {
 		t.Fatalf("failed to set in-progress: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &issuestorage.Issue{
+	closedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
 		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -185,7 +185,7 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create open and closed issues
-	openID, err := store.Create(ctx, &issuestorage.Issue{
+	openID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -193,14 +193,14 @@ func TestListCommand_ClosedFlag(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	closedID, err := store.Create(ctx, &issuestorage.Issue{
+	closedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
 		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	if err := store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -236,7 +236,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issues with different statuses
-	openID, err := store.Create(ctx, &issuestorage.Issue{
+	openID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 		Status:   issuestorage.StatusOpen,
@@ -245,7 +245,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+	inProgressID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "In-progress issue",
 		Priority: issuestorage.PriorityHigh,
 		Status:   issuestorage.StatusInProgress,
@@ -254,7 +254,7 @@ func TestListCommand_StatusFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 	// Update status to in-progress
-	store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
+	rs.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
 
 	var out bytes.Buffer
 	app := &App{
@@ -287,7 +287,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	highID, err := store.Create(ctx, &issuestorage.Issue{
+	highID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "High priority",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -295,7 +295,7 @@ func TestListCommand_PriorityFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	lowID, err := store.Create(ctx, &issuestorage.Issue{
+	lowID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Low priority",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -334,7 +334,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	bugID, err := store.Create(ctx, &issuestorage.Issue{
+	bugID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Bug issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeBug,
@@ -343,7 +343,7 @@ func TestListCommand_TypeFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	taskID, err := store.Create(ctx, &issuestorage.Issue{
+	taskID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Task issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -383,7 +383,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	labeledID, err := store.Create(ctx, &issuestorage.Issue{
+	labeledID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Labeled issue",
 		Priority: issuestorage.PriorityHigh,
 		Labels:   []string{"urgent", "v2"},
@@ -392,7 +392,7 @@ func TestListCommand_LabelsFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	unlabeledID, err := store.Create(ctx, &issuestorage.Issue{
+	unlabeledID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Unlabeled issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -431,7 +431,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	aliceID, err := store.Create(ctx, &issuestorage.Issue{
+	aliceID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Alice's issue",
 		Priority: issuestorage.PriorityHigh,
 		Assignee: "alice",
@@ -440,7 +440,7 @@ func TestListCommand_AssigneeFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	bobID, err := store.Create(ctx, &issuestorage.Issue{
+	bobID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Bob's issue",
 		Priority: issuestorage.PriorityHigh,
 		Assignee: "bob",
@@ -481,7 +481,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeEpic,
@@ -491,7 +491,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	}
 
 	// Create child issue
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child issue",
 		Priority: issuestorage.PriorityMedium,
 		Parent:   parentID,
@@ -501,7 +501,7 @@ func TestListCommand_ParentFilter(t *testing.T) {
 	}
 
 	// Create another root issue
-	rootID, err := store.Create(ctx, &issuestorage.Issue{
+	rootID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Another root",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -541,7 +541,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeEpic,
@@ -551,7 +551,7 @@ func TestListCommand_RootsFlag(t *testing.T) {
 	}
 
 	// Create child issue
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child issue",
 		Priority: issuestorage.PriorityMedium,
 		Parent:   parentID,
@@ -592,7 +592,7 @@ func TestListCommand_FormatIsNoop(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -633,7 +633,7 @@ func TestListCommand_JSON(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Test issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -711,7 +711,7 @@ func TestListCommand_StatusAll(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issues with different statuses
-	openID, err := store.Create(ctx, &issuestorage.Issue{
+	openID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Open issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -719,26 +719,26 @@ func TestListCommand_StatusAll(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	inProgressID, err := store.Create(ctx, &issuestorage.Issue{
+	inProgressID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "In-progress issue",
 		Priority: issuestorage.PriorityMedium,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	store.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
+	rs.Modify(ctx, inProgressID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusInProgress; return nil })
 
-	closedID, err := store.Create(ctx, &issuestorage.Issue{
+	closedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed issue",
 		Priority: issuestorage.PriorityLow,
 	})
 	if err != nil {
 		t.Fatalf("failed to create issue: %v", err)
 	}
-	store.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
+	rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil })
 
 	// Create a deleted issue (tombstone)
-	deletedID, err := store.Create(ctx, &issuestorage.Issue{
+	deletedID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Deleted issue",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -784,7 +784,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	swarmID, err := store.Create(ctx, &issuestorage.Issue{
+	swarmID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:   "Swarm issue",
 		MolType: issuestorage.MolTypeSwarm,
 	})
@@ -792,7 +792,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	patrolID, err := store.Create(ctx, &issuestorage.Issue{
+	patrolID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:   "Patrol issue",
 		MolType: issuestorage.MolTypePatrol,
 	})
@@ -800,7 +800,7 @@ func TestListCommand_MolTypeFilter(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	workID, err := store.Create(ctx, &issuestorage.Issue{
+	workID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:   "Work issue",
 		MolType: issuestorage.MolTypeWork,
 	})
@@ -872,7 +872,7 @@ func TestListCommand_DefaultLimit(t *testing.T) {
 
 	// Create 55 issues (more than the default limit of 50)
 	for i := 0; i < 55; i++ {
-		_, err := store.Create(ctx, &issuestorage.Issue{
+		_, err := rs.Create(ctx, &issuestorage.Issue{
 			Title:    fmt.Sprintf("Issue %d", i),
 			Priority: issuestorage.PriorityMedium,
 		})
@@ -912,7 +912,7 @@ func TestListCommand_LimitZeroReturnsAll(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	for i := 0; i < 5; i++ {
-		_, err := store.Create(ctx, &issuestorage.Issue{
+		_, err := rs.Create(ctx, &issuestorage.Issue{
 			Title:    fmt.Sprintf("Issue %d", i),
 			Priority: issuestorage.PriorityMedium,
 		})
@@ -953,7 +953,7 @@ func TestListCommand_CustomLimit(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	for i := 0; i < 5; i++ {
-		_, err := store.Create(ctx, &issuestorage.Issue{
+		_, err := rs.Create(ctx, &issuestorage.Issue{
 			Title:    fmt.Sprintf("Issue %d", i),
 			Priority: issuestorage.PriorityMedium,
 		})

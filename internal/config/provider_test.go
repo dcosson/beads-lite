@@ -11,10 +11,7 @@ import (
 func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := filepath.Join(tmpDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
+	if err := os.MkdirAll(beadsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
@@ -30,20 +27,12 @@ func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
 	if gotConfig != wantConfig {
 		t.Errorf("ConfigDir = %q, want %q", paths.ConfigDir, beadsDir)
 	}
-	gotData, _ := filepath.EvalSymlinks(paths.DataDir)
-	wantData, _ := filepath.EvalSymlinks(filepath.Join(beadsDir, "issues"))
-	if gotData != wantData {
-		t.Errorf("DataDir = %q, want %q", paths.DataDir, filepath.Join(beadsDir, "issues"))
-	}
 }
 
 func TestResolvePaths_SearchUpward(t *testing.T) {
 	tmpDir := t.TempDir()
 	beadsDir := filepath.Join(tmpDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
+	if err := os.MkdirAll(beadsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
@@ -72,11 +61,6 @@ func TestResolvePaths_SearchUpward(t *testing.T) {
 	wantConfig := resolvePath(beadsDir)
 	if gotConfig != wantConfig {
 		t.Errorf("ConfigDir = %q, want %q", paths.ConfigDir, beadsDir)
-	}
-	gotData := resolvePath(paths.DataDir)
-	wantData := resolvePath(filepath.Join(beadsDir, "issues"))
-	if gotData != wantData {
-		t.Errorf("DataDir = %q, want %q", paths.DataDir, filepath.Join(beadsDir, "issues"))
 	}
 }
 
@@ -114,7 +98,9 @@ func TestResolvePaths_MissingConfig(t *testing.T) {
 	}
 }
 
-func TestResolvePaths_MissingDataDir(t *testing.T) {
+func TestResolvePaths_ConfigExists(t *testing.T) {
+	// config package only checks for config.yaml existence - data dir check
+	// is the responsibility of the storage layer during Init/operations
 	tmpDir := t.TempDir()
 	beadsDir := filepath.Join(tmpDir, ".beads")
 	if err := os.MkdirAll(beadsDir, 0755); err != nil {
@@ -124,25 +110,22 @@ func TestResolvePaths_MissingDataDir(t *testing.T) {
 
 	t.Setenv(EnvBeadsDir, beadsDir)
 
-	_, err := ResolvePaths()
-	if err == nil {
-		t.Fatal("ResolvePaths should error when data dir is missing")
+	paths, err := ResolvePaths()
+	if err != nil {
+		t.Fatalf("ResolvePaths should succeed when config.yaml exists: %v", err)
 	}
-
-	expected := "beads data not found at " + filepath.Join(beadsDir, "issues") + " (run `bd init`)"
-	if err.Error() != expected {
-		t.Fatalf("expected error %q, got %q", expected, err.Error())
+	gotConfig := resolvePath(paths.ConfigDir)
+	wantConfig := resolvePath(beadsDir)
+	if gotConfig != wantConfig {
+		t.Errorf("ConfigDir = %q, want %q", gotConfig, wantConfig)
 	}
 }
 
-// setupBeadsDir creates a .beads directory with config and data dirs.
+// setupBeadsDir creates a .beads directory with config.yaml.
 func setupBeadsDir(t *testing.T, parentDir string) string {
 	t.Helper()
 	beadsDir := filepath.Join(parentDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(beadsDir, "issues", "closed"), 0755); err != nil {
+	if err := os.MkdirAll(beadsDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 	writeDefaultConfig(t, filepath.Join(beadsDir, "config.yaml"))
@@ -195,10 +178,7 @@ func TestResolvePaths_StopsAtGitRoot(t *testing.T) {
 	// Place .beads ABOVE the git repo root (should NOT be found)
 	parentDir := filepath.Dir(repoDir)
 	parentBeads := filepath.Join(parentDir, ".beads")
-	if err := os.MkdirAll(filepath.Join(parentBeads, "issues", "open"), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(filepath.Join(parentBeads, "issues", "closed"), 0755); err != nil {
+	if err := os.MkdirAll(parentBeads, 0755); err != nil {
 		t.Fatal(err)
 	}
 	writeDefaultConfig(t, filepath.Join(parentBeads, "config.yaml"))
@@ -462,13 +442,15 @@ func TestIsValidBeadsLiteDir_WithConfig(t *testing.T) {
 	}
 }
 
-func TestIsValidBeadsLiteDir_WithProjectDirs(t *testing.T) {
+func TestIsValidBeadsLiteDir_WithoutConfig(t *testing.T) {
+	// A .beads directory is only valid if it has config.yaml
+	// Storage directories alone don't make it valid
 	tmpDir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(tmpDir, "issues", "open"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if !isValidBeadsLiteDir(tmpDir) {
-		t.Error("isValidBeadsLiteDir should return true when project dirs with open/ exist")
+	if isValidBeadsLiteDir(tmpDir) {
+		t.Error("isValidBeadsLiteDir should return false when config.yaml is missing")
 	}
 }
 

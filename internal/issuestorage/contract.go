@@ -30,12 +30,15 @@ func testCreate(t *testing.T, s IssueStore) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
+	now := time.Now()
 	issue := &Issue{
 		Title:       "Test Issue",
 		Description: "Test description",
 		Status:      StatusOpen,
 		Priority:    PriorityMedium,
 		Type:        TypeTask,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 
 	id, err := s.Create(ctx, issue)
@@ -66,11 +69,12 @@ func testCreate(t *testing.T, s IssueStore) {
 	if got.Type != issue.Type {
 		t.Errorf("Type mismatch: got %q, want %q", got.Type, issue.Type)
 	}
+	// Storage persists timestamps as given (issueservice sets them)
 	if got.CreatedAt.IsZero() {
-		t.Error("CreatedAt should be set")
+		t.Error("CreatedAt should be persisted")
 	}
 	if got.UpdatedAt.IsZero() {
-		t.Error("UpdatedAt should be set")
+		t.Error("UpdatedAt should be persisted")
 	}
 }
 
@@ -87,11 +91,14 @@ func testGet(t *testing.T, s IssueStore) {
 	}
 
 	// Create an issue and verify we can get it
+	now := time.Now()
 	issue := &Issue{
-		Title:    "Get Test",
-		Status:   StatusOpen,
-		Priority: PriorityLow,
-		Type:     TypeBug,
+		Title:     "Get Test",
+		Status:    StatusOpen,
+		Priority:  PriorityLow,
+		Type:      TypeBug,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -123,12 +130,15 @@ func testModify(t *testing.T, s IssueStore) {
 	}
 
 	// Create an issue
+	now := time.Now()
 	issue := &Issue{
 		Title:       "Original Title",
 		Description: "Original description",
 		Status:      StatusOpen,
 		Priority:    PriorityLow,
 		Type:        TypeTask,
+		CreatedAt:   now,
+		UpdatedAt:   now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -145,6 +155,8 @@ func testModify(t *testing.T, s IssueStore) {
 		Type:        TypeTask,
 		Labels:      []string{"urgent"},
 		Assignee:    "alice",
+		CreatedAt:   now,
+		UpdatedAt:   time.Now(),
 	}
 	if err := s.Modify(ctx, id, func(i *Issue) error { *i = *updated; return nil }); err != nil {
 		t.Fatalf("Modify failed: %v", err)
@@ -188,11 +200,14 @@ func testDelete(t *testing.T, s IssueStore) {
 	}
 
 	// Create an issue
+	now := time.Now()
 	issue := &Issue{
-		Title:    "To Delete",
-		Status:   StatusOpen,
-		Priority: PriorityLow,
-		Type:     TypeChore,
+		Title:     "To Delete",
+		Status:    StatusOpen,
+		Priority:  PriorityLow,
+		Type:      TypeChore,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -238,6 +253,7 @@ func testList(t *testing.T, s IssueStore) {
 	}
 
 	// Create several issues
+	now := time.Now()
 	ids := make([]string, 0, 4)
 	for i, spec := range []struct {
 		title    string
@@ -252,11 +268,13 @@ func testList(t *testing.T, s IssueStore) {
 		{"Feature 1", StatusClosed, PriorityMedium, TypeFeature, nil},
 	} {
 		issue := &Issue{
-			Title:    spec.title,
-			Status:   spec.status,
-			Priority: spec.priority,
-			Type:     spec.typ,
-			Labels:   spec.labels,
+			Title:     spec.title,
+			Status:    spec.status,
+			Priority:  spec.priority,
+			Type:      spec.typ,
+			Labels:    spec.labels,
+			CreatedAt: now,
+			UpdatedAt: now,
 		}
 		id, err := s.Create(ctx, issue)
 		if err != nil {
@@ -337,23 +355,31 @@ func testCloseReopen(t *testing.T, s IssueStore) {
 	}
 
 	// Create an issue
+	now := time.Now()
 	issue := &Issue{
-		Title:    "To Close",
-		Status:   StatusOpen,
-		Priority: PriorityLow,
-		Type:     TypeTask,
+		Title:     "To Close",
+		Status:    StatusOpen,
+		Priority:  PriorityLow,
+		Type:      TypeTask,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
 		t.Fatalf("Create failed: %v", err)
 	}
 
-	// Close it
-	if err := s.Modify(ctx, id, func(i *Issue) error { i.Status = StatusClosed; return nil }); err != nil {
+	// Close it (storage handles file movement, issueservice handles ClosedAt)
+	closedAt := time.Now()
+	if err := s.Modify(ctx, id, func(i *Issue) error {
+		i.Status = StatusClosed
+		i.ClosedAt = &closedAt
+		return nil
+	}); err != nil {
 		t.Fatalf("Close failed: %v", err)
 	}
 
-	// Verify status changed
+	// Verify status changed and issue is retrievable from closed dir
 	got, err := s.Get(ctx, id)
 	if err != nil {
 		t.Fatalf("Get after Close failed: %v", err)
@@ -362,15 +388,19 @@ func testCloseReopen(t *testing.T, s IssueStore) {
 		t.Errorf("Status after Close: got %q, want %q", got.Status, StatusClosed)
 	}
 	if got.ClosedAt == nil {
-		t.Error("ClosedAt should be set after Close")
+		t.Error("ClosedAt should be persisted after Close")
 	}
 
-	// Reopen it
-	if err := s.Modify(ctx, id, func(i *Issue) error { i.Status = StatusOpen; return nil }); err != nil {
+	// Reopen it (storage handles file movement, issueservice handles ClosedAt clearing)
+	if err := s.Modify(ctx, id, func(i *Issue) error {
+		i.Status = StatusOpen
+		i.ClosedAt = nil
+		return nil
+	}); err != nil {
 		t.Fatalf("Reopen failed: %v", err)
 	}
 
-	// Verify status changed back
+	// Verify status changed back and issue is retrievable from open dir
 	got, err = s.Get(ctx, id)
 	if err != nil {
 		t.Fatalf("Get after Reopen failed: %v", err)
@@ -389,14 +419,19 @@ func testChildCounters(t *testing.T, s IssueStore) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
+	now := time.Now()
+	makeIssue := func(id, title string) *Issue {
+		return &Issue{ID: id, Title: title, Status: StatusOpen, CreatedAt: now, UpdatedAt: now}
+	}
+
 	// Create parent issues so GetNextChildID can validate them
-	parentA := &Issue{Title: "Parent A"}
+	parentA := makeIssue("", "Parent A")
 	idA, err := s.Create(ctx, parentA)
 	if err != nil {
 		t.Fatalf("Create parent A failed: %v", err)
 	}
 
-	parentB := &Issue{Title: "Parent B"}
+	parentB := makeIssue("", "Parent B")
 	idB, err := s.Create(ctx, parentB)
 	if err != nil {
 		t.Fatalf("Create parent B failed: %v", err)
@@ -412,7 +447,7 @@ func testChildCounters(t *testing.T, s IssueStore) {
 		t.Errorf("First child ID: got %q, want %q", childID, wantFirst)
 	}
 	// Create so next scan sees it
-	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child A.1"})
+	_, err = s.Create(ctx, makeIssue(childID, "Child A.1"))
 	if err != nil {
 		t.Fatalf("Create child A.1 failed: %v", err)
 	}
@@ -426,7 +461,7 @@ func testChildCounters(t *testing.T, s IssueStore) {
 	if childID != wantSecond {
 		t.Errorf("Second child ID: got %q, want %q", childID, wantSecond)
 	}
-	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child A.2"})
+	_, err = s.Create(ctx, makeIssue(childID, "Child A.2"))
 	if err != nil {
 		t.Fatalf("Create child A.2 failed: %v", err)
 	}
@@ -440,7 +475,7 @@ func testChildCounters(t *testing.T, s IssueStore) {
 	if childID != wantB {
 		t.Errorf("First child of different parent: got %q, want %q", childID, wantB)
 	}
-	_, err = s.Create(ctx, &Issue{ID: childID, Title: "Child B.1"})
+	_, err = s.Create(ctx, makeIssue(childID, "Child B.1"))
 	if err != nil {
 		t.Fatalf("Create child B.1 failed: %v", err)
 	}
@@ -468,8 +503,13 @@ func testHierarchyDepthLimit(t *testing.T, s IssueStore) {
 		t.Fatalf("Init failed: %v", err)
 	}
 
+	now := time.Now()
+	makeIssue := func(id, title string) *Issue {
+		return &Issue{ID: id, Title: title, Status: StatusOpen, CreatedAt: now, UpdatedAt: now}
+	}
+
 	// Create a root issue
-	root := &Issue{Title: "Root"}
+	root := makeIssue("", "Root")
 	rootID, err := s.Create(ctx, root)
 	if err != nil {
 		t.Fatalf("Create root failed: %v", err)
@@ -480,19 +520,19 @@ func testHierarchyDepthLimit(t *testing.T, s IssueStore) {
 	if err != nil {
 		t.Fatalf("GetNextChildID depth 1 failed: %v", err)
 	}
-	s.Create(ctx, &Issue{ID: depth1ID, Title: "Depth 1"})
+	s.Create(ctx, makeIssue(depth1ID, "Depth 1"))
 
 	depth2ID, err := s.GetNextChildID(ctx, depth1ID)
 	if err != nil {
 		t.Fatalf("GetNextChildID depth 2 failed: %v", err)
 	}
-	s.Create(ctx, &Issue{ID: depth2ID, Title: "Depth 2"})
+	s.Create(ctx, makeIssue(depth2ID, "Depth 2"))
 
 	depth3ID, err := s.GetNextChildID(ctx, depth2ID)
 	if err != nil {
 		t.Fatalf("GetNextChildID depth 3 failed: %v", err)
 	}
-	s.Create(ctx, &Issue{ID: depth3ID, Title: "Depth 3"})
+	s.Create(ctx, makeIssue(depth3ID, "Depth 3"))
 
 	// Depth 4 should be rejected
 	_, err = s.GetNextChildID(ctx, depth3ID)
@@ -508,11 +548,14 @@ func testTombstoneStatus(t *testing.T, s IssueStore) {
 	}
 
 	// Create an issue to tombstone
+	now := time.Now()
 	issue := &Issue{
-		Title:    "To Tombstone",
-		Status:   StatusOpen,
-		Priority: PriorityMedium,
-		Type:     TypeTask,
+		Title:     "To Tombstone",
+		Status:    StatusOpen,
+		Priority:  PriorityMedium,
+		Type:      TypeTask,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {
@@ -594,22 +637,31 @@ func testTombstoneStatus(t *testing.T, s IssueStore) {
 		t.Errorf("Get after hard delete of tombstone: got %v, want ErrNotFound", err)
 	}
 
-	// Test tombstoning a closed issue (ClosedAt should be cleared)
+	// Test tombstoning a closed issue (storage persists what it's given)
 	closedIssue := &Issue{
-		Title:    "Closed then tombstoned",
-		Status:   StatusOpen,
-		Priority: PriorityLow,
-		Type:     TypeBug,
+		Title:     "Closed then tombstoned",
+		Status:    StatusOpen,
+		Priority:  PriorityLow,
+		Type:      TypeBug,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	closedID, err := s.Create(ctx, closedIssue)
 	if err != nil {
 		t.Fatalf("Create closed issue failed: %v", err)
 	}
-	if err := s.Modify(ctx, closedID, func(i *Issue) error { i.Status = StatusClosed; return nil }); err != nil {
+	closedAt := time.Now()
+	if err := s.Modify(ctx, closedID, func(i *Issue) error {
+		i.Status = StatusClosed
+		i.ClosedAt = &closedAt
+		return nil
+	}); err != nil {
 		t.Fatalf("Close issue failed: %v", err)
 	}
+	// When tombstoning, the caller (issueservice) is responsible for clearing ClosedAt
 	if err := s.Modify(ctx, closedID, func(i *Issue) error {
 		i.Status = StatusTombstone
+		i.ClosedAt = nil // Caller clears this
 		return nil
 	}); err != nil {
 		t.Fatalf("Modify closed issue to tombstone failed: %v", err)
@@ -622,7 +674,7 @@ func testTombstoneStatus(t *testing.T, s IssueStore) {
 		t.Errorf("Closed-then-tombstoned status: got %q, want %q", gotClosed.Status, StatusTombstone)
 	}
 	if gotClosed.ClosedAt != nil {
-		t.Error("ClosedAt should be cleared when tombstoning a closed issue")
+		t.Error("ClosedAt should be nil (caller cleared it)")
 	}
 }
 

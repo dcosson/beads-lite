@@ -23,7 +23,7 @@ func TestChildrenCommand(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent issue
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent Issue",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -32,7 +32,7 @@ func TestChildrenCommand(t *testing.T) {
 	}
 
 	// Create child issues
-	child1ID, err := store.Create(ctx, &issuestorage.Issue{
+	child1ID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child One",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -40,7 +40,7 @@ func TestChildrenCommand(t *testing.T) {
 		t.Fatalf("failed to create child 1: %v", err)
 	}
 
-	child2ID, err := store.Create(ctx, &issuestorage.Issue{
+	child2ID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child Two",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -100,7 +100,7 @@ func TestChildrenNoChildren(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issue with no children
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Childless Issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -140,7 +140,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -148,7 +148,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -156,7 +156,7 @@ func TestChildrenTreeFlag(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	grandchildID, err := store.Create(ctx, &issuestorage.Issue{
+	grandchildID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Grandchild",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -214,7 +214,7 @@ func TestChildrenJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent and child
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -222,7 +222,7 @@ func TestChildrenJSON(t *testing.T) {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -273,7 +273,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create hierarchy: parent -> child -> grandchild
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -281,7 +281,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -289,7 +289,7 @@ func TestChildrenTreeJSON(t *testing.T) {
 		t.Fatalf("failed to create child: %v", err)
 	}
 
-	grandchildID, err := store.Create(ctx, &issuestorage.Issue{
+	grandchildID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Grandchild",
 		Priority: issuestorage.PriorityLow,
 	})
@@ -349,7 +349,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent and child
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent",
 		Priority: issuestorage.PriorityHigh,
 	})
@@ -357,7 +357,7 @@ func TestChildrenPrefixMatch(t *testing.T) {
 		t.Fatalf("failed to create parent: %v", err)
 	}
 
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -439,7 +439,7 @@ func TestChildrenEmptyJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issue with no children
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Childless",
 		Priority: issuestorage.PriorityMedium,
 	})

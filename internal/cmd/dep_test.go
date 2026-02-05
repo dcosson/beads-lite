@@ -442,8 +442,8 @@ func setupCrossStoreTestApp(t *testing.T) (*App, *filesystem.FilesystemStorage, 
 		t.Fatalf("failed to create router: %v", err)
 	}
 
-	localStore := filesystem.New(filepath.Join(localBeads, "issues"), "bl-")
-	remoteStore := filesystem.New(filepath.Join(remoteBeads, "issues"), "hq-")
+	localStore := filesystem.New(localBeads, "bl-")
+	remoteStore := filesystem.New(remoteBeads, "hq-")
 	rs := issueservice.New(router, localStore)
 
 	app := &App{

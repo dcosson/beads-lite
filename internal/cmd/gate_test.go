@@ -22,7 +22,7 @@ func TestGateShowCommand(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
 		Type:      issuestorage.TypeGate,
 		Priority:  issuestorage.PriorityHigh,
@@ -81,7 +81,7 @@ func TestGateShowNotGateType(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Regular Task",
 		Type:     issuestorage.TypeTask,
 		Priority: issuestorage.PriorityMedium,
@@ -144,7 +144,7 @@ func TestGateShowPrefixMatch(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Prefix Gate",
 		Type:      issuestorage.TypeGate,
 		Priority:  issuestorage.PriorityMedium,
@@ -184,7 +184,7 @@ func TestGateShowJSON(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "JSON Gate",
 		Type:      issuestorage.TypeGate,
 		Priority:  issuestorage.PriorityHigh,
@@ -251,7 +251,7 @@ func TestGateShowMinimalFields(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Minimal Gate",
 		Type:     issuestorage.TypeGate,
 		Priority: issuestorage.PriorityMedium,
@@ -483,7 +483,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create an open gate
-	openGateID, err := store.Create(ctx, &issuestorage.Issue{
+	openGateID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
 		Priority:  issuestorage.PriorityHigh,
 		Type:      issuestorage.TypeGate,
@@ -496,7 +496,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	}
 
 	// Create a closed gate
-	closedGateID, err := store.Create(ctx, &issuestorage.Issue{
+	closedGateID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Old gate",
 		Priority:  issuestorage.PriorityMedium,
 		Type:      issuestorage.TypeGate,
@@ -513,7 +513,7 @@ func TestGateListCommand_DefaultListsOpenGates(t *testing.T) {
 	}
 
 	// Create a non-gate issue (should not appear)
-	taskID, err := store.Create(ctx, &issuestorage.Issue{
+	taskID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Regular task",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -556,7 +556,7 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	openGateID, err := store.Create(ctx, &issuestorage.Issue{
+	openGateID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Open gate",
 		Priority:  issuestorage.PriorityHigh,
 		Type:      issuestorage.TypeGate,
@@ -567,7 +567,7 @@ func TestGateListCommand_AllFlag(t *testing.T) {
 		t.Fatalf("failed to create gate: %v", err)
 	}
 
-	closedGateID, err := store.Create(ctx, &issuestorage.Issue{
+	closedGateID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Closed gate",
 		Priority:  issuestorage.PriorityMedium,
 		Type:      issuestorage.TypeGate,
@@ -614,7 +614,7 @@ func TestGateListCommand_NoGates(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Regular task",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -651,7 +651,7 @@ func TestGateListCommand_JSON(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
 		Priority:  issuestorage.PriorityHigh,
 		Type:      issuestorage.TypeGate,
@@ -710,7 +710,7 @@ func TestGateListCommand_TextTableOutput(t *testing.T) {
 	}
 	rs := issueservice.New(nil, store)
 
-	_, err := store.Create(ctx, &issuestorage.Issue{
+	_, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:     "Wait for CI",
 		Priority:  issuestorage.PriorityHigh,
 		Type:      issuestorage.TypeGate,

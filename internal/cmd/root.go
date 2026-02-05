@@ -77,7 +77,7 @@ func (p *AppProvider) init() (*App, error) {
 		prefix = v
 	}
 
-	store := filesystem.New(paths.DataDir, prefix, fsOpts...)
+	store := filesystem.New(paths.ConfigDir, prefix, fsOpts...)
 	store.CleanupStaleLocks()
 
 	slotStore, err := kvfs.New(paths.ConfigDir, "slots")

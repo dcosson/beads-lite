@@ -23,12 +23,15 @@ func newGCStore(t *testing.T) issuestorage.IssueStore {
 
 func createGCIssue(t *testing.T, ctx context.Context, s issuestorage.IssueStore, title string, ephemeral bool) *issuestorage.Issue {
 	t.Helper()
+	now := time.Now()
 	issue := &issuestorage.Issue{
 		Title:     title,
 		Status:    issuestorage.StatusOpen,
 		Priority:  issuestorage.PriorityMedium,
 		Type:      issuestorage.TypeTask,
 		Ephemeral: ephemeral,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 	id, err := s.Create(ctx, issue)
 	if err != nil {

@@ -3,7 +3,7 @@ package config
 import (
 	"strconv"
 
-	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/idgen"
 )
 
 // DefaultValues returns the default config map for the core keys.
@@ -14,7 +14,7 @@ func DefaultValues() map[string]string {
 		"defaults.type":              "task",
 		"issue_prefix":               "bd",
 		"actor":                      "${USER}",
-		"hierarchy.max_depth":        strconv.Itoa(issuestorage.DefaultMaxHierarchyDepth),
+		"hierarchy.max_depth":        strconv.Itoa(idgen.DefaultMaxHierarchyDepth),
 	}
 }
 

@@ -23,7 +23,7 @@ func TestShowCommand(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a test issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "Test Issue",
 		Description: "This is a test description",
 		Priority:    issuestorage.PriorityHigh,
@@ -108,7 +108,7 @@ func TestShowPrefixMatch(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a test issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Prefix Test Issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -152,7 +152,7 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create two issues (both will start with "bd-")
-	id1, err := store.Create(ctx, &issuestorage.Issue{
+	id1, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue One",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -160,7 +160,7 @@ func TestShowAmbiguousPrefix(t *testing.T) {
 		t.Fatalf("failed to create issue 1: %v", err)
 	}
 
-	id2, err := store.Create(ctx, &issuestorage.Issue{
+	id2, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue Two",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -236,7 +236,7 @@ func TestShowJSON(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create a test issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:       "JSON Test Issue",
 		Description: "Test description",
 		Priority:    issuestorage.PriorityLow,
@@ -290,7 +290,7 @@ func TestShowClosedIssue(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create and close an issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Closed Issue",
 		Priority: issuestorage.PriorityMedium,
 	})
@@ -298,7 +298,7 @@ func TestShowClosedIssue(t *testing.T) {
 		t.Fatalf("failed to create issue: %v", err)
 	}
 
-	if err := store.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
+	if err := rs.Modify(ctx, id, func(i *issuestorage.Issue) error { i.Status = issuestorage.StatusClosed; return nil }); err != nil {
 		t.Fatalf("failed to close issue: %v", err)
 	}
 
@@ -346,7 +346,7 @@ func TestShowWithDependencies(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create issues with dependencies
-	depID, err := store.Create(ctx, &issuestorage.Issue{
+	depID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Dependency Issue",
 		Priority: issuestorage.PriorityMedium,
 		Type:     issuestorage.TypeTask,
@@ -355,7 +355,7 @@ func TestShowWithDependencies(t *testing.T) {
 		t.Fatalf("failed to create dependency issue: %v", err)
 	}
 
-	mainID, err := store.Create(ctx, &issuestorage.Issue{
+	mainID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Main Issue",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -428,7 +428,7 @@ func TestShowWithChildren(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create parent epic
-	parentID, err := store.Create(ctx, &issuestorage.Issue{
+	parentID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Parent Epic",
 		Priority: issuestorage.PriorityMedium,
 		Type:     issuestorage.TypeEpic,
@@ -438,7 +438,7 @@ func TestShowWithChildren(t *testing.T) {
 	}
 
 	// Create child task
-	childID, err := store.Create(ctx, &issuestorage.Issue{
+	childID, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Child Task",
 		Priority: issuestorage.PriorityHigh,
 		Type:     issuestorage.TypeTask,
@@ -519,7 +519,7 @@ func TestShowWithComments(t *testing.T) {
 	rs := issueservice.New(nil, store)
 
 	// Create an issue
-	id, err := store.Create(ctx, &issuestorage.Issue{
+	id, err := rs.Create(ctx, &issuestorage.Issue{
 		Title:    "Issue with Comments",
 		Priority: issuestorage.PriorityMedium,
 	})

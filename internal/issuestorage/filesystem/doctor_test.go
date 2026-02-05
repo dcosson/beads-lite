@@ -21,7 +21,7 @@ func TestDoctorOrphanedLockFiles(t *testing.T) {
 	}
 
 	// Create an orphaned lock file (no corresponding .json)
-	lockPath := filepath.Join(dir, "open", "orphan.lock")
+	lockPath := filepath.Join(dir, DataDirName, "open", "orphan.lock")
 	if err := os.WriteFile(lockPath, []byte{}, 0644); err != nil {
 		t.Fatalf("Failed to create orphan lock: %v", err)
 	}
@@ -72,8 +72,8 @@ func TestDoctorOrphanedTempFiles(t *testing.T) {
 	}
 
 	// Create orphaned temp files in both directories
-	openTmp := filepath.Join(dir, "open", "test.json.tmp.abc123")
-	closedTmp := filepath.Join(dir, "closed", "test.json.tmp.def456")
+	openTmp := filepath.Join(dir, DataDirName, "open", "test.json.tmp.abc123")
+	closedTmp := filepath.Join(dir, DataDirName, "closed", "test.json.tmp.def456")
 
 	os.WriteFile(openTmp, []byte("{}"), 0644)
 	os.WriteFile(closedTmp, []byte("{}"), 0644)
@@ -121,7 +121,7 @@ func TestDoctorDuplicateIssue(t *testing.T) {
 	}
 
 	// Read the issue data
-	openPath := filepath.Join(dir, "open", id+".json")
+	openPath := filepath.Join(dir, DataDirName, "open", id+".json")
 	data, err := os.ReadFile(openPath)
 	if err != nil {
 		t.Fatalf("Read failed: %v", err)
@@ -133,7 +133,7 @@ func TestDoctorDuplicateIssue(t *testing.T) {
 	closedIssue.Status = issuestorage.StatusClosed
 
 	closedData, _ := json.Marshal(closedIssue)
-	closedPath := filepath.Join(dir, "closed", id+".json")
+	closedPath := filepath.Join(dir, DataDirName, "closed", id+".json")
 	os.WriteFile(closedPath, closedData, 0644)
 
 	// Doctor should detect the duplicate
@@ -182,7 +182,7 @@ func TestDoctorStatusLocationMismatch(t *testing.T) {
 		Type:     issuestorage.TypeTask,
 	}
 	data, _ := json.Marshal(issue)
-	openPath := filepath.Join(dir, "open", "bd-test.json")
+	openPath := filepath.Join(dir, DataDirName, "open", "bd-test.json")
 	os.WriteFile(openPath, data, 0644)
 
 	// Doctor should detect the mismatch
@@ -208,7 +208,7 @@ func TestDoctorStatusLocationMismatch(t *testing.T) {
 	if _, err := os.Stat(openPath); !os.IsNotExist(err) {
 		t.Error("File should have been moved from open/")
 	}
-	closedPath := filepath.Join(dir, "closed", "bd-test.json")
+	closedPath := filepath.Join(dir, DataDirName, "closed", "bd-test.json")
 	if _, err := os.Stat(closedPath); os.IsNotExist(err) {
 		t.Error("File should exist in closed/")
 	}
@@ -233,7 +233,7 @@ func TestDoctorBrokenDependencyReference(t *testing.T) {
 		Dependencies: []issuestorage.Dependency{{ID: "bd-nonexistent", Type: issuestorage.DepTypeBlocks}},
 	}
 	data, _ := json.Marshal(issue)
-	issuePath := filepath.Join(dir, "open", "bd-test.json")
+	issuePath := filepath.Join(dir, DataDirName, "open", "bd-test.json")
 	os.WriteFile(issuePath, data, 0644)
 
 	// Doctor should detect the broken reference
@@ -294,8 +294,8 @@ func TestDoctorAsymmetricDependency(t *testing.T) {
 
 	dataA, _ := json.Marshal(issueA)
 	dataB, _ := json.Marshal(issueB)
-	os.WriteFile(filepath.Join(dir, "open", "bd-aaaa.json"), dataA, 0644)
-	os.WriteFile(filepath.Join(dir, "open", "bd-bbbb.json"), dataB, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-aaaa.json"), dataA, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-bbbb.json"), dataB, 0644)
 
 	// Doctor should detect the asymmetry
 	problems, err := fs.Doctor(ctx, false)
@@ -345,7 +345,7 @@ func TestDoctorBrokenParentReference(t *testing.T) {
 		Parent:   "bd-nonexistent-parent",
 	}
 	data, _ := json.Marshal(issue)
-	os.WriteFile(filepath.Join(dir, "open", "bd-child.json"), data, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-child.json"), data, 0644)
 
 	// Doctor should detect the broken reference
 	problems, err := fs.Doctor(ctx, false)
@@ -394,7 +394,7 @@ func TestDoctorMalformedJSON(t *testing.T) {
   "title": "Branch B",
   >>>>>>> feature
 }`
-	os.WriteFile(filepath.Join(dir, "open", "bd-corrupt.json"), []byte(malformed), 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-corrupt.json"), []byte(malformed), 0644)
 
 	// Doctor should detect the malformed JSON
 	problems, err := fs.Doctor(ctx, false)
@@ -496,8 +496,8 @@ func TestDoctorAsymmetricBlocks(t *testing.T) {
 
 	dataA, _ := json.Marshal(issueA)
 	dataB, _ := json.Marshal(issueB)
-	os.WriteFile(filepath.Join(dir, "open", "bd-aaaa.json"), dataA, 0644)
-	os.WriteFile(filepath.Join(dir, "open", "bd-bbbb.json"), dataB, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-aaaa.json"), dataA, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-bbbb.json"), dataB, 0644)
 
 	// Doctor should detect the asymmetry
 	problems, err := fs.Doctor(ctx, false)
@@ -557,8 +557,8 @@ func TestDoctorAsymmetricParentChild(t *testing.T) {
 
 	dataP, _ := json.Marshal(parent)
 	dataC, _ := json.Marshal(child)
-	os.WriteFile(filepath.Join(dir, "open", "bd-parent.json"), dataP, 0644)
-	os.WriteFile(filepath.Join(dir, "open", "bd-child.json"), dataC, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-parent.json"), dataP, 0644)
+	os.WriteFile(filepath.Join(dir, DataDirName, "open", "bd-child.json"), dataC, 0644)
 
 	// Doctor should detect the asymmetry
 	problems, err := fs.Doctor(ctx, false)
