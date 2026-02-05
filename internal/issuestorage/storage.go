@@ -6,10 +6,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
-	"unicode"
 )
 
 // ApplyStatusDefaults sets side-effect fields for status transitions.
@@ -25,18 +23,6 @@ func ApplyStatusDefaults(old, updated *Issue) {
 	if old.Status == StatusClosed && updated.Status != StatusClosed {
 		updated.ClosedAt = nil
 		updated.CloseReason = ""
-	}
-}
-
-// DirForStatus returns the directory name for the given issue status.
-func DirForStatus(status Status) string {
-	switch status {
-	case StatusClosed:
-		return DirClosed
-	case StatusTombstone:
-		return DirDeleted
-	default:
-		return DirOpen
 	}
 }
 
@@ -56,20 +42,6 @@ const (
 // ReservedDirs lists all directory names used by issue storage.
 // Other storage systems (e.g., kvstorage) should not use these names.
 var ReservedDirs = []string{DirOpen, DirClosed, DirDeleted, DirEphemeral}
-
-// DirForIssue returns the appropriate directory for an issue based on its
-// status and ephemeral flag. Tombstoned issues always go to DirDeleted.
-// Non-tombstone ephemeral issues go to DirEphemeral; others go to the
-// directory matching their status.
-func DirForIssue(issue *Issue) string {
-	if issue.Status == StatusTombstone {
-		return DirDeleted
-	}
-	if issue.Ephemeral {
-		return DirEphemeral
-	}
-	return DirForStatus(issue.Status)
-}
 
 // DependencyType represents the type of relationship between two issues.
 type DependencyType string
@@ -354,23 +326,6 @@ type CreateOpts struct {
 	PrefixAddition string
 }
 
-// BuildPrefix composes a full ID prefix from a base prefix and an optional
-// addition. It normalises dashes so the result always ends with exactly one
-// dash and never contains double-dashes.
-//
-//	BuildPrefix("bd-", "")    → "bd-"
-//	BuildPrefix("bd-", "mol") → "bd-mol-"
-//	BuildPrefix("bd",  "mol") → "bd-mol-"
-//	BuildPrefix("bd-", "-mol-") → "bd-mol-"
-func BuildPrefix(base, addition string) string {
-	base = strings.TrimRight(base, "-")
-	addition = strings.Trim(addition, "-")
-	if addition == "" {
-		return base + "-"
-	}
-	return base + "-" + addition + "-"
-}
-
 // IssueGetter provides read-only access to issues by ID.
 // IssueStore embeds this implicitly (it has a Get method), so any IssueStore
 // value satisfies IssueGetter. A separate implementation can provide
@@ -422,72 +377,4 @@ type IssueStore interface {
 
 	// Doctor checks for and optionally fixes inconsistencies.
 	Doctor(ctx context.Context, fix bool) ([]string, error)
-}
-
-// IsHierarchicalID reports whether id is a hierarchical child ID.
-// An ID is hierarchical if it contains a dot and the suffix after the last
-// dot is purely numeric (e.g. "bd-a3f8.1" is hierarchical, but
-// "my.project-abc" is not).
-func IsHierarchicalID(id string) bool {
-	dot := strings.LastIndex(id, ".")
-	if dot < 0 || dot == len(id)-1 {
-		return false
-	}
-	suffix := id[dot+1:]
-	for _, r := range suffix {
-		if !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
-}
-
-// HierarchyDepth returns the nesting depth of an ID by counting dots.
-// A root ID like "bd-a3f8" has depth 0; "bd-a3f8.1" has depth 1, etc.
-func HierarchyDepth(id string) int {
-	return strings.Count(id, ".")
-}
-
-// CheckHierarchyDepth verifies that parentID is not already at the maximum
-// hierarchy depth. If adding a child to parentID would exceed maxDepth,
-// it returns ErrMaxDepthExceeded with a descriptive message.
-// For example, with maxDepth=3, a parent "bd-x.1.2.3" (depth 3) is rejected
-// because a child would be at depth 4.
-func CheckHierarchyDepth(parentID string, maxDepth int) error {
-	depth := HierarchyDepth(parentID)
-	if depth >= maxDepth {
-		return fmt.Errorf("cannot add child to %s (depth %d): maximum hierarchy depth is %d: %w",
-			parentID, depth, maxDepth, ErrMaxDepthExceeded)
-	}
-	return nil
-}
-
-// ChildID returns the composite child ID given a parent ID and child number.
-func ChildID(parentID string, childNum int) string {
-	return fmt.Sprintf("%s.%d", parentID, childNum)
-}
-
-// ParseHierarchicalID splits a hierarchical ID into its immediate parent and
-// child number. For example, "bd-a3f8.2" returns ("bd-a3f8", 2, true).
-// Returns ("", 0, false) if the ID is not hierarchical.
-func ParseHierarchicalID(id string) (parentID string, childNum int, ok bool) {
-	if !IsHierarchicalID(id) {
-		return "", 0, false
-	}
-	dot := strings.LastIndex(id, ".")
-	parentID = id[:dot]
-	childNum, _ = strconv.Atoi(id[dot+1:])
-	return parentID, childNum, true
-}
-
-// RootParentID returns the root parent portion of a (possibly hierarchical) ID.
-// For hierarchical IDs this is everything before the first dot
-// (e.g. "bd-a3f8.1.2" → "bd-a3f8"). For non-hierarchical IDs the full ID
-// is returned unchanged.
-func RootParentID(id string) string {
-	dot := strings.Index(id, ".")
-	if dot < 0 {
-		return id
-	}
-	return id[:dot]
 }

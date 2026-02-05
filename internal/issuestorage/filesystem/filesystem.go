@@ -25,6 +25,30 @@ import (
 // P(20 consecutive collisions) ≈ 0.25^20 ≈ 10^-12.
 const MaxIDRetries = 20
 
+// dirForStatus returns the directory name for the given issue status.
+func dirForStatus(status issuestorage.Status) string {
+	switch status {
+	case issuestorage.StatusClosed:
+		return issuestorage.DirClosed
+	case issuestorage.StatusTombstone:
+		return issuestorage.DirDeleted
+	default:
+		return issuestorage.DirOpen
+	}
+}
+
+// dirForIssue returns the appropriate directory for an issue based on its
+// status and ephemeral flag.
+func dirForIssue(issue *issuestorage.Issue) string {
+	if issue.Status == issuestorage.StatusTombstone {
+		return issuestorage.DirDeleted
+	}
+	if issue.Ephemeral {
+		return issuestorage.DirEphemeral
+	}
+	return dirForStatus(issue.Status)
+}
+
 // FilesystemStorage implements issuestorage.IssueStore using filesystem-based JSON files.
 type FilesystemStorage struct {
 	root              string // path to .beads directory
@@ -236,8 +260,8 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		// Use the pre-set ID (e.g. from GetNextChildID or explicit --id)
 
 		// Enforce hierarchy depth limit for explicit hierarchical IDs.
-		if parentID, _, ok := issuestorage.ParseHierarchicalID(issue.ID); ok {
-			if err := issuestorage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
+		if parentID, _, ok := idgen.ParseHierarchicalID(issue.ID); ok {
+			if err := idgen.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 				return "", err
 			}
 		}
@@ -245,7 +269,7 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 		if issue.Status == "" {
 			issue.Status = issuestorage.StatusOpen
 		}
-		dir := issuestorage.DirForIssue(issue)
+		dir := dirForIssue(issue)
 		path := fs.issuePathInDir(issue.ID, dir)
 
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
@@ -283,12 +307,12 @@ func (fs *FilesystemStorage) Create(ctx context.Context, issue *issuestorage.Iss
 	if len(opts) > 0 {
 		prefixAddition = opts[0].PrefixAddition
 	}
-	effectivePrefix := issuestorage.BuildPrefix(fs.prefix, prefixAddition)
+	effectivePrefix := idgen.BuildPrefix(fs.prefix, prefixAddition)
 
 	if issue.Status == "" {
 		issue.Status = issuestorage.StatusOpen
 	}
-	dir := issuestorage.DirForIssue(issue)
+	dir := dirForIssue(issue)
 
 	// Retry with fresh random IDs on collision.
 	// AdaptiveLength ensures ≤25% collision probability,
@@ -426,8 +450,8 @@ func (fs *FilesystemStorage) Modify(ctx context.Context, id string, fn func(*iss
 
 	issue.UpdatedAt = time.Now()
 
-	oldDir := issuestorage.DirForIssue(&issuestorage.Issue{Status: oldStatus, Ephemeral: oldEphemeral})
-	newDir := issuestorage.DirForIssue(&issue)
+	oldDir := dirForIssue(&issuestorage.Issue{Status: oldStatus, Ephemeral: oldEphemeral})
+	newDir := dirForIssue(&issue)
 
 	if oldDir == newDir {
 		// Same directory — in-place write with backup (current behavior).
@@ -707,7 +731,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 				problems = append(problems, fmt.Sprintf("duplicate issue: %s exists in both %s/ and %s/", id, existing.dir, dir))
 				if fix {
 					// Keep the one in the correct directory based on status/ephemeral
-					correctDir := issuestorage.DirForIssue(&issue)
+					correctDir := dirForIssue(&issue)
 					if dir == correctDir {
 						os.Remove(filepath.Join(fs.root, existing.dir, id+".json"))
 						issuesByID[id] = &locatedIssue{issue: &issue, dir: dir}
@@ -725,7 +749,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 
 	// Check for status-location and ephemeral-location mismatches
 	for id, loc := range issuesByID {
-		expectedDir := issuestorage.DirForIssue(loc.issue)
+		expectedDir := dirForIssue(loc.issue)
 		if loc.dir != expectedDir {
 			if loc.issue.Ephemeral && loc.dir != issuestorage.DirEphemeral {
 				problems = append(problems, fmt.Sprintf("ephemeral mismatch: %s is ephemeral but is in %s/ (expected %s/)", id, loc.dir, issuestorage.DirEphemeral))
@@ -816,7 +840,7 @@ func (fs *FilesystemStorage) Doctor(ctx context.Context, fix bool) ([]string, er
 	if fix {
 		for id := range issuesNeedingUpdate {
 			issue := allIssues[id]
-			dir := issuestorage.DirForIssue(issue)
+			dir := dirForIssue(issue)
 			path := fs.issuePathInDir(id, dir)
 			atomicWriteJSON(path, issue)
 		}
@@ -862,7 +886,7 @@ func (fs *FilesystemStorage) scanMaxChildNumber(parentID string) (int, error) {
 				continue
 			}
 			id := strings.TrimSuffix(name, ".json")
-			parent, childNum, ok := issuestorage.ParseHierarchicalID(id)
+			parent, childNum, ok := idgen.ParseHierarchicalID(id)
 			if ok && parent == parentID && childNum > maxChild {
 				maxChild = childNum
 			}
@@ -886,7 +910,7 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 	}
 
 	// 2. Check hierarchy depth limit
-	if err := issuestorage.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
+	if err := idgen.CheckHierarchyDepth(parentID, fs.maxHierarchyDepth); err != nil {
 		return "", err
 	}
 
@@ -896,6 +920,6 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 		return "", fmt.Errorf("scanning children of %s: %w", parentID, err)
 	}
 
-	return issuestorage.ChildID(parentID, maxChild+1), nil
+	return idgen.ChildID(parentID, maxChild+1), nil
 }
 

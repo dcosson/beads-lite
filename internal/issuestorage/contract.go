@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"beads-lite/internal/idgen"
 )
 
 // RunContractTests runs the full contract test suite against a IssueStore implementation.
@@ -494,8 +496,8 @@ func testHierarchyDepthLimit(t *testing.T, s IssueStore) {
 
 	// Depth 4 should be rejected
 	_, err = s.GetNextChildID(ctx, depth3ID)
-	if !errors.Is(err, ErrMaxDepthExceeded) {
-		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
+		t.Errorf("GetNextChildID at depth 4: got %v, want idgen.ErrMaxDepthExceeded", err)
 	}
 }
 

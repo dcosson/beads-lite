@@ -9,9 +9,10 @@ import (
 	"strings"
 	"testing"
 
+	"beads-lite/internal/idgen"
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func setupTestApp(t *testing.T) (*App, *issueservice.IssueStore) {
@@ -789,7 +790,7 @@ func TestCreateWithParent_ConfigMaxDepth(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error creating grandchild with max_depth=1")
 	}
-	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
 		t.Errorf("expected ErrMaxDepthExceeded, got: %v", err)
 	}
 }

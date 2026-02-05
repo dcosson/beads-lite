@@ -4,18 +4,18 @@ import (
 	"context"
 	"testing"
 
-	"beads-lite/internal/issuestorage"
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage/filesystem"
 )
 
-func setupTestStorage(t *testing.T) issuestorage.IssueStore {
+func setupTestStorage(t *testing.T) *issueservice.IssueStore {
 	t.Helper()
 	dir := t.TempDir()
-	store := filesystem.New(dir, "bd-")
-	if err := store.Init(context.Background()); err != nil {
+	fsStore := filesystem.New(dir, "bd-")
+	if err := fsStore.Init(context.Background()); err != nil {
 		t.Fatalf("failed to init storage: %v", err)
 	}
-	return store
+	return issueservice.New(nil, fsStore)
 }
 
 func TestNewIssueGenerator(t *testing.T) {

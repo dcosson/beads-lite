@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"beads-lite/internal/idgen"
 	"beads-lite/internal/issuestorage"
 )
 
@@ -1021,7 +1022,7 @@ func TestGetNextChildID_MaxDepth(t *testing.T) {
 
 	// Depth 4 should fail (rootID.1.1.1.1 exceeds max depth of 3)
 	_, err = s.GetNextChildID(ctx, child3ID)
-	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
 		t.Errorf("GetNextChildID at depth 4: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
@@ -1042,15 +1043,15 @@ func TestCreateExplicitHierarchicalID_UpdatesCounter(t *testing.T) {
 
 	// Directly create a child with explicit ID (e.g., parentID.3)
 	explicitChild := &issuestorage.Issue{
-		ID:    issuestorage.ChildID(parentID, 3),
+		ID:    idgen.ChildID(parentID, 3),
 		Title: "Explicit child 3",
 	}
 	childID, err := s.Create(ctx, explicitChild)
 	if err != nil {
 		t.Fatalf("Create explicit child failed: %v", err)
 	}
-	if childID != issuestorage.ChildID(parentID, 3) {
-		t.Fatalf("got %q, want %q", childID, issuestorage.ChildID(parentID, 3))
+	if childID != idgen.ChildID(parentID, 3) {
+		t.Fatalf("got %q, want %q", childID, idgen.ChildID(parentID, 3))
 	}
 
 	// Now GetNextChildID should return parentID.4, not parentID.1
@@ -1058,7 +1059,7 @@ func TestCreateExplicitHierarchicalID_UpdatesCounter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := issuestorage.ChildID(parentID, 4)
+	want := idgen.ChildID(parentID, 4)
 	if nextID != want {
 		t.Errorf("GetNextChildID after explicit .3: got %q, want %q", nextID, want)
 	}
@@ -1095,7 +1096,7 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 
 	// Explicitly create child .5
 	child5 := &issuestorage.Issue{
-		ID:    issuestorage.ChildID(parent2ID, 5),
+		ID:    idgen.ChildID(parent2ID, 5),
 		Title: "Explicit child 5",
 	}
 	if _, err := s.Create(ctx, child5); err != nil {
@@ -1104,7 +1105,7 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 
 	// Explicitly create child .2 (lower than 5)
 	child2 := &issuestorage.Issue{
-		ID:    issuestorage.ChildID(parent2ID, 2),
+		ID:    idgen.ChildID(parent2ID, 2),
 		Title: "Explicit child 2",
 	}
 	if _, err := s.Create(ctx, child2); err != nil {
@@ -1116,7 +1117,7 @@ func TestCreateExplicitHierarchicalID_DoesNotLowerCounter(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := issuestorage.ChildID(parent2ID, 6)
+	want := idgen.ChildID(parent2ID, 6)
 	if nextID != want {
 		t.Errorf("GetNextChildID after .5 then .2: got %q, want %q", nextID, want)
 	}
@@ -1149,7 +1150,7 @@ func TestCreateNonHierarchicalID_NoCounterSideEffect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID failed: %v", err)
 	}
-	want := issuestorage.ChildID(parentID, 1)
+	want := idgen.ChildID(parentID, 1)
 	if nextID != want {
 		t.Errorf("got %q, want %q", nextID, want)
 	}
@@ -1177,7 +1178,7 @@ func TestCreateExplicitHierarchicalID_MaxDepth(t *testing.T) {
 		Title: "Too deep",
 	}
 	_, err = s.Create(ctx, tooDeep)
-	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
 		t.Errorf("Create at depth 4 with explicit ID: got %v, want ErrMaxDepthExceeded", err)
 	}
 
@@ -1214,7 +1215,7 @@ func TestDeleteReusesChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
 	}
-	wantChild1 := issuestorage.ChildID(parentID, 1)
+	wantChild1 := idgen.ChildID(parentID, 1)
 	if child1ID != wantChild1 {
 		t.Fatalf("First child: got %q, want %q", child1ID, wantChild1)
 	}
@@ -1230,7 +1231,7 @@ func TestDeleteReusesChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID after delete failed: %v", err)
 	}
-	wantChild2 := issuestorage.ChildID(parentID, 1)
+	wantChild2 := idgen.ChildID(parentID, 1)
 	if child2ID != wantChild2 {
 		t.Errorf("After deleting child .1: got %q, want %q (number should be reused)", child2ID, wantChild2)
 	}
@@ -1266,7 +1267,7 @@ func TestCloseDoesNotReuseChildNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID after close failed: %v", err)
 	}
-	wantChild2 := issuestorage.ChildID(parentID, 2)
+	wantChild2 := idgen.ChildID(parentID, 2)
 	if child2ID != wantChild2 {
 		t.Errorf("After closing child .1: got %q, want %q", child2ID, wantChild2)
 	}
@@ -1290,8 +1291,8 @@ func TestGetNextChildID_SubChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 1 failed: %v", err)
 	}
-	if child1ID != issuestorage.ChildID(rootID, 1) {
-		t.Fatalf("First child: got %q, want %q", child1ID, issuestorage.ChildID(rootID, 1))
+	if child1ID != idgen.ChildID(rootID, 1) {
+		t.Fatalf("First child: got %q, want %q", child1ID, idgen.ChildID(rootID, 1))
 	}
 	createIssueWithID(t, s, child1ID, "Child 1")
 
@@ -1313,8 +1314,8 @@ func TestGetNextChildID_SubChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID for child 2 failed: %v", err)
 	}
-	if child2ID != issuestorage.ChildID(rootID, 2) {
-		t.Errorf("Second child of root: got %q, want %q", child2ID, issuestorage.ChildID(rootID, 2))
+	if child2ID != idgen.ChildID(rootID, 2) {
+		t.Errorf("Second child of root: got %q, want %q", child2ID, idgen.ChildID(rootID, 2))
 	}
 }
 
@@ -1373,7 +1374,7 @@ func TestGetNextChildID_CounterIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetNextChildID child3 failed: %v", err)
 	}
-	wantChild3 := issuestorage.ChildID(rootID, 3)
+	wantChild3 := idgen.ChildID(rootID, 3)
 	if child3ID != wantChild3 {
 		t.Errorf("Third child of root: got %q, want %q", child3ID, wantChild3)
 	}
@@ -1415,7 +1416,7 @@ func TestGetNextChildID_MultipleParentsInterleaved(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GetNextChildID step %d failed: %v", i, err)
 		}
-		want := issuestorage.ChildID(exp.parentID, exp.wantNum)
+		want := idgen.ChildID(exp.parentID, exp.wantNum)
 		if childID != want {
 			t.Errorf("Step %d: got %q, want %q", i, childID, want)
 		}
@@ -1457,7 +1458,7 @@ func TestWithMaxHierarchyDepth(t *testing.T) {
 
 	// Depth 3 via GetNextChildID — should fail (exceeds max=2)
 	_, err = s.GetNextChildID(ctx, child2ID)
-	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
 		t.Errorf("GetNextChildID at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
 	}
 
@@ -1467,7 +1468,7 @@ func TestWithMaxHierarchyDepth(t *testing.T) {
 		Title: "Too deep explicit",
 	}
 	_, err = s.Create(ctx, tooDeep)
-	if !errors.Is(err, issuestorage.ErrMaxDepthExceeded) {
+	if !errors.Is(err, idgen.ErrMaxDepthExceeded) {
 		t.Errorf("Create explicit at depth 3 with max=2: got %v, want ErrMaxDepthExceeded", err)
 	}
 }
