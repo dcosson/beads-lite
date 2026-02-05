@@ -179,13 +179,14 @@ close (20)                         0.19s          1.32s     -85.9%
 final list (20x)                   0.08s          1.29s     -93.5%
 create (BEADS_DIR, 4x5)            0.20s        103.77s     -99.8%
 show (BEADS_DIR, 20)               0.09s        103.41s     -99.9%
-create (cwd, 4x5)                  0.31s        103.89s     -99.7%
-show (cwd root, 20)                0.19s        103.53s     -99.8%
-show (cwd child, 20)               0.19s        103.35s     -99.8%
+create (cwd, 4x5)                  0.20s        103.89s     -99.8%
+show (cwd root, 20)                0.09s        103.53s     -99.9%
+show (cwd child, 20)               0.09s        103.35s     -99.9%
 ───────────────────────────────────────────────────────────────────
-TOTAL                              1.79s        526.42s     -99.7%
+TOTAL                              1.59s        526.42s     -99.7%
 ```
 
 The multi-repo tests create 4 nested repos with routing and exercise cross-repo
 issue lookups. The `BEADS_DIR` variants set the env var directly; the `cwd` variants
-rely on directory discovery (walking up to find `.beads/`). Both are fast in beads-lite.
+rely on directory discovery (walking up to find `.beads/`). Both paths are equally fast
+in beads-lite thanks to subprocess-free git root detection.

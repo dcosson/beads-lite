@@ -151,3 +151,46 @@ Examples:
 - **Config storage**: `config.Store` interface + `config.Paths` type → `config/yamlstore.YAMLStore` implementation → `configservice.ResolvePaths()` service functions
 
 **Note**: `kvstorage/` (used for slots, agents, merge-slots) intentionally does not follow this pattern. It's a simple key-value store with no business logic, so commands use the storage layer directly without a service wrapper.
+
+## Config Discovery
+
+The `configservice` package handles finding the `.beads` directory. Discovery order:
+
+1. **`BEADS_DIR` env var** — If set, use that path directly (fastest path)
+2. **Walk up from CWD** — Look for `.beads/config.yaml` in current directory, then parent, etc.
+3. **Git worktree fallback** — If not found and in a git worktree, also check the main repo root
+
+### Git Root Boundary
+
+When walking up, we stop at the git repository root to avoid escaping repo boundaries. This is detected by looking for a `.git` directory or file (for worktrees), not by running `git rev-parse`.
+
+**Why not subprocess?** Performance. Each `git rev-parse` call takes ~5ms due to process spawn overhead. With pure file walk-up, detection takes ~0.004ms (1,300x faster). For 20 commands, this saves ~100ms.
+
+**Edge cases** where behavior differs from `git rev-parse`:
+
+- `GIT_DIR` / `GIT_WORK_TREE` env vars: These override where git looks for the repo, but beads-lite ignores them. We use the physical `.git` location.
+- If `GIT_DIR` points elsewhere but there's a local `.git`, we stop at the local `.git` boundary.
+- If `GIT_WORK_TREE` defines a virtual boundary with no physical `.git`, we walk past it.
+
+These are obscure configurations. For typical usage (normal repos, worktrees, submodules), behavior is identical. The tradeoff is: we optimize for the 99.9% case at the cost of slightly different behavior for exotic git setups.
+
+### Redirect Files
+
+A `.beads/redirect` file can point to a different `.beads` directory. This is followed during discovery (one level only). Used for shared beads directories across multiple repos.
+
+### Future: Configurable Discovery Mode
+
+Currently beads-lite uses the `git-dir` behavior (stop at `.git`). A future enhancement could make this configurable:
+
+```yaml
+# .beads/config.yaml
+discovery_mode: git-dir  # default
+```
+
+| Mode | Behavior |
+|------|----------|
+| `git-dir` (default, current) | Walk up from CWD, stop at `.git` directory/file |
+| `git-worktree` | Use `$GIT_WORK_TREE/.beads`. Error if `GIT_WORK_TREE` is not set. |
+| `none` | Walk up from CWD to filesystem root, ignore git entirely |
+
+The `BEADS_DIR` env var would continue to take precedence over any mode.

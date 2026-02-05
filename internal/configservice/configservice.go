@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -163,46 +162,89 @@ func findConfigUpward(start string) (string, string, bool, error) {
 }
 
 // FindGitRoot returns the git repository root for the given directory.
-// Returns "" if not in a git repo or git is not available.
+// Returns "" if not in a git repo. Uses file walk-up instead of subprocess for speed.
 func FindGitRoot(startDir string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
-	cmd.Dir = startDir
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
+	dir := startDir
+	for {
+		gitPath := filepath.Join(dir, ".git")
+		if info, err := os.Stat(gitPath); err == nil {
+			// .git can be a directory (normal repo) or a file (worktree)
+			if info.IsDir() || info.Mode().IsRegular() {
+				return dir, nil
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", nil // reached filesystem root
+		}
+		dir = parent
 	}
-	return strings.TrimSpace(string(out)), nil
 }
 
 // findGitWorktreeRoot detects if startDir is in a git worktree and returns
 // the main repository root. Returns "" if not in a worktree.
+// Uses file reading instead of subprocess for speed.
 func findGitWorktreeRoot(startDir string) (string, error) {
-	gitDirCmd := exec.Command("git", "rev-parse", "--git-dir")
-	gitDirCmd.Dir = startDir
-	gitDirOut, err := gitDirCmd.Output()
+	gitRoot, err := FindGitRoot(startDir)
+	if err != nil || gitRoot == "" {
+		return "", err
+	}
+
+	gitPath := filepath.Join(gitRoot, ".git")
+	info, err := os.Stat(gitPath)
 	if err != nil {
 		return "", err
 	}
-	gitDir := strings.TrimSpace(string(gitDirOut))
 
-	commonDirCmd := exec.Command("git", "rev-parse", "--git-common-dir")
-	commonDirCmd.Dir = startDir
-	commonDirOut, err := commonDirCmd.Output()
-	if err != nil {
-		return "", err
-	}
-	commonDir := strings.TrimSpace(string(commonDirOut))
-
-	// If --git-dir and --git-common-dir are the same, this is not a worktree
-	absGitDir, _ := filepath.Abs(filepath.Join(startDir, gitDir))
-	absCommonDir, _ := filepath.Abs(filepath.Join(startDir, commonDir))
-	if absGitDir == absCommonDir {
+	// If .git is a directory, this is a normal repo, not a worktree
+	if info.IsDir() {
 		return "", nil
 	}
 
-	// The common dir is the .git dir of the main repo; its parent is the main repo root
-	mainRepoRoot := filepath.Dir(absCommonDir)
-	return mainRepoRoot, nil
+	// .git is a file — this is a worktree. Read it to find the gitdir.
+	// Format: "gitdir: /path/to/.git/worktrees/name"
+	content, err := os.ReadFile(gitPath)
+	if err != nil {
+		return "", err
+	}
+
+	line := strings.TrimSpace(string(content))
+	if !strings.HasPrefix(line, "gitdir: ") {
+		return "", nil // unexpected format
+	}
+	worktreeGitDir := strings.TrimPrefix(line, "gitdir: ")
+
+	// Make path absolute if relative
+	if !filepath.IsAbs(worktreeGitDir) {
+		worktreeGitDir = filepath.Join(gitRoot, worktreeGitDir)
+	}
+	worktreeGitDir = filepath.Clean(worktreeGitDir)
+
+	// The worktree gitdir is typically .git/worktrees/<name>
+	// The main repo root is the parent of .git (i.e., grandparent of worktrees)
+	// Check for commondir file which points to the main .git
+	commondirPath := filepath.Join(worktreeGitDir, "commondir")
+	commondirContent, err := os.ReadFile(commondirPath)
+	if err != nil {
+		// No commondir file, try to infer from path structure
+		// worktreeGitDir is typically /path/to/main/.git/worktrees/name
+		if strings.Contains(worktreeGitDir, string(filepath.Separator)+"worktrees"+string(filepath.Separator)) {
+			// Go up: name -> worktrees -> .git -> main repo root
+			mainGitDir := filepath.Dir(filepath.Dir(worktreeGitDir))
+			return filepath.Dir(mainGitDir), nil
+		}
+		return "", nil
+	}
+
+	// commondir contains relative path to main .git (usually "..")
+	commondir := strings.TrimSpace(string(commondirContent))
+	if !filepath.IsAbs(commondir) {
+		commondir = filepath.Join(worktreeGitDir, commondir)
+	}
+	commondir = filepath.Clean(commondir)
+
+	// Main repo root is parent of .git
+	return filepath.Dir(commondir), nil
 }
 
 // ReadRedirect reads a redirect file from a .beads directory.
