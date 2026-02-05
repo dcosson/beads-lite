@@ -108,6 +108,22 @@ func (r *Runner) KillAllDaemons(sandbox string) {
 	cmd.Run() // best-effort
 }
 
+// SyncAndKillDaemons runs bd sync and then kills all daemons.
+// Useful for ensuring reference beads has flushed state before a benchmark phase.
+func (r *Runner) SyncAndKillDaemons(sandbox string) {
+	env := append(os.Environ(), "BEADS_DIR="+sandbox)
+
+	syncCmd := exec.Command(r.BdCmd, "sync")
+	syncCmd.Dir = sandbox
+	syncCmd.Env = env
+	syncCmd.Run() // best-effort
+
+	killCmd := exec.Command(r.BdCmd, "daemon", "killall")
+	killCmd.Dir = sandbox
+	killCmd.Env = env
+	killCmd.Run() // best-effort
+}
+
 // projectRoot returns the root directory of the project (parent of e2etests/).
 func projectRoot() string {
 	dir, err := os.Getwd()

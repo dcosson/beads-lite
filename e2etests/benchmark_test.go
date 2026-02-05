@@ -242,6 +242,9 @@ func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
 	var beadsDirIDs []string
 
 	// Phase: Create issues using BEADS_DIR
+	if r.KillDaemons {
+		r.SyncAndKillDaemons(rootDir)
+	}
 	start := time.Now()
 	for _, repo := range repos {
 		repoPath := rootDir
@@ -267,6 +270,9 @@ func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
 	})
 
 	// Phase: Show all issues using BEADS_DIR
+	if r.KillDaemons {
+		r.SyncAndKillDaemons(rootDir)
+	}
 	start = time.Now()
 	for _, id := range beadsDirIDs {
 		result := r.RunWithBeadsDir(rootBeadsDir, "show", id, "--json")
@@ -284,6 +290,9 @@ func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
 	var cwdIDs []string
 
 	// Phase: Create issues using cwd (cd to each repo dir)
+	if r.KillDaemons {
+		r.SyncAndKillDaemons(rootDir)
+	}
 	start = time.Now()
 	for _, repo := range repos {
 		repoPath := rootDir
@@ -308,6 +317,9 @@ func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
 	})
 
 	// Phase: Show all issues from root directory (cwd)
+	if r.KillDaemons {
+		r.SyncAndKillDaemons(rootDir)
+	}
 	start = time.Now()
 	for _, id := range cwdIDs {
 		result := r.RunInDir(rootDir, "show", id, "--json")
@@ -321,6 +333,9 @@ func runMultiRepoPhases(t *testing.T, r *Runner, label string) []phaseResult {
 	})
 
 	// Phase: Show all issues from child directory (cwd)
+	if r.KillDaemons {
+		r.SyncAndKillDaemons(rootDir)
+	}
 	start = time.Now()
 	for _, id := range cwdIDs {
 		result := r.RunInDir(childDir, "show", id, "--json")
