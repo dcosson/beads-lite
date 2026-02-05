@@ -70,9 +70,17 @@ func runInit(out io.Writer, force bool, prefix string) error {
 		beadsPath = filepath.Join(absPath, ".beads")
 	}
 
-	// Check if .beads already exists
-	if _, err := os.Stat(beadsPath); err == nil {
-		if !force {
+	// Check if .beads already exists and is non-empty
+	if info, err := os.Stat(beadsPath); err == nil {
+		if info.IsDir() {
+			empty, checkErr := isDirEmpty(beadsPath)
+			if checkErr != nil {
+				return fmt.Errorf("checking .beads directory: %w", checkErr)
+			}
+			if !empty && !force {
+				return errors.New("beads-lite repository already exists (use --force to reinitialize)")
+			}
+		} else if !force {
 			return errors.New("beads-lite repository already exists (use --force to reinitialize)")
 		}
 	} else if !os.IsNotExist(err) {
@@ -195,4 +203,13 @@ func extractPrefixFromExistingIssues(dataPath string) string {
 		}
 	}
 	return ""
+}
+
+// isDirEmpty returns true if the directory has no entries.
+func isDirEmpty(path string) (bool, error) {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return false, err
+	}
+	return len(entries) == 0, nil
 }

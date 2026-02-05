@@ -58,10 +58,10 @@ func TestInit(t *testing.T) {
 		}
 	})
 
-	t.Run("fails if beads already exists", func(t *testing.T) {
+	t.Run("succeeds if beads directory exists but is empty", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		// Create .beads directory first
+		// Create empty .beads directory
 		beadsPath := filepath.Join(tmpDir, ".beads")
 		if err := os.MkdirAll(beadsPath, 0755); err != nil {
 			t.Fatalf("setup failed: %v", err)
@@ -76,9 +76,41 @@ func TestInit(t *testing.T) {
 		cmd := newInitCmd(provider)
 		cmd.SetArgs([]string{})
 
+		if err := cmd.Execute(); err != nil {
+			t.Errorf("init should succeed with empty .beads directory: %v", err)
+		}
+
+		// Verify directories were created
+		openPath := filepath.Join(beadsPath, "issues", "open")
+		if _, err := os.Stat(openPath); os.IsNotExist(err) {
+			t.Error(".beads/issues/open directory was not created")
+		}
+	})
+
+	t.Run("fails if beads already exists and is non-empty", func(t *testing.T) {
+		tmpDir := t.TempDir()
+
+		// Create .beads directory with a file in it
+		beadsPath := filepath.Join(tmpDir, ".beads")
+		if err := os.MkdirAll(beadsPath, 0755); err != nil {
+			t.Fatalf("setup failed: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(beadsPath, "config.yaml"), []byte("test"), 0644); err != nil {
+			t.Fatalf("setup failed: %v", err)
+		}
+
+		// Change working directory temporarily
+		oldWd, _ := os.Getwd()
+		os.Chdir(tmpDir)
+		defer os.Chdir(oldWd)
+
+		provider := &AppProvider{}
+		cmd := newInitCmd(provider)
+		cmd.SetArgs([]string{})
+
 		err := cmd.Execute()
 		if err == nil {
-			t.Error("init command should have failed when .beads already exists")
+			t.Error("init command should have failed when .beads already exists with content")
 		}
 	})
 
