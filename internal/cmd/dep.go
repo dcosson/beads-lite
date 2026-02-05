@@ -134,7 +134,7 @@ Examples:
 				return json.NewEncoder(app.Out).Encode(result)
 			}
 
-			fmt.Fprintf(app.Out, "Added dependency: %s depends on %s (type: %s)\n", issue.ID, dependency.ID, depType)
+			fmt.Fprintf(app.Out, "%s Added dependency: %s depends on %s (type: %s)\n", app.SuccessColor("✓"), issue.ID, dependency.ID, depType)
 			return nil
 		},
 	}
