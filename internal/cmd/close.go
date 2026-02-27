@@ -59,6 +59,19 @@ Examples:
 			// Use local storage for molecule/dependent lookups
 			store := app.Storage
 
+			// Auto-close ancestors if enabled
+			autoCloseFlag := autoCloseEnabled(app)
+			var autoClosed []string
+			if autoCloseFlag {
+				for _, issueID := range closed {
+					ac, err := graph.AutoCloseAncestors(ctx, store, issueID, true)
+					if err != nil {
+						fmt.Fprintf(app.Err, "Warning: auto-close ancestors for %s: %v\n", issueID, err)
+					}
+					autoClosed = append(autoClosed, ac...)
+				}
+			}
+
 			// JSON output
 			if app.JSON {
 				var issues []IssueJSON
@@ -122,7 +135,7 @@ Examples:
 				// --suggest-next logic (JSON)
 				if suggestNext {
 					for _, issueID := range closed {
-						findUnblockedDependents(ctx, store, issueID)
+						findUnblockedDependents(ctx, app, store, issueID)
 					}
 				}
 
@@ -132,6 +145,9 @@ Examples:
 			// Text output
 			for _, id := range closed {
 				fmt.Fprintf(app.Out, "Closed %s\n", id)
+			}
+			for _, id := range autoClosed {
+				fmt.Fprintf(app.Out, "Auto-closed %s (all children closed)\n", id)
 			}
 
 			// --continue logic (text)
@@ -160,7 +176,7 @@ Examples:
 			// --suggest-next logic (text)
 			if suggestNext {
 				for _, issueID := range closed {
-					unblocked := findUnblockedDependents(ctx, store, issueID)
+					unblocked := findUnblockedDependents(ctx, app, store, issueID)
 					for _, u := range unblocked {
 						fmt.Fprintf(app.Out, "Unblocked: %s %s\n", u["id"], u["title"])
 					}
@@ -219,7 +235,8 @@ func findNextMoleculeStep(ctx context.Context, store issuestorage.IssueStore, is
 }
 
 // findUnblockedDependents returns dependents of the given issue that are newly unblocked.
-func findUnblockedDependents(ctx context.Context, store issuestorage.IssueStore, issueID string) []map[string]string {
+// Uses cascade-aware IsEffectivelyBlocked so that parent-level blocks are respected.
+func findUnblockedDependents(ctx context.Context, app *App, store issuestorage.IssueStore, issueID string) []map[string]string {
 	issue, err := store.Get(ctx, issueID)
 	if err != nil {
 		return nil
@@ -230,6 +247,8 @@ func findUnblockedDependents(ctx context.Context, store issuestorage.IssueStore,
 		return nil
 	}
 
+	cascade := cascadeEnabled(app)
+
 	var unblocked []map[string]string
 	for _, dep := range issue.Dependents {
 		if dep.Type != issuestorage.DepTypeBlocks {
@@ -239,15 +258,11 @@ func findUnblockedDependents(ctx context.Context, store issuestorage.IssueStore,
 		if err != nil || dependent.Status == issuestorage.StatusClosed {
 			continue
 		}
-		allResolved := true
-		blocksType := issuestorage.DepTypeBlocks
-		for _, blockingID := range dependent.DependencyIDs(&blocksType) {
-			if !closedSet[blockingID] {
-				allResolved = false
-				break
-			}
+		blocked, err := graph.IsEffectivelyBlocked(ctx, store, dependent, closedSet, cascade)
+		if err != nil {
+			continue
 		}
-		if allResolved {
+		if !blocked {
 			unblocked = append(unblocked, map[string]string{
 				"id":    dependent.ID,
 				"title": dependent.Title,
@@ -255,4 +270,17 @@ func findUnblockedDependents(ctx context.Context, store issuestorage.IssueStore,
 		}
 	}
 	return unblocked
+}
+
+// autoCloseEnabled reads the graph.auto_close_parent config flag.
+// Returns true (the default) if the flag is not set or is "true".
+func autoCloseEnabled(app *App) bool {
+	if app.ConfigStore == nil {
+		return true
+	}
+	v, ok := app.ConfigStore.Get("graph.auto_close_parent")
+	if !ok {
+		return true
+	}
+	return v != "false"
 }
