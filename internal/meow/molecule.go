@@ -71,7 +71,7 @@ func Current(ctx context.Context, store issuestorage.IssueStore, opts CurrentOpt
 		return nil, fmt.Errorf("build closed set: %w", err)
 	}
 
-	classes := graph.ClassifySteps(children, closedSet)
+	classes := graph.ClassifySteps(ctx, store, children, closedSet, false)
 
 	// Build ordered step views.
 	ordered, err := graph.TopologicalOrder(children)
@@ -139,7 +139,7 @@ func Progress(ctx context.Context, store issuestorage.IssueStore, molID string) 
 		return nil, fmt.Errorf("build closed set: %w", err)
 	}
 
-	classes := graph.ClassifySteps(children, closedSet)
+	classes := graph.ClassifySteps(ctx, store, children, closedSet, false)
 
 	var stats ProgressStats
 	stats.Total = len(children)
@@ -179,7 +179,7 @@ func FindStaleSteps(ctx context.Context, store issuestorage.IssueStore, molID st
 		return nil, fmt.Errorf("build closed set: %w", err)
 	}
 
-	ready := graph.FindReadySteps(children, closedSet)
+	ready := graph.FindReadySteps(ctx, store, children, closedSet, false)
 
 	var stale []*StaleStep
 	for _, step := range ready {
@@ -278,4 +278,3 @@ func findHookedMolecules(ctx context.Context, store issuestorage.IssueStore, act
 	}
 	return "", nil
 }
-

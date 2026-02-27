@@ -209,6 +209,7 @@ making them easy to review, diff, and track alongside your code.`,
 	rootCmd.AddCommand(newSearchCmd(provider))
 	rootCmd.AddCommand(newReadyCmd(provider))
 	rootCmd.AddCommand(newBlockedCmd(provider))
+	rootCmd.AddCommand(newGraphCmd(provider))
 	rootCmd.AddCommand(newCloseCmd(provider))
 	rootCmd.AddCommand(newListCmd(provider))
 	rootCmd.AddCommand(newReopenCmd(provider))

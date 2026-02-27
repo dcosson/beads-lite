@@ -1,0 +1,34 @@
+{
+  "id": "bl-egx.7",
+  "title": "Implement TopologicalWavesAcrossParents",
+  "description": "New function in internal/graph/cross_parent_waves.go. Computes parallelizable waves across multiple parent issues by:\n1. Collecting all leaf tasks (no children) under rootID or all open tasks\n2. If cascade=true, finding parent-level blocks deps and injecting synthetic task-level edges using the blocking frontier (dependency-graph sinks within blocker subtree)\n3. Blocker normalization: if blocker has no descendants use it directly, if it has descendants use its sinks, if outside set warn and skip\n4. Running existing TopologicalWaves on the expanded edge set\n\nReturns waves and a lookup map of ID→Issue. See GRAPH_AND_CASCADE_DESIGN.md 'Cross-Parent Topological Waves' and 'Blocking Frontier' sections. Include comprehensive unit tests.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.2",
+      "type": "blocks"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "bl-egx.8",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "created_at": "2026-02-27T12:40:13.323773-08:00",
+  "updated_at": "2026-02-27T13:48:39.881176-08:00",
+  "closed_at": "2026-02-27T13:48:39.881176-08:00",
+  "close_reason": "Closed"
+}

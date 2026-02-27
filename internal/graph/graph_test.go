@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func newStore(t *testing.T) *issueservice.IssueStore {
@@ -275,7 +275,7 @@ func TestFindReadySteps(t *testing.T) {
 	}
 
 	// No closed set: only A is ready
-	ready := FindReadySteps(children, map[string]bool{})
+	ready := FindReadySteps(ctx, s, children, map[string]bool{}, false)
 	if len(ready) != 1 || ready[0].Title != "A" {
 		titles := titlesOf(ready)
 		t.Errorf("with empty closedSet: got %v, want [A]", titles)
@@ -285,7 +285,7 @@ func TestFindReadySteps(t *testing.T) {
 	closedSet := map[string]bool{byTitle["A"].ID: true}
 	// Mark A as closed on the issue struct too
 	byTitle["A"].Status = issuestorage.StatusClosed
-	ready = FindReadySteps(children, closedSet)
+	ready = FindReadySteps(ctx, s, children, closedSet, false)
 	titles := titlesOf(ready)
 	if len(ready) != 2 {
 		t.Errorf("after closing A: got %v, want [B, C]", titles)
@@ -304,9 +304,56 @@ func TestFindReadySteps_AllClosed(t *testing.T) {
 		closedSet[c.ID] = true
 	}
 
-	ready := FindReadySteps(children, closedSet)
+	ready := FindReadySteps(ctx, s, children, closedSet, false)
 	if len(ready) != 0 {
 		t.Errorf("all closed: got %d ready, want 0", len(ready))
+	}
+}
+
+func TestFindReadySteps_CascadeInheritedBlockers(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	root := createIssue(t, ctx, s, "Root", issuestorage.TypeEpic)
+	parentA := createIssue(t, ctx, s, "ParentA", issuestorage.TypeTask)
+	parentB := createIssue(t, ctx, s, "ParentB", issuestorage.TypeTask)
+	childA := createIssue(t, ctx, s, "ChildA", issuestorage.TypeTask)
+
+	for _, pair := range [][2]string{
+		{parentA.ID, root.ID},
+		{parentB.ID, root.ID},
+		{childA.ID, parentA.ID},
+	} {
+		if err := s.AddDependency(ctx, pair[0], pair[1], issuestorage.DepTypeParentChild); err != nil {
+			t.Fatalf("add parent-child %s -> %s: %v", pair[0], pair[1], err)
+		}
+	}
+	if err := s.AddDependency(ctx, parentA.ID, parentB.ID, issuestorage.DepTypeBlocks); err != nil {
+		t.Fatalf("add blocks %s -> %s: %v", parentA.ID, parentB.ID, err)
+	}
+
+	children, err := CollectMoleculeChildren(ctx, s, root.ID)
+	if err != nil {
+		t.Fatalf("CollectMoleculeChildren: %v", err)
+	}
+
+	readyNoCascade := FindReadySteps(ctx, s, children, map[string]bool{}, false)
+	readyCascade := FindReadySteps(ctx, s, children, map[string]bool{}, true)
+
+	noCascadeSet := make(map[string]bool)
+	for _, issue := range readyNoCascade {
+		noCascadeSet[issue.Title] = true
+	}
+	cascadeSet := make(map[string]bool)
+	for _, issue := range readyCascade {
+		cascadeSet[issue.Title] = true
+	}
+
+	if !noCascadeSet["ChildA"] {
+		t.Errorf("expected ChildA to be ready without cascade; got %v", titlesOf(readyNoCascade))
+	}
+	if cascadeSet["ChildA"] {
+		t.Errorf("expected ChildA to be blocked with cascade; got %v", titlesOf(readyCascade))
 	}
 }
 
@@ -396,24 +443,63 @@ func TestClassifySteps(t *testing.T) {
 	}
 
 	// Initial state: A=ready, B=blocked, C=blocked
-	classes := ClassifySteps(children, map[string]bool{})
+	classes := ClassifySteps(ctx, s, children, map[string]bool{}, false)
 	assertStatus(t, classes, byTitle["A"].ID, StepReady)
 	assertStatus(t, classes, byTitle["B"].ID, StepBlocked)
 	assertStatus(t, classes, byTitle["C"].ID, StepBlocked)
 
 	// Set A to in_progress: A=current, B=blocked, C=blocked
 	byTitle["A"].Status = issuestorage.StatusInProgress
-	classes = ClassifySteps(children, map[string]bool{})
+	classes = ClassifySteps(ctx, s, children, map[string]bool{}, false)
 	assertStatus(t, classes, byTitle["A"].ID, StepCurrent)
 	assertStatus(t, classes, byTitle["B"].ID, StepBlocked)
 
 	// Close A: A=done, B=ready, C=blocked
 	byTitle["A"].Status = issuestorage.StatusClosed
 	closedSet := map[string]bool{byTitle["A"].ID: true}
-	classes = ClassifySteps(children, closedSet)
+	classes = ClassifySteps(ctx, s, children, closedSet, false)
 	assertStatus(t, classes, byTitle["A"].ID, StepDone)
 	assertStatus(t, classes, byTitle["B"].ID, StepReady)
 	assertStatus(t, classes, byTitle["C"].ID, StepBlocked)
+}
+
+func TestClassifySteps_CascadeInheritedBlockers(t *testing.T) {
+	ctx := context.Background()
+	s := newStore(t)
+
+	root := createIssue(t, ctx, s, "Root", issuestorage.TypeEpic)
+	parentA := createIssue(t, ctx, s, "ParentA", issuestorage.TypeTask)
+	parentB := createIssue(t, ctx, s, "ParentB", issuestorage.TypeTask)
+	childA := createIssue(t, ctx, s, "ChildA", issuestorage.TypeTask)
+
+	for _, pair := range [][2]string{
+		{parentA.ID, root.ID},
+		{parentB.ID, root.ID},
+		{childA.ID, parentA.ID},
+	} {
+		if err := s.AddDependency(ctx, pair[0], pair[1], issuestorage.DepTypeParentChild); err != nil {
+			t.Fatalf("add parent-child %s -> %s: %v", pair[0], pair[1], err)
+		}
+	}
+	if err := s.AddDependency(ctx, parentA.ID, parentB.ID, issuestorage.DepTypeBlocks); err != nil {
+		t.Fatalf("add blocks %s -> %s: %v", parentA.ID, parentB.ID, err)
+	}
+
+	children, err := CollectMoleculeChildren(ctx, s, root.ID)
+	if err != nil {
+		t.Fatalf("CollectMoleculeChildren: %v", err)
+	}
+
+	byTitle := make(map[string]*issuestorage.Issue, len(children))
+	for _, c := range children {
+		byTitle[c.Title] = c
+	}
+
+	noCascade := ClassifySteps(ctx, s, children, map[string]bool{}, false)
+	withCascade := ClassifySteps(ctx, s, children, map[string]bool{}, true)
+
+	assertStatus(t, noCascade, byTitle["ChildA"].ID, StepReady)
+	assertStatus(t, withCascade, byTitle["ChildA"].ID, StepBlocked)
 }
 
 func TestBuildClosedSet(t *testing.T) {

@@ -1,0 +1,35 @@
+{
+  "id": "bl-egx.1",
+  "title": "Add config flags for cascade and auto-close",
+  "description": "Add graph.cascade_parent_blocking (default true) and graph.auto_close_parent (default true) to internal/config/defaults.go. Update internal/config/validate.go if needed. Add config tests to internal/config/config_test.go. These are the two feature flags that gate all new cascading behavior.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "bl-egx.2",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.3",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "assignee": "beads-builder",
+  "created_at": "2026-02-27T12:39:06.289382-08:00",
+  "updated_at": "2026-02-27T12:50:07.751794-08:00",
+  "closed_at": "2026-02-27T12:50:07.751793-08:00",
+  "close_reason": "Closed"
+}

@@ -214,7 +214,7 @@ func FindReadyStepsWithCascade(
 ) ([]*issuestorage.Issue, error) {
 	if !cascade {
 		// Fall back to the existing non-cascade logic for efficiency
-		return FindReadySteps(children, closedSet), nil
+		return FindReadySteps(ctx, store, children, closedSet, false), nil
 	}
 
 	childSet := make(map[string]bool, len(children))

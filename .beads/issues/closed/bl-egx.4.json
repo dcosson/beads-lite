@@ -1,0 +1,38 @@
+{
+  "id": "bl-egx.4",
+  "title": "Update bd ready and bd blocked to use EffectiveBlockers",
+  "description": "Two command updates in one task since they share the same pattern:\n\nbd ready (internal/cmd/ready.go): Replace isReady() helper with graph.IsEffectivelyBlocked(). Read cascade config flag from app config store, pass as bool. Delete the old isReady() function.\n\nbd blocked (internal/cmd/blocked.go): Replace getWaitingOn() with graph.EffectiveBlockers(). Show inherited blockers in text output as 'Parent blocked: \u003cancestor\u003e blocked by [\u003cblockers\u003e]'. Add inherited_blockers field to JSON output. Delete old getWaitingOn() function.\n\nUpdate tests for both commands. See GRAPH_AND_CASCADE_DESIGN.md sections on bd ready and bd blocked.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.2",
+      "type": "blocks"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "bl-egx.10",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.9",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "created_at": "2026-02-27T12:39:34.141987-08:00",
+  "updated_at": "2026-02-27T12:59:44.942407-08:00",
+  "closed_at": "2026-02-27T12:59:44.942407-08:00",
+  "close_reason": "Updated bd ready, bd blocked, and bd stats to use EffectiveBlockers with cascade support"
+}

@@ -146,6 +146,8 @@ Examples:
 			if len(children) == 0 {
 				return fmt.Errorf("epic %s has no children", epicID)
 			}
+			cascade := cascadeEnabled(app)
+			_ = graph.FindReadySteps(ctx, store, children, map[string]bool{}, cascade)
 
 			result := SwarmValidateJSON{
 				EpicID:        epic.ID,
@@ -294,6 +296,8 @@ Examples:
 			if len(children) == 0 {
 				return fmt.Errorf("epic %s has no children", epicID)
 			}
+			cascade := cascadeEnabled(app)
+			_ = graph.FindReadySteps(ctx, store, children, map[string]bool{}, cascade)
 			_, err = graph.TopologicalWaves(children)
 			if err != nil {
 				return fmt.Errorf("not swarmable: %w", err)
@@ -398,7 +402,8 @@ Examples:
 				return fmt.Errorf("build closed set: %w", err)
 			}
 
-			classes := graph.ClassifySteps(children, closedSet)
+			cascade := cascadeEnabled(app)
+			classes := graph.ClassifySteps(ctx, store, children, closedSet, cascade)
 
 			// Build child set for blocker resolution
 			childSet := make(map[string]bool, len(children))
@@ -556,7 +561,8 @@ Examples:
 					continue
 				}
 
-				classes := graph.ClassifySteps(children, closedSet)
+				cascade := cascadeEnabled(app)
+				classes := graph.ClassifySteps(ctx, app.Storage, children, closedSet, cascade)
 
 				var completed, activeCnt, readyCnt, blockedCnt int
 				for _, status := range classes {

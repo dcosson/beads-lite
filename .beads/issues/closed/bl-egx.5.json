@@ -1,0 +1,28 @@
+{
+  "id": "bl-egx.5",
+  "title": "Update bd show to display inherited blocks",
+  "description": "Modify internal/cmd/show.go outputIssue() to add an 'Inherited Blocks' section when cascade is enabled and inherited blockers exist. Read cascade config flag. Call EffectiveBlockers and display inherited blockers grouped by ancestor. For JSON output (outputIssueJSON), add inherited_blockers to the IssueJSON struct. Update tests. See GRAPH_AND_CASCADE_DESIGN.md 'bd show' section.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.2",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "created_at": "2026-02-27T12:39:40.162023-08:00",
+  "updated_at": "2026-02-27T13:02:25.478031-08:00",
+  "closed_at": "2026-02-27T13:02:25.478031-08:00",
+  "close_reason": "Added inherited blocks display to bd show text and JSON output"
+}

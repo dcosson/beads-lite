@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func newSwarmTestApp(t *testing.T) (*App, *issueservice.IssueStore) {
@@ -491,5 +491,92 @@ func TestSwarmValidate_DisconnectedWarning(t *testing.T) {
 
 	if len(result.Warnings) == 0 {
 		t.Error("expected warnings about disconnected issues")
+	}
+}
+
+func TestSwarmStatus_CascadeParentBlockingConfig(t *testing.T) {
+	ctx := context.Background()
+
+	makeAppAndEpic := func(t *testing.T, cascadeValue string) (*App, string) {
+		t.Helper()
+		app, store := newSwarmTestApp(t)
+		app.JSON = true
+		app.ConfigStore = &mapConfigStore{data: map[string]string{
+			"graph.cascade_parent_blocking": cascadeValue,
+		}}
+
+		epic := &issuestorage.Issue{
+			Title:    "Cascade Epic",
+			Type:     issuestorage.TypeEpic,
+			Status:   issuestorage.StatusOpen,
+			Priority: issuestorage.PriorityMedium,
+		}
+		epicID, err := store.Create(ctx, epic)
+		if err != nil {
+			t.Fatalf("create epic: %v", err)
+		}
+
+		parentA := &issuestorage.Issue{Title: "ParentA", Type: issuestorage.TypeTask, Status: issuestorage.StatusOpen, Priority: issuestorage.PriorityMedium}
+		parentB := &issuestorage.Issue{Title: "ParentB", Type: issuestorage.TypeTask, Status: issuestorage.StatusOpen, Priority: issuestorage.PriorityMedium}
+		childA := &issuestorage.Issue{Title: "ChildA", Type: issuestorage.TypeTask, Status: issuestorage.StatusOpen, Priority: issuestorage.PriorityMedium}
+
+		parentAID, err := store.Create(ctx, parentA)
+		if err != nil {
+			t.Fatalf("create parentA: %v", err)
+		}
+		parentBID, err := store.Create(ctx, parentB)
+		if err != nil {
+			t.Fatalf("create parentB: %v", err)
+		}
+		childAID, err := store.Create(ctx, childA)
+		if err != nil {
+			t.Fatalf("create childA: %v", err)
+		}
+
+		for _, pair := range [][2]string{
+			{parentAID, epicID},
+			{parentBID, epicID},
+			{childAID, parentAID},
+		} {
+			if err := store.AddDependency(ctx, pair[0], pair[1], issuestorage.DepTypeParentChild); err != nil {
+				t.Fatalf("add parent-child %s -> %s: %v", pair[0], pair[1], err)
+			}
+		}
+		if err := store.AddDependency(ctx, parentAID, parentBID, issuestorage.DepTypeBlocks); err != nil {
+			t.Fatalf("add blocks %s -> %s: %v", parentAID, parentBID, err)
+		}
+
+		return app, epicID
+	}
+
+	appNoCascade, epicNoCascade := makeAppAndEpic(t, "false")
+	cmdNoCascade := newSwarmStatusCmd(NewTestProvider(appNoCascade))
+	cmdNoCascade.SetArgs([]string{epicNoCascade})
+	if err := cmdNoCascade.Execute(); err != nil {
+		t.Fatalf("swarm status (cascade=false): %v", err)
+	}
+
+	var noCascade SwarmStatusJSON
+	if err := json.Unmarshal(appNoCascade.Out.(*bytes.Buffer).Bytes(), &noCascade); err != nil {
+		t.Fatalf("unmarshal cascade=false: %v", err)
+	}
+
+	appCascade, epicCascade := makeAppAndEpic(t, "true")
+	cmdCascade := newSwarmStatusCmd(NewTestProvider(appCascade))
+	cmdCascade.SetArgs([]string{epicCascade})
+	if err := cmdCascade.Execute(); err != nil {
+		t.Fatalf("swarm status (cascade=true): %v", err)
+	}
+
+	var withCascade SwarmStatusJSON
+	if err := json.Unmarshal(appCascade.Out.(*bytes.Buffer).Bytes(), &withCascade); err != nil {
+		t.Fatalf("unmarshal cascade=true: %v", err)
+	}
+
+	if noCascade.Ready != 2 || noCascade.Blocked != 1 {
+		t.Fatalf("unexpected counts for cascade=false: ready=%d blocked=%d", noCascade.Ready, noCascade.Blocked)
+	}
+	if withCascade.Ready != 1 || withCascade.Blocked != 2 {
+		t.Fatalf("unexpected counts for cascade=true: ready=%d blocked=%d", withCascade.Ready, withCascade.Blocked)
 	}
 }

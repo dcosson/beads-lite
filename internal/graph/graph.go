@@ -140,8 +140,15 @@ func TopologicalOrder(children []*issuestorage.Issue) ([]*issuestorage.Issue, er
 }
 
 // FindReadySteps returns issues that are open and whose blocking dependencies
-// are all in the closedSet.
-func FindReadySteps(children []*issuestorage.Issue, closedSet map[string]bool) []*issuestorage.Issue {
+// are all in the closedSet. When cascade is true, inherited parent blockers
+// are also considered.
+func FindReadySteps(
+	ctx context.Context,
+	store issuestorage.IssueGetter,
+	children []*issuestorage.Issue,
+	closedSet map[string]bool,
+	cascade bool,
+) []*issuestorage.Issue {
 	childSet := make(map[string]bool, len(children))
 	for _, c := range children {
 		childSet[c.ID] = true
@@ -158,6 +165,12 @@ func FindReadySteps(children []*issuestorage.Issue, closedSet map[string]bool) [
 			if childSet[depID] && !closedSet[depID] {
 				blocked = true
 				break
+			}
+		}
+		if !blocked && cascade && store != nil {
+			effectivelyBlocked, err := IsEffectivelyBlocked(ctx, store, c, closedSet, true)
+			if err == nil && effectivelyBlocked {
+				blocked = true
 			}
 		}
 		if !blocked {
@@ -203,7 +216,14 @@ func FindNextStep(ordered []*issuestorage.Issue, currentID string, closedSet map
 }
 
 // ClassifySteps classifies each child issue as done, current, ready, blocked, or pending.
-func ClassifySteps(children []*issuestorage.Issue, closedSet map[string]bool) map[string]StepStatus {
+// When cascade is true, inherited parent blockers are also considered.
+func ClassifySteps(
+	ctx context.Context,
+	store issuestorage.IssueGetter,
+	children []*issuestorage.Issue,
+	closedSet map[string]bool,
+	cascade bool,
+) map[string]StepStatus {
 	childSet := make(map[string]bool, len(children))
 	for _, c := range children {
 		childSet[c.ID] = true
@@ -228,6 +248,12 @@ func ClassifySteps(children []*issuestorage.Issue, closedSet map[string]bool) ma
 			if childSet[depID] && !closedSet[depID] {
 				blocked = true
 				break
+			}
+		}
+		if !blocked && cascade && store != nil {
+			effectivelyBlocked, err := IsEffectivelyBlocked(ctx, store, c, closedSet, true)
+			if err == nil && effectivelyBlocked {
+				blocked = true
 			}
 		}
 		if blocked {

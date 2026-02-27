@@ -1,0 +1,55 @@
+{
+  "id": "bl-egx.2",
+  "title": "Implement EffectiveBlockers and IsEffectivelyBlocked",
+  "description": "Core primitive in internal/graph/. EffectiveBlockers walks the parent chain to collect direct (issue's own unclosed DepTypeBlocks deps) and inherited (ancestor's unclosed DepTypeBlocks deps) blockers. IsEffectivelyBlocked is a convenience wrapper returning bool. Takes cascade bool param (not config import). Includes ancestor cache for batch usage. Resilient error handling: log warnings on Get failures, return partial results. See GRAPH_AND_CASCADE_DESIGN.md 'Core Primitive' and 'Error Handling Policy' sections. Include comprehensive unit tests.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.1",
+      "type": "blocks"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "bl-egx.4",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.5",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.6",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.7",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.8",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.9",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "assignee": "beads-builder",
+  "created_at": "2026-02-27T12:39:13.954685-08:00",
+  "updated_at": "2026-02-27T12:55:53.785206-08:00",
+  "closed_at": "2026-02-27T12:55:53.785206-08:00",
+  "close_reason": "Implemented EffectiveBlockers, IsEffectivelyBlocked, EffectiveBlockersBatch, FindReadyStepsWithCascade with 12 tests"
+}

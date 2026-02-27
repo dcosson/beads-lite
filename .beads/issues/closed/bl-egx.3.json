@@ -1,0 +1,35 @@
+{
+  "id": "bl-egx.3",
+  "title": "Implement AutoCloseAncestors",
+  "description": "New function in internal/graph/. Walks up parent chain after a close, auto-closing ancestors whose Children() are all closed. Continues past already-closed ancestors (don't stop). Skips gate and molecule types. Sets CloseReason to 'Auto-closed: all children completed'. Cycle guard with visited set. Resilient error handling. See GRAPH_AND_CASCADE_DESIGN.md 'Auto-Close Parent' section. Include comprehensive unit tests covering: last child close, multi-level recursion, skip-already-closed-continue-up, gate/molecule skip, Get error mid-chain.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.1",
+      "type": "blocks"
+    }
+  ],
+  "dependents": [
+    {
+      "id": "bl-egx.6",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "assignee": "beads-coder",
+  "created_at": "2026-02-27T12:39:20.924161-08:00",
+  "updated_at": "2026-02-27T12:56:22.258488-08:00",
+  "closed_at": "2026-02-27T12:56:22.258488-08:00",
+  "close_reason": "Implemented by beads-coder - AutoCloseAncestors with resilient traversal, 5 tests passing"
+}

@@ -1,0 +1,31 @@
+{
+  "id": "bl-egx.9",
+  "title": "Update bd swarm to use cascade-aware ClassifySteps and FindReadySteps",
+  "description": "Modify internal/cmd/swarm.go and internal/graph/graph.go:\n\n1. Add cascade bool parameter to ClassifySteps() and FindReadySteps() in graph package. When cascade=true, additionally check IsEffectivelyBlocked for each task.\n\n2. Update swarm validate, swarm status, and swarm create to read cascade config flag and pass it through.\n\nThis primarily affects tasks in sub-parents of a swarm where cross-parent deps now cascade correctly. Update swarm_test.go. See GRAPH_AND_CASCADE_DESIGN.md 'bd swarm' section.",
+  "status": "open",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-egx",
+  "dependencies": [
+    {
+      "id": "bl-egx",
+      "type": "parent-child"
+    },
+    {
+      "id": "bl-egx.2",
+      "type": "blocks"
+    },
+    {
+      "id": "bl-egx.4",
+      "type": "blocks"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "labels": [
+    "project=graph-cascade"
+  ],
+  "assignee": "beads-reviewer",
+  "created_at": "2026-02-27T12:40:44.447369-08:00",
+  "updated_at": "2026-02-27T13:49:37.417813-08:00"
+}
