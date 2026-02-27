@@ -11,6 +11,16 @@ CLI issue tracker. Binary is `bd`. Go project using cobra for CLI, filesystem-ba
 
 Pass `ARGS` to filter tests, e.g. `make test-unit ARGS='-run TestCreateWithLabels'`.
 
+## Releases
+
+Version is defined in `internal/cmd/version.go`. When bumping the version:
+
+1. Update the `Version` variable in `internal/cmd/version.go`
+2. Update `CHANGELOG.md` with a summary of changes since the last version
+3. Commit and tag with `v<version>`
+
+**Always update the changelog when bumping the version.** The changelog lives at `CHANGELOG.md` in the repo root.
+
 ## Golden File Tests (e2e/reference)
 
 The `e2etests/reference/` tests are golden file tests. Each `case_<nn>_<name>.go` file runs a sequence of commands against the **reference beads implementation** and stores the output in `e2etests/reference/expected/<nn>_<name>.txt`. The same commands are then run against beads-lite and the outputs are compared.
