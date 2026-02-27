@@ -21,7 +21,9 @@ func DefaultValues() map[string]string {
 		"defaults.type":              "task",
 		"issue_prefix":               "bd",
 		"actor":                      "${USER}",
-		"hierarchy.max_depth":        strconv.Itoa(idgen.DefaultMaxHierarchyDepth),
+		"hierarchy.max_depth":            strconv.Itoa(idgen.DefaultMaxHierarchyDepth),
+		"graph.cascade_parent_blocking": "true",
+		"graph.auto_close_parent":       "true",
 	}
 }
 

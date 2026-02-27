@@ -14,9 +14,11 @@ var validValues = map[string][]string{
 	"issue_prefix":        {},
 	"actor":               {},
 	"project.name":        {},
-	"hierarchy.max_depth": {},
-	"types.custom":        {},
-	"status.custom":       {},
+	"hierarchy.max_depth":            {},
+	"graph.cascade_parent_blocking": {"true", "false"},
+	"graph.auto_close_parent":       {"true", "false"},
+	"types.custom":                  {},
+	"status.custom":                 {},
 }
 
 // Validate checks all values in s for known keys. It returns an error

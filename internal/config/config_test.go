@@ -9,13 +9,15 @@ func TestDefaultValues(t *testing.T) {
 	defaults := DefaultValues()
 
 	expected := map[string]string{
-		"beads_variant":              "beads-lite",
-		"create.require-description": "false",
-		"defaults.priority":          "2",
-		"defaults.type":              "task",
-		"issue_prefix":               "bd",
-		"actor":                      "${USER}",
-		"hierarchy.max_depth":        "3",
+		"beads_variant":                 "beads-lite",
+		"create.require-description":    "false",
+		"defaults.priority":             "2",
+		"defaults.type":                 "task",
+		"issue_prefix":                  "bd",
+		"actor":                         "${USER}",
+		"hierarchy.max_depth":           "3",
+		"graph.cascade_parent_blocking": "true",
+		"graph.auto_close_parent":       "true",
 	}
 
 	if len(defaults) != len(expected) {
@@ -153,6 +155,42 @@ func TestValidate_DefaultsTypeBuiltInStillWorks(t *testing.T) {
 	}}
 	if err := Validate(s); err != nil {
 		t.Errorf("Validate should still accept built-in types: %v", err)
+	}
+}
+
+func TestValidate_GraphCascadeParentBlocking(t *testing.T) {
+	for _, val := range []string{"true", "false"} {
+		s := &memStore{data: map[string]string{
+			"graph.cascade_parent_blocking": val,
+		}}
+		if err := Validate(s); err != nil {
+			t.Errorf("Validate should accept graph.cascade_parent_blocking=%q: %v", val, err)
+		}
+	}
+
+	s := &memStore{data: map[string]string{
+		"graph.cascade_parent_blocking": "yes",
+	}}
+	if err := Validate(s); err == nil {
+		t.Error("Validate should reject graph.cascade_parent_blocking=yes")
+	}
+}
+
+func TestValidate_GraphAutoCloseParent(t *testing.T) {
+	for _, val := range []string{"true", "false"} {
+		s := &memStore{data: map[string]string{
+			"graph.auto_close_parent": val,
+		}}
+		if err := Validate(s); err != nil {
+			t.Errorf("Validate should accept graph.auto_close_parent=%q: %v", val, err)
+		}
+	}
+
+	s := &memStore{data: map[string]string{
+		"graph.auto_close_parent": "1",
+	}}
+	if err := Validate(s); err == nil {
+		t.Error("Validate should reject graph.auto_close_parent=1")
 	}
 }
 
