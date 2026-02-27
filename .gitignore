@@ -1,6 +1,5 @@
 .runtime/
 .claude/
-.beads/
 .logs/
 
 # built binary
