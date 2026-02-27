@@ -10,7 +10,8 @@ import (
 	"testing"
 )
 
-var update = flag.Bool("update", false, "update expected output files")
+var update = flag.Bool("update", false, "update expected output files from reference binary")
+var updateLite = flag.Bool("update-lite", false, "update expected output files for lite-only tests from beads-lite")
 
 // verifyReferenceBeads checks that BD_CMD points to the original beads binary,
 // not beads-lite. Expected output files must be generated from the reference
@@ -36,7 +37,7 @@ func TestE2E(t *testing.T) {
 		return
 	}
 
-	runner := &Runner{BdCmd: bdCmd, KillDaemons: *update}
+	runner := &Runner{BdCmd: bdCmd, KillDaemons: *update || *updateLite}
 
 	if *update {
 		verifyReferenceBeads(t, runner)
@@ -46,6 +47,18 @@ func TestE2E(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
+			// During reference update, skip lite-only tests (reference binary
+			// doesn't have these features).
+			if *update && tc.LiteOnly {
+				t.Skipf("skipping lite-only test %s during reference update", tc.Name)
+				return
+			}
+			// During lite update, skip non-lite tests.
+			if *updateLite && !tc.LiteOnly {
+				t.Skipf("skipping reference test %s during lite update", tc.Name)
+				return
+			}
+
 			// Tear down the previous sandbox (after daemon killall ran in SetupSandbox).
 			if prevSandbox != "" {
 				runner.TeardownSandbox(prevSandbox)
@@ -67,7 +80,7 @@ func TestE2E(t *testing.T) {
 
 			expectedFile := filepath.Join("expected", tc.Name+".txt")
 
-			if *update {
+			if *update || *updateLite {
 				if err := os.MkdirAll("expected", 0755); err != nil {
 					t.Fatalf("failed to create expected dir: %v", err)
 				}
@@ -83,6 +96,9 @@ func TestE2E(t *testing.T) {
 
 			expected, err := os.ReadFile(expectedFile)
 			if err != nil {
+				if tc.LiteOnly {
+					t.Fatalf("no expected file %q (run with -update-lite to generate): %v", expectedFile, err)
+				}
 				t.Fatalf("no expected file %q (run with -update to generate): %v", expectedFile, err)
 			}
 

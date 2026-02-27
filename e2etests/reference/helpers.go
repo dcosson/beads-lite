@@ -14,6 +14,11 @@ type TestCase struct {
 	// implementation to perfectly match the reference implementation due to a
 	// bug or confusing behavior.
 	PostUpdate func(string) string
+	// LiteOnly marks tests for beads-lite-only features (e.g., bd graph,
+	// cascade blocking). These are skipped during reference binary update
+	// runs and instead generate expected output from beads-lite itself
+	// via the update-lite-e2e make target.
+	LiteOnly bool
 }
 
 // testCases is the ordered registry of all e2e test cases.
@@ -32,6 +37,10 @@ var testCases = []TestCase{
 	{Name: "12_stats", Fn: caseStats},
 	{Name: "13_config", Fn: caseConfig},
 	{Name: "14_meow", Fn: caseMeow, PostUpdate: patchMeowExpected},
+	{Name: "15_graph_basic", Fn: caseGraphBasic, LiteOnly: true},
+	{Name: "16_graph_cross_parent", Fn: caseGraphCrossParent, LiteOnly: true},
+	{Name: "17_cascade_ready", Fn: caseCascadeReady, LiteOnly: true},
+	{Name: "18_auto_close", Fn: caseAutoClose, LiteOnly: true},
 }
 
 // section writes a section header and normalized JSON content to the builder.

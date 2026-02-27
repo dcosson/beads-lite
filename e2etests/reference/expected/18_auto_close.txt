@@ -1,0 +1,210 @@
+=== close task A ===
+[
+  {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "testactor@example.com",
+    "parent": "ISSUE_2",
+    "priority": 2,
+    "status": "closed",
+    "title": "Task A",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== parent still open ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_3",
+        "issue_type": "epic",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Project Alpha",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_1",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Task A",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_4",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Task B",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "parent": "ISSUE_3",
+    "priority": 2,
+    "status": "open",
+    "title": "Phase 1",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== close task B triggers auto-close ===
+[
+  {
+    "close_reason": "Closed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_4",
+    "issue_type": "task",
+    "owner": "testactor@example.com",
+    "parent": "ISSUE_2",
+    "priority": 2,
+    "status": "closed",
+    "title": "Task B",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== parent auto-closed ===
+[
+  {
+    "close_reason": "Auto-closed: all children completed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_3",
+        "issue_type": "epic",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Project Alpha",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_1",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Task A",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_4",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Task B",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "parent": "ISSUE_3",
+    "priority": 2,
+    "status": "closed",
+    "title": "Phase 1",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== grandparent auto-closed ===
+[
+  {
+    "close_reason": "Auto-closed: all children completed",
+    "closed_at": "TIMESTAMP",
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_2",
+        "issue_type": "epic",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Phase 1",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_3",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "closed",
+    "title": "Project Alpha",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== parent stays open when auto-close off ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_5",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "closed",
+        "title": "Only child",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_6",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Project Beta",
+    "updated_at": "TIMESTAMP"
+  }
+]
+

@@ -41,8 +41,9 @@ func caseMeow(r *Runner, n *Normalizer, sandbox string) (string, error) {
 
 	// Set BD_ACTOR=testuser for claim/close/current commands.
 	// Runner.Run() passes os.Environ() to child processes, so this flows through.
+	origActor := os.Getenv("BD_ACTOR")
 	os.Setenv("BD_ACTOR", "testuser")
-	defer os.Unsetenv("BD_ACTOR")
+	defer os.Setenv("BD_ACTOR", origActor)
 
 	// 2. Cook — dry-run preview.
 	result, err := mustRun(r, sandbox, "cook", "test-workflow", "--var", "name=demo", "--json")

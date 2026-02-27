@@ -1,0 +1,128 @@
+=== graph cross-parent text ===
+ISSUE_1 [○ open] - Setup Infrastructure
+├── ○ ISSUE_2  Provision servers
+│   └── ● ISSUE_3  Deploy infrastructure  [blocked by: ISSUE_2]
+└── ○ ISSUE_4  Configure monitoring
+
+ISSUE_5 [● parent blocked by: ISSUE_1] - Build Application
+├── ● ISSUE_6  Implement auth  [parent blocked]
+└── ● ISSUE_7  Build API  [parent blocked]
+
+Standalone (no parent)
+└── ○ ISSUE_8  Update docs
+
+
+=== graph cross-parent json ===
+{
+  "cascade_parent_blocking": true,
+  "groups": [
+    {
+      "blocked_by": null,
+      "parent_id": "ISSUE_1",
+      "parent_status": "open",
+      "parent_title": "Setup Infrastructure",
+      "parent_type": "epic",
+      "tasks": [
+        {
+          "blocks": [],
+          "direct_blockers": [],
+          "effectively_blocked": false,
+          "id": "ISSUE_4",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Configure monitoring"
+        },
+        {
+          "blocks": [],
+          "direct_blockers": [
+            "ISSUE_2"
+          ],
+          "effectively_blocked": true,
+          "id": "ISSUE_3",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Deploy infrastructure"
+        },
+        {
+          "blocks": [
+            "ISSUE_3"
+          ],
+          "direct_blockers": [],
+          "effectively_blocked": false,
+          "id": "ISSUE_2",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Provision servers"
+        }
+      ]
+    },
+    {
+      "blocked_by": [
+        "ISSUE_1"
+      ],
+      "parent_id": "ISSUE_5",
+      "parent_status": "open",
+      "parent_title": "Build Application",
+      "parent_type": "epic",
+      "tasks": [
+        {
+          "blocks": [],
+          "direct_blockers": [],
+          "effectively_blocked": true,
+          "id": "ISSUE_7",
+          "inherited_blockers": [
+            "ISSUE_1"
+          ],
+          "status": "open",
+          "title": "Build API"
+        },
+        {
+          "blocks": [],
+          "direct_blockers": [],
+          "effectively_blocked": true,
+          "id": "ISSUE_6",
+          "inherited_blockers": [
+            "ISSUE_1"
+          ],
+          "status": "open",
+          "title": "Implement auth"
+        }
+      ]
+    }
+  ],
+  "standalone": [
+    {
+      "blocks": [],
+      "direct_blockers": [],
+      "effectively_blocked": false,
+      "id": "ISSUE_8",
+      "inherited_blockers": [],
+      "status": "open",
+      "title": "Update docs"
+    }
+  ],
+  "waves": [
+    {
+      "issues": [
+        "ISSUE_2",
+        "ISSUE_4",
+        "ISSUE_8"
+      ],
+      "wave": 0
+    },
+    {
+      "issues": [
+        "ISSUE_3"
+      ],
+      "wave": 1
+    },
+    {
+      "issues": [
+        "ISSUE_6",
+        "ISSUE_7"
+      ],
+      "wave": 2
+    }
+  ]
+}
+

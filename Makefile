@@ -35,6 +35,9 @@ update-e2e:
 	@test -x "$(BD_REF_CMD)" || (echo "error: $(BD_REF_CMD) is not executable" && exit 1)
 	BD_CMD=$(BD_REF_CMD) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/reference -update -v -count=1 $(ARGS)
 
+update-lite-e2e: build
+	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/reference -update-lite -v -count=1 $(ARGS)
+
 build:
 	go build -o bd ./cmd
 

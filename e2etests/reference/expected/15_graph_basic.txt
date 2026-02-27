@@ -1,0 +1,90 @@
+=== graph parent text ===
+ISSUE_1 [○ open] - Setup Infrastructure
+└── ○ ISSUE_2  Provision servers
+    ├── ● ISSUE_3  Configure networking  [blocked by: ISSUE_2]
+    │   └── ● ISSUE_4  Integration tests  [blocked by: ISSUE_2, ISSUE_3]
+    └── ↗ ISSUE_4  (see above)
+
+
+=== graph parent json ===
+{
+  "cascade_parent_blocking": true,
+  "groups": [
+    {
+      "blocked_by": null,
+      "parent_id": "ISSUE_1",
+      "parent_status": "open",
+      "parent_title": "Setup Infrastructure",
+      "parent_type": "epic",
+      "tasks": [
+        {
+          "blocks": [
+            "ISSUE_4"
+          ],
+          "direct_blockers": [
+            "ISSUE_2"
+          ],
+          "effectively_blocked": true,
+          "id": "ISSUE_3",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Configure networking"
+        },
+        {
+          "blocks": [],
+          "direct_blockers": [
+            "ISSUE_2",
+            "ISSUE_3"
+          ],
+          "effectively_blocked": true,
+          "id": "ISSUE_4",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Integration tests"
+        },
+        {
+          "blocks": [
+            "ISSUE_3",
+            "ISSUE_4"
+          ],
+          "direct_blockers": [],
+          "effectively_blocked": false,
+          "id": "ISSUE_2",
+          "inherited_blockers": [],
+          "status": "open",
+          "title": "Provision servers"
+        }
+      ]
+    }
+  ],
+  "standalone": [],
+  "waves": [
+    {
+      "issues": [
+        "ISSUE_2"
+      ],
+      "wave": 0
+    },
+    {
+      "issues": [
+        "ISSUE_3"
+      ],
+      "wave": 1
+    },
+    {
+      "issues": [
+        "ISSUE_4"
+      ],
+      "wave": 2
+    }
+  ]
+}
+
+=== graph global text ===
+ISSUE_1 [○ open] - Setup Infrastructure
+└── ○ ISSUE_2  Provision servers
+    ├── ● ISSUE_3  Configure networking  [blocked by: ISSUE_2]
+    │   └── ● ISSUE_4  Integration tests  [blocked by: ISSUE_2, ISSUE_3]
+    └── ↗ ISSUE_4  (see above)
+
+

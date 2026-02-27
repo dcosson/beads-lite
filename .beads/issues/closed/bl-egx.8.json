@@ -2,7 +2,7 @@
   "id": "bl-egx.8",
   "title": "Implement bd graph command",
   "description": "New command in internal/cmd/graph.go, registered in internal/cmd/root.go.\n\nUsage: bd graph [parent-id] [--waves] [--json]\n\nTree rendering with back-references:\n- DFS traversal of blocking dependencies within each parent group\n- Each node appears once at primary position, subsequent refs show ↗ marker\n- Status icons: ○ open/ready, ◐ in_progress, ● blocked, ✓ closed\n- Annotations: [parent blocked] for inherited, [blocked by: X, Y] for direct\n- Parent groups sorted topologically by blocking edges\n- Global mode (no args): groups by immediate parent, includes standalone section\n\n--waves: show wave grouping using TopologicalWavesAcrossParents\n--json: structured output per design doc schema\n\nSee GRAPH_AND_CASCADE_DESIGN.md 'bd graph Command' section. Include unit tests for tree rendering, back-references, annotations, JSON output.",
-  "status": "open",
+  "status": "closed",
   "priority": 2,
   "type": "task",
   "parent": "bl-egx",
@@ -33,5 +33,7 @@
   ],
   "assignee": "beads-coder",
   "created_at": "2026-02-27T12:40:31.033717-08:00",
-  "updated_at": "2026-02-27T13:49:37.401109-08:00"
+  "updated_at": "2026-02-27T14:05:22.478037-08:00",
+  "closed_at": "2026-02-27T14:05:22.478037-08:00",
+  "close_reason": "Closed"
 }

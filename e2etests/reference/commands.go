@@ -44,6 +44,7 @@ var knownCommands = map[string]bool{
 	"mol squash":      true,
 	"mol gc":          true,
 	"cook":            true,
+	"graph":           true,
 }
 
 // nonParentCommands are commands that do NOT have subcommands.

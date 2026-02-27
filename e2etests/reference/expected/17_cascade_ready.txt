@@ -1,0 +1,187 @@
+=== ready cascade on ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix typo",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Foundation",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== blocked cascade on ===
+[
+  {
+    "blocked_by": [
+      "ISSUE_2"
+    ],
+    "blocked_by_count": 1,
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_3",
+    "issue_type": "epic",
+    "priority": 2,
+    "status": "open",
+    "title": "Application",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "blocked_by": null,
+    "blocked_by_count": 1,
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_4",
+    "inherited_blockers": [
+      {
+        "ancestor_id": "ISSUE_3",
+        "blocker_id": "ISSUE_2"
+      }
+    ],
+    "issue_type": "task",
+    "priority": 2,
+    "status": "open",
+    "title": "Build API",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "blocked_by": null,
+    "blocked_by_count": 1,
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_5",
+    "inherited_blockers": [
+      {
+        "ancestor_id": "ISSUE_3",
+        "blocker_id": "ISSUE_2"
+      }
+    ],
+    "issue_type": "task",
+    "priority": 2,
+    "status": "open",
+    "title": "Build auth",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== show blocked epic ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "dependencies": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "blocks",
+        "id": "ISSUE_2",
+        "issue_type": "epic",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Foundation",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "dependents": [
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_4",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Build API",
+        "updated_at": "TIMESTAMP"
+      },
+      {
+        "created_at": "TIMESTAMP",
+        "created_by": "testactor",
+        "dependency_type": "parent-child",
+        "id": "ISSUE_5",
+        "issue_type": "task",
+        "owner": "testactor@example.com",
+        "priority": 2,
+        "status": "open",
+        "title": "Build auth",
+        "updated_at": "TIMESTAMP"
+      }
+    ],
+    "id": "ISSUE_3",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Application",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== ready cascade off ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix typo",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Foundation",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
+=== ready after closing blocker ===
+[
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_1",
+    "issue_type": "task",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Fix typo",
+    "updated_at": "TIMESTAMP"
+  },
+  {
+    "created_at": "TIMESTAMP",
+    "created_by": "testactor",
+    "id": "ISSUE_2",
+    "issue_type": "epic",
+    "owner": "testactor@example.com",
+    "priority": 2,
+    "status": "open",
+    "title": "Foundation",
+    "updated_at": "TIMESTAMP"
+  }
+]
+
