@@ -33,4 +33,8 @@ if [ ! -d "$SANDBOX_DIR/.beads" ]; then
     fi
 fi
 
+# Disable auto-close parent: the reference implementation doesn't have this
+# feature, so reference comparison tests need it off.
+BEADS_DIR="$SANDBOX_DIR" $BD_CMD config set graph.auto_close_parent false > /dev/null 2>&1
+
 echo "$SANDBOX_DIR"
