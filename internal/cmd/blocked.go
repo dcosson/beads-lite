@@ -4,23 +4,31 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
 )
 
+// InheritedBlockerJSON represents a blocking constraint inherited from an ancestor.
+type InheritedBlockerJSON struct {
+	AncestorID string `json:"ancestor_id"`
+	BlockerID  string `json:"blocker_id"`
+}
+
 // BlockedIssueJSON represents a blocked issue with blocked_by info for JSON output.
 type BlockedIssueJSON struct {
-	BlockedBy      []string `json:"blocked_by"`
-	BlockedByCount int      `json:"blocked_by_count"`
-	CreatedAt      string   `json:"created_at"`
-	CreatedBy      string   `json:"created_by,omitempty"`
-	ID             string   `json:"id"`
-	IssueType      string   `json:"issue_type"`
-	Priority       int      `json:"priority"`
-	Status         string   `json:"status"`
-	Title          string   `json:"title"`
-	UpdatedAt      string   `json:"updated_at"`
+	BlockedBy         []string               `json:"blocked_by"`
+	BlockedByCount    int                    `json:"blocked_by_count"`
+	InheritedBlockers []InheritedBlockerJSON `json:"inherited_blockers,omitempty"`
+	CreatedAt         string                 `json:"created_at"`
+	CreatedBy         string                 `json:"created_by,omitempty"`
+	ID                string                 `json:"id"`
+	IssueType         string                 `json:"issue_type"`
+	Priority          int                    `json:"priority"`
+	Status            string                 `json:"status"`
+	Title             string                 `json:"title"`
+	UpdatedAt         string                 `json:"updated_at"`
 }
 
 // newBlockedCmd creates the blocked command.
@@ -66,24 +74,42 @@ An issue is blocked if:
 				closedSet[issue.ID] = true
 			}
 
+			// Read cascade config flag
+			cascade := cascadeEnabled(app)
+
 			// Find blocked issues and what they're waiting on
 			blocked := []BlockedIssueJSON{} // Initialize as empty slice (marshals to [] not null)
 			for _, issue := range issues {
-				waitingOn := getWaitingOn(issue, closedSet)
-				if len(waitingOn) > 0 {
-					blocked = append(blocked, BlockedIssueJSON{
-						BlockedBy:      waitingOn,
-						BlockedByCount: len(waitingOn),
-						CreatedAt:      formatTime(issue.CreatedAt),
-						CreatedBy:      issue.CreatedBy,
-						ID:             issue.ID,
-						IssueType:      string(issue.Type),
-						Priority:       priorityToInt(issue.Priority),
-						Status:         string(issue.Status),
-						Title:          issue.Title,
-						UpdatedAt:      formatTime(issue.UpdatedAt),
+				result, err := graph.EffectiveBlockers(ctx, app.Storage, issue, closedSet, cascade)
+				if err != nil {
+					return fmt.Errorf("checking blockers for %s: %w", issue.ID, err)
+				}
+				if !result.HasBlockers() {
+					continue
+				}
+
+				var inheritedJSON []InheritedBlockerJSON
+				for _, ib := range result.Inherited {
+					inheritedJSON = append(inheritedJSON, InheritedBlockerJSON{
+						AncestorID: ib.AncestorID,
+						BlockerID:  ib.BlockerID,
 					})
 				}
+
+				allIDs := result.AllBlockerIDs()
+				blocked = append(blocked, BlockedIssueJSON{
+					BlockedBy:         result.Direct,
+					BlockedByCount:    len(allIDs),
+					InheritedBlockers: inheritedJSON,
+					CreatedAt:         formatTime(issue.CreatedAt),
+					CreatedBy:         issue.CreatedBy,
+					ID:                issue.ID,
+					IssueType:         string(issue.Type),
+					Priority:          priorityToInt(issue.Priority),
+					Status:            string(issue.Status),
+					Title:             issue.Title,
+					UpdatedAt:         formatTime(issue.UpdatedAt),
+				})
 			}
 
 			if app.JSON {
@@ -98,7 +124,13 @@ An issue is blocked if:
 			fmt.Fprintf(app.Out, "Blocked issues (%d):\n\n", len(blocked))
 			for _, bi := range blocked {
 				fmt.Fprintf(app.Out, "  %s  %s\n", bi.ID, bi.Title)
-				fmt.Fprintf(app.Out, "    Waiting on: %v\n\n", bi.BlockedBy)
+				if len(bi.BlockedBy) > 0 {
+					fmt.Fprintf(app.Out, "    Waiting on: %v\n", bi.BlockedBy)
+				}
+				for _, ib := range bi.InheritedBlockers {
+					fmt.Fprintf(app.Out, "    Parent blocked: %s blocked by %s\n", ib.AncestorID, ib.BlockerID)
+				}
+				fmt.Fprintln(app.Out)
 			}
 
 			return nil
@@ -108,18 +140,3 @@ An issue is blocked if:
 	return cmd
 }
 
-// getWaitingOn returns a list of issue IDs that this issue is waiting on.
-// Only "blocks" type dependencies prevent readiness.
-func getWaitingOn(issue *issuestorage.Issue, closedSet map[string]bool) []string {
-	var waitingOn []string
-	seen := make(map[string]bool)
-
-	for _, dep := range issue.Dependencies {
-		if dep.Type == issuestorage.DepTypeBlocks && !closedSet[dep.ID] && !seen[dep.ID] {
-			waitingOn = append(waitingOn, dep.ID)
-			seen[dep.ID] = true
-		}
-	}
-
-	return waitingOn
-}

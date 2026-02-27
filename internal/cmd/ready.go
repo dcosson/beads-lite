@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
@@ -93,6 +94,9 @@ are shown, along with parallel group info.`,
 				closedSet[issue.ID] = true
 			}
 
+			// Read cascade config flag
+			cascade := cascadeEnabled(app)
+
 			// Filter to only ready issues, excluding ephemeral and
 			// (when not in --mol mode) molecule steps.
 			var ready []*issuestorage.Issue
@@ -106,7 +110,11 @@ are shown, along with parallel group info.`,
 				if molID == "" && issue.Parent != "" {
 					continue
 				}
-				if isReady(issue, closedSet) {
+				blocked, err := graph.IsEffectivelyBlocked(ctx, app.Storage, issue, closedSet, cascade)
+				if err != nil {
+					return fmt.Errorf("checking blocked status for %s: %w", issue.ID, err)
+				}
+				if !blocked {
 					ready = append(ready, issue)
 				}
 			}
@@ -159,14 +167,15 @@ are shown, along with parallel group info.`,
 	return cmd
 }
 
-// isReady returns true if an issue is ready to work on.
-// An issue is ready if all its "blocks" type dependencies are closed.
-// Other dependency types (tracks, related, etc.) do not block readiness.
-func isReady(issue *issuestorage.Issue, closedSet map[string]bool) bool {
-	for _, dep := range issue.Dependencies {
-		if dep.Type == issuestorage.DepTypeBlocks && !closedSet[dep.ID] {
-			return false // Blocking dependency not closed
-		}
+// cascadeEnabled reads the graph.cascade_parent_blocking config flag.
+// Returns true (the default) if the flag is not set or is "true".
+func cascadeEnabled(app *App) bool {
+	if app.ConfigStore == nil {
+		return true
 	}
-	return true
+	v, ok := app.ConfigStore.Get("graph.cascade_parent_blocking")
+	if !ok {
+		return true
+	}
+	return v != "false"
 }

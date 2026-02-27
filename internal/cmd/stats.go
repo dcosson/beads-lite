@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
 	"github.com/spf13/cobra"
 )
@@ -65,8 +66,13 @@ func newStatsCmd(provider *AppProvider) *cobra.Command {
 				switch issue.Status {
 				case issuestorage.StatusOpen:
 					summary.OpenIssues++
-					// Check if ready (no unclosed blocking deps)
-					if isReady(issue, closedSet) {
+					// Check if ready (no unclosed blocking deps, including inherited)
+					cascade := cascadeEnabled(app)
+					blocked, err := graph.IsEffectivelyBlocked(ctx, app.Storage, issue, closedSet, cascade)
+					if err != nil {
+						return fmt.Errorf("checking blocked status for %s: %w", issue.ID, err)
+					}
+					if !blocked {
 						summary.ReadyIssues++
 					}
 				case issuestorage.StatusInProgress:
