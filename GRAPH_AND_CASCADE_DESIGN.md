@@ -198,11 +198,23 @@ AutoCloseAncestors(store, issueID, autoClose):
 
     closed = []
     currentID = store.Get(issueID).Parent
+    visited = {}
 
-    while currentID != "":
+    while currentID != "" and currentID not in visited:
+        visited.add(currentID)
         parent = store.Get(currentID)
+
         if parent.Status == closed:
-            break  // already closed, stop
+            // Already closed — don't re-close, but DO continue up
+            // the chain. A grandparent may now qualify for auto-close
+            // if this closed parent was the last holdout.
+            currentID = parent.Parent
+            continue
+
+        // Skip gate and molecule types — they have manual lifecycle semantics
+        if parent.Type in [gate, molecule]:
+            currentID = parent.Parent
+            continue
 
         allChildrenClosed = true
         for childID in parent.Children():
@@ -212,9 +224,12 @@ AutoCloseAncestors(store, issueID, autoClose):
                 break
 
         if not allChildrenClosed:
-            break
+            break  // this ancestor still has open children, stop
 
-        store.Modify(currentID, func(p) { p.Status = closed })
+        store.Modify(currentID, func(p) {
+            p.Status = closed
+            p.CloseReason = "Auto-closed: all children completed"
+        })
         closed.append(currentID)
         currentID = parent.Parent
 
@@ -238,10 +253,11 @@ Auto-closing a parent can have cascading effects: if parent B was blocking paren
 
 ### Edge Cases
 
-- **Parent has no children** — A parent with zero children won't auto-close (there are no children to be "all closed"). This is correct; an empty parent is not "done."
-- **Parent is already closed** — Stop recursion, don't re-close.
-- **Mixed issue types** — Works the same regardless of parent type (epic, task, bug, etc.).
-- **Close reason** — Auto-closed parents get a default close reason like "Auto-closed: all children completed" to distinguish from manual closes.
+- **Ancestor with zero resolved child links** — If an ancestor currently has no children (empty Children() list), skip auto-close for that node and continue traversal upward.
+- **Already-closed ancestor** — Skip (don't re-close), but continue walking up. A grandparent may now qualify if this was the last open child.
+- **Gate and molecule types** — Excluded from auto-close. These have manual lifecycle semantics (gates are explicitly opened/closed, molecules are managed by swarm). Traversal continues past them.
+- **Mixed issue types** — All other types (epic, task, bug, feature, chore) are eligible for auto-close regardless of type.
+- **Close reason** — Auto-closed parents get `CloseReason: "Auto-closed: all children completed"` to distinguish from manual closes.
 
 ## Cross-Parent Topological Waves
 
@@ -269,6 +285,17 @@ func TopologicalWavesAcrossParents(
 ) ([][]string, map[string]*issuestorage.Issue, error)
 ```
 
+### Blocking Frontier
+
+When parent A is blocked by parent B, we need to identify which tasks in B must complete before tasks in A can start. We call this the **blocking frontier** of B — the set of dependency-graph sinks within B's subtree (tasks that no other task within B depends on, i.e. they have no intra-set DepTypeBlocks dependents).
+
+Important: "blocking frontier" is determined by the **dependency graph** (DepTypeBlocks edges), not the parent-child hierarchy. A task with children (a sub-parent) can still be a dependency sink if nothing within its sibling set depends on it.
+
+**Blocker normalization**: The blocker in a parent-level `blocks` dep might not itself be a parent issue — it could be a regular task. In that case, the blocking frontier is just that single task. The rule:
+- If blocker has descendants in the task set → use its dependency sinks
+- If blocker is a leaf task in the task set → use that task directly
+- If blocker is outside the task set entirely → emit a warning, skip
+
 ### Algorithm
 
 ```
@@ -289,28 +316,62 @@ TopologicalWavesAcrossParents(store, rootID, cascade):
 
     // 3. If cascade, find parent-level blocking edges and inject synthetic task edges
     if cascade:
-        // For each parent at any level, check its blocking deps
         for parent in parents:
             for dep in parent.Dependencies where dep.Type == blocks:
                 blockerID = dep.ID
 
-                // Find all leaf tasks under the blocked parent
-                blockedLeaves = leafTasksUnder(parent.ID, taskSet)
-                // Find all leaf tasks under the blocking parent
-                blockerLeaves = leafTasksUnder(blockerID, taskSet)
+                // Blocker normalization: determine the blocking frontier
+                blockerFrontier = blockingFrontier(blockerID, taskSet)
+                // All root tasks under the blocked parent (tasks with no
+                // intra-set blockers) get synthetic edges to the frontier
+                blockedRoots = rootTasksUnder(parent.ID, taskSet)
 
-                if len(blockerLeaves) > 0 and len(blockedLeaves) > 0:
-                    // Inject synthetic edges: every leaf under blocked parent
-                    // depends on every leaf under blocking parent
-                    for task in blockedLeaves:
-                        for leaf in blockerLeaves:
-                            addSyntheticEdge(task, leaf)
+                for task in blockedRoots:
+                    for frontierTask in blockerFrontier:
+                        addSyntheticEdge(task, frontierTask)
 
     // 4. Run TopologicalWaves on the expanded edge set
     return TopologicalWaves(leafTasks)  // with synthetic edges included
+
+blockingFrontier(blockerID, taskSet):
+    descendants = tasksUnder(blockerID, taskSet)
+    if len(descendants) == 0:
+        if blockerID in taskSet:
+            return [blockerID]  // blocker is itself a leaf task
+        return []               // blocker outside set, skip
+
+    // Find dependency sinks: tasks with no intra-set DepTypeBlocks dependents
+    hasDependents = set()
+    for task in descendants:
+        for depID in task.DependencyIDs(DepTypeBlocks):
+            if depID in descendants:
+                hasDependents.add(depID)  // depID has someone depending on it
+    // Wait, that's inverted. Let me be precise:
+    // A sink is a task where no other task in the set has a DepTypeBlocks
+    // dependency on it (i.e., nothing is waiting for it to finish — it's
+    // the last thing that finishes).
+    hasBlockedBy = set()  // tasks that block something else
+    for task in descendants:
+        for depID in task.DependencyIDs(DepTypeBlocks):
+            if depID in descendantSet:
+                hasBlockedBy.add(depID)
+    sinks = [t for t in descendants if t.ID not in hasBlockedBy]
+    // Actually: a sink has no outgoing "blocks" edges within the set.
+    // Meaning: no other task in the set lists this task in its Dependencies.
+    // Equivalently: this task has no DepTypeBlocks dependents within the set.
+    sinks = []
+    for task in descendants:
+        hasDep = false
+        for other in descendants:
+            if task.ID in other.DependencyIDs(DepTypeBlocks):
+                hasDep = true
+                break
+        if not hasDep:
+            sinks.append(task)
+    return sinks
 ```
 
-The synthetic edges are not persisted — they exist only during wave computation. They correctly model the semantics: tasks under Parent A cannot start until all tasks under Parent B are complete (the leaf tasks in B are the last to finish, so depending on them is sufficient).
+The synthetic edges are not persisted — they exist only during wave computation. They correctly model the semantics: tasks under Parent A cannot start until all tasks under Parent B are complete. The blocking frontier captures the "last to finish" tasks in B — everything upstream is transitively covered.
 
 ### Multi-Level Hierarchy
 
@@ -327,7 +388,7 @@ Root
 └── Task D (standalone child of Root)
 ```
 
-Leaf tasks are [B2, B3, C1, C2, D]. The blocking edge from Sub-Parent B to Sub-Parent C means B's leaves depend on C's leaves. Synthetic edges: B2→C1, B2→C2, B3→C1, B3→C2. Task D has no parent-level constraints so it appears in wave 0 alongside C1 and C2.
+Leaf tasks: [B1, B2, B3, C1, C2, D]. Blocking frontier of Sub-Parent C: C1 and C2 (both are sinks — neither has intra-set dependents). Root tasks of Sub-Parent B: B1 and B3 (they have no intra-set blockers). Synthetic edges: B1→C1, B1→C2, B3→C1, B3→C2.
 
 Result:
 ```
@@ -336,11 +397,11 @@ Wave 1: [B1, B3]      ← C done, B's roots unblocked; D already in wave 0
 Wave 2: [B2]           ← depends on B1
 ```
 
-### Why Leaf Tasks?
+### Why the Blocking Frontier?
 
-If Parent B has: B1 → B2 → B3 (linear chain), we only need edges from A-tasks to B3. B3 can't finish until B1 and B2 are done (transitively), so depending on B3 implies waiting for all of Parent B.
+If Parent B has: B1 → B2 → B3 (linear chain), B3 is the only sink. We inject edges from A's root tasks to B3. B3 can't finish until B1 and B2 are done (transitively), so depending on B3 implies waiting for all of Parent B.
 
-If Parent B has: B1, B2, B3 (no internal deps), all three are leaves, and A-tasks depend on all of them — which is correct since all three must finish independently.
+If Parent B has: B1, B2, B3 (no internal deps), all three are sinks, and A's root tasks depend on all of them — which is correct since all three must finish independently.
 
 ## `bd graph` Command
 
@@ -613,6 +674,72 @@ sequenceDiagram
     GraphCmd-->>User: ASCII tree output
 ```
 
+## Error Handling Policy
+
+When `EffectiveBlockers` walks the parent chain and encounters errors (missing issues, corrupt files, routing failures):
+
+**Policy: Resilient mode.** Do not fail the entire command. Instead:
+- Log a warning to stderr: `warning: could not resolve ancestor <id>: <error>`
+- Return what we have so far — direct blockers are always available, inherited blockers may be partial
+- The issue is annotated in output as having "unknown inherited blocker state" so the user knows the result may be incomplete
+
+This ensures that one malformed issue in the hierarchy doesn't break `bd ready`, `bd blocked`, or `bd graph` for all issues.
+
+For `AutoCloseAncestors`, same policy: if a `Get` or `Modify` fails mid-chain, log a warning, return the list of successfully auto-closed ancestors so far, and don't propagate the error as a command failure.
+
+## Close Command JSON Schema Changes
+
+The `bd close` JSON output format changes with auto-close. This is a **breaking change** for the plain `--json` variant.
+
+### `bd close --json` (no other flags)
+
+**Before**: `[]IssueJSON` (array of closed issues)
+
+**After**:
+```json
+{
+  "closed": [<IssueJSON>, ...],
+  "auto_closed": [
+    {"id": "bd-e1", "title": "Setup Infrastructure", "reason": "Auto-closed: all children completed"}
+  ]
+}
+```
+
+`auto_closed` is always present (empty array if nothing was auto-closed).
+
+### `bd close --json --continue`
+
+**Before**: `{"closed": [<IssueJSON>], "continue": <CloseContinueJSON>}`
+
+**After**: Same structure, adds `auto_closed` field:
+```json
+{
+  "closed": [<IssueJSON>],
+  "continue": <CloseContinueJSON>,
+  "auto_closed": [...]
+}
+```
+
+### `bd close --json --suggest-next`
+
+**Before**: `[]IssueJSON`
+
+**After**: Same as plain `--json`:
+```json
+{
+  "closed": [<IssueJSON>],
+  "auto_closed": [...],
+  "unblocked": [{"id": "bd-t4", "title": "Implement auth"}]
+}
+```
+
+### Backward Compatibility
+
+The plain `--json` change from array to object is breaking. This is acceptable because:
+1. beads-lite is pre-1.0, JSON output is not yet a stable API
+2. The change is documented in release notes
+3. Consumers can detect the change by checking if the response is an array vs object
+
 ## Performance Considerations
 
 ### Parent Chain Walks
@@ -674,9 +801,13 @@ This avoids re-reading the same parent issue for every child task. The cache liv
    - Not all children closed → parent stays open
    - Multi-level: closing last child auto-closes parent, which auto-closes grandparent
    - autoClose=false → no auto-closing
-   - Parent already closed → stops recursion
-   - Parent has no children → no auto-close
-   - Mixed issue types as parents → all work
+   - Already-closed ancestor → skip but continue up (don't stop)
+   - Already-closed ancestor with open grandparent that qualifies → grandparent auto-closed
+   - Ancestor with zero children → skip, continue traversal
+   - Gate type ancestor → skip, continue traversal
+   - Molecule type ancestor → skip, continue traversal
+   - Mixed issue types as parents → all non-gate/molecule types work
+   - Get error mid-chain → log warning, return partial results
 
 ### Unit Tests (cmd package)
 
@@ -708,16 +839,44 @@ This avoids re-reading the same parent issue for every child task. The cache liv
 
 Tasks should be implemented in this order due to dependencies:
 
-1. **Config flags** — Add `graph.cascade_parent_blocking` and `graph.auto_close_parent` to defaults.go
-2. **EffectiveBlockers + IsEffectivelyBlocked** — Core primitive in graph package with unit tests
-3. **AutoCloseAncestors** — Auto-close logic in graph package with unit tests
-4. **Update bd ready** — Replace isReady() with IsEffectivelyBlocked
-5. **Update bd blocked** — Use EffectiveBlockers for richer output
-6. **Update bd show** — Add inherited blocks section
-7. **Update bd close** — Respect parent blocking in unblocked-dependent detection + auto-close parents
-8. **TopologicalWavesAcrossParents** — Cross-parent wave computation
-9. **bd graph command** — New command with tree rendering
-10. **Update bd swarm** — Thread cascade through ClassifySteps/FindReadySteps
-11. **E2E golden file tests** — End-to-end validation
+1. **Config flags** — Add `graph.cascade_parent_blocking` and `graph.auto_close_parent` to `internal/config/defaults.go`. Update `internal/config/validate.go` if needed. Add config tests to `internal/config/config_test.go`.
+2. **EffectiveBlockers + IsEffectivelyBlocked** — Core primitive in `internal/graph/graph.go` (or new file `internal/graph/effective_blockers.go`). Unit tests in `internal/graph/graph_test.go`.
+3. **AutoCloseAncestors** — Auto-close logic in `internal/graph/auto_close.go`. Unit tests in `internal/graph/auto_close_test.go`.
+4. **Update bd ready** — Modify `internal/cmd/ready.go`: replace `isReady()` with `graph.IsEffectivelyBlocked()`. Delete `isReady` helper. Update `internal/cmd/ready_test.go`.
+5. **Update bd blocked** — Modify `internal/cmd/blocked.go`: replace `getWaitingOn()` with `graph.EffectiveBlockers()`. Update `internal/cmd/blocked_test.go`.
+6. **Update bd show** — Modify `internal/cmd/show.go`: add inherited blocks section in `outputIssue()`. Update `internal/cmd/show_test.go`.
+7. **Update bd close** — Modify `internal/cmd/close.go`: update `findUnblockedDependents()` to use `IsEffectivelyBlocked`, integrate `AutoCloseAncestors`, update JSON output schemas. Update `internal/cmd/close_test.go`.
+8. **TopologicalWavesAcrossParents** — New function in `internal/graph/cross_parent_waves.go`. Unit tests in `internal/graph/cross_parent_waves_test.go`.
+9. **bd graph command** — New file `internal/cmd/graph.go`, register in `internal/cmd/root.go`. Tests in `internal/cmd/graph_test.go`.
+10. **Update bd swarm** — Modify `internal/cmd/swarm.go`: thread `cascade bool` through `ClassifySteps`/`FindReadySteps`. Update `internal/cmd/swarm_test.go`.
+11. **E2E golden file tests** — New test cases in `e2etests/reference/`.
 
 Steps 2-3 can be parallelized. Steps 4-7 can be parallelized after steps 2-3 complete. Steps 8-9 can be parallelized. Step 10 depends on step 2.
+
+### Unchanged Behaviors
+
+The following commands/behaviors are explicitly **not changed**:
+- `bd dep add/remove` — mutation operations, already correct
+- `bd dep list` — shows literal stored relationships, not computed state
+- `bd create --deps/--parent` — creates deps as stored, no cascade logic
+- `bd delete --cascade` — follows stored edges for cleanup, unrelated to blocking cascade
+- `bd children` — shows literal parent-child hierarchy
+- Issue `.Status` field — never mutated by inherited blocking (display-only)
+
+## Review Disposition
+
+Incorporates feedback from `GRAPH_AND_CASCADE_DESIGN-review.md` (beads-reviewer).
+
+| # | Finding | Severity | Disposition | Resolution |
+|---|---------|----------|-------------|------------|
+| 1 | Leaf vs sink confusion in wave algorithm | High | **Accepted** | Replaced "leaf tasks" with "blocking frontier" concept (dependency-graph sinks). Added formal `blockingFrontier()` function and `Blocking Frontier` section. |
+| 2 | Blocker can be a regular task, not a parent | High | **Accepted** | Added blocker normalization: if blocker has no descendants, use it directly. If it has descendants, use its sinks. If outside set, warn and skip. |
+| 3 | Close JSON contract underspecified/breaking | High | **Accepted** | Added full "Close Command JSON Schema Changes" section with exact schemas for all flag combinations. Documented as breaking pre-1.0 change. |
+| 4 | Auto-close stop on already-closed parent | High | **Accepted** | Fixed algorithm: already-closed ancestors are skipped (not re-closed) but traversal continues upward. Added cycle guard with visited set. |
+| 5 | Error handling for parent chain walks | Medium | **Accepted** | Added "Error Handling Policy" section: resilient mode — log warnings, return partial results, don't fail whole command. |
+| 6 | Config validation/test updates missing | Medium | **Accepted** | Updated implementation plan with explicit file paths including `validate.go` and `config_test.go`. |
+| 7 | File paths don't match repo layout | Medium | **Accepted** | Updated all implementation plan entries with correct `internal/cmd/`, `internal/graph/`, `internal/config/` paths and specific function names. |
+| 8 | Zero-children parent edge case contradictory | Low | **Accepted** | Rephrased: "if ancestor has zero resolved child links, skip auto-close and continue traversal." |
+| OQ1 | Should inherited blocks mutate status? | — | **Resolved: No** | Inherited blocking is computed/display-only. Issue `.Status` field is never mutated. Added to "Unchanged Behaviors" section. |
+| OQ2 | Should auto-close apply to molecule/gate? | — | **Resolved: Exclude** | Gate and molecule types are excluded from auto-close (manual lifecycle). Added skip logic in `AutoCloseAncestors` algorithm. |
+| OQ3 | Grouping key for global graph mode? | — | **Resolved: Immediate parent** | Group by immediate parent. Cross-parent blocking edges determine render order of groups, not grouping itself. |
