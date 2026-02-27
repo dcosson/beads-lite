@@ -1,7 +1,7 @@
 BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= /opt/homebrew/bin/bd
 
-.PHONY: test test-unit test-unit-coverage test-e2e test-e2e-reference bench-e2e bench-comparison-e2e update-e2e update-lite-e2e build check check-ci fmt fmt-check vet staticcheck deps
+.PHONY: test test-unit test-unit-coverage test-e2e test-e2e-reference bench-e2e bench-comparison-e2e update-e2e-reference update-e2e-lite build check check-ci fmt fmt-check vet staticcheck deps
 
 test: test-unit test-e2e
 
@@ -44,13 +44,13 @@ bench-comparison-e2e: build
 	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_REF_CMD=$(BD_REF_CMD) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests -run TestBenchmark -compare -v -count=1 $(ARGS)
 
 # Regenerate reference golden files from the original beads binary.
-update-e2e:
+update-e2e-reference:
 	@test -n "$(BD_REF_CMD)" || (echo "error: reference bd not found in PATH" && echo "Install bd or set BD_REF_CMD" && exit 1)
 	@test -x "$(BD_REF_CMD)" || (echo "error: $(BD_REF_CMD) is not executable" && exit 1)
 	BD_CMD=$(BD_REF_CMD) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/reference -run TestGoldenReference -update -v -count=1 $(ARGS)
 
 # Regenerate lite-only golden files from beads-lite.
-update-lite-e2e: build
+update-e2e-lite: build
 	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/reference -run TestGoldenLite -update-lite -v -count=1 $(ARGS)
 
 build:

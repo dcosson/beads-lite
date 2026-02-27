@@ -20,10 +20,10 @@ The `e2etests/reference/` tests are golden file tests. Each `case_<nn>_<name>.go
 To regenerate expected output:
 ```
 # All cases
-make update-e2e
+make update-e2e-reference
 
 # Single case
-make update-e2e ARGS='-run "TestE2E/01_create"'
+make update-e2e-reference ARGS='-run "TestE2E/01_create"'
 ```
 
 Commit the generated `.txt` files after updating.
