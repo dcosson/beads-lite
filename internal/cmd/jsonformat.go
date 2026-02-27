@@ -7,33 +7,40 @@ import (
 	"beads-lite/internal/issuestorage"
 )
 
+// InheritedBlockerJSON represents a blocking constraint inherited from an ancestor (for show JSON).
+type InheritedBlockerShowJSON struct {
+	AncestorID string `json:"ancestor_id"`
+	BlockerID  string `json:"blocker_id"`
+}
+
 // IssueJSON is the JSON output format matching original beads.
 // Used for create, show, and list commands.
 type IssueJSON struct {
-	Assignee        string            `json:"assignee,omitempty"`
-	Comments        []CommentJSON     `json:"comments,omitempty"`
-	CreatedAt       string            `json:"created_at"`
-	CreatedBy       string            `json:"created_by,omitempty"`
-	Dependencies    []EnrichedDepJSON `json:"dependencies,omitempty"`
-	DependencyCount *int              `json:"dependency_count,omitempty"`
-	Dependents      []EnrichedDepJSON `json:"dependents,omitempty"`
-	DependentCount  *int              `json:"dependent_count,omitempty"`
-	Description     string            `json:"description,omitempty"`
-	ID              string            `json:"id"`
-	IssueType       string            `json:"issue_type"`
-	Labels          []string          `json:"labels,omitempty"`
-	Owner           string            `json:"owner,omitempty"`
-	Parent          string            `json:"parent,omitempty"`
-	Priority        int               `json:"priority"`
-	Status          string            `json:"status"`
-	Title           string            `json:"title"`
-	UpdatedAt       string            `json:"updated_at"`
-	CloseReason     string            `json:"close_reason,omitempty"`
-	ClosedAt        string            `json:"closed_at,omitempty"`
-	AwaitType       string            `json:"await_type,omitempty"`
-	AwaitID         string            `json:"await_id,omitempty"`
-	TimeoutNS       int64             `json:"timeout_ns,omitempty"`
-	Waiters         []string          `json:"waiters,omitempty"`
+	Assignee          string                     `json:"assignee,omitempty"`
+	Comments          []CommentJSON              `json:"comments,omitempty"`
+	CreatedAt         string                     `json:"created_at"`
+	CreatedBy         string                     `json:"created_by,omitempty"`
+	Dependencies      []EnrichedDepJSON          `json:"dependencies,omitempty"`
+	DependencyCount   *int                       `json:"dependency_count,omitempty"`
+	Dependents        []EnrichedDepJSON          `json:"dependents,omitempty"`
+	DependentCount    *int                       `json:"dependent_count,omitempty"`
+	Description       string                     `json:"description,omitempty"`
+	ID                string                     `json:"id"`
+	InheritedBlockers []InheritedBlockerShowJSON `json:"inherited_blockers,omitempty"`
+	IssueType         string                     `json:"issue_type"`
+	Labels            []string                   `json:"labels,omitempty"`
+	Owner             string                     `json:"owner,omitempty"`
+	Parent            string                     `json:"parent,omitempty"`
+	Priority          int                        `json:"priority"`
+	Status            string                     `json:"status"`
+	Title             string                     `json:"title"`
+	UpdatedAt         string                     `json:"updated_at"`
+	CloseReason       string                     `json:"close_reason,omitempty"`
+	ClosedAt          string                     `json:"closed_at,omitempty"`
+	AwaitType         string                     `json:"await_type,omitempty"`
+	AwaitID           string                     `json:"await_id,omitempty"`
+	TimeoutNS         int64                      `json:"timeout_ns,omitempty"`
+	Waiters           []string                   `json:"waiters,omitempty"`
 }
 
 // EnrichedDepJSON is a dependency with full issue details for JSON output.

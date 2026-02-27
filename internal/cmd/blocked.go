@@ -10,17 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// InheritedBlockerJSON represents a blocking constraint inherited from an ancestor.
-type InheritedBlockerJSON struct {
-	AncestorID string `json:"ancestor_id"`
-	BlockerID  string `json:"blocker_id"`
-}
-
 // BlockedIssueJSON represents a blocked issue with blocked_by info for JSON output.
 type BlockedIssueJSON struct {
-	BlockedBy         []string               `json:"blocked_by"`
-	BlockedByCount    int                    `json:"blocked_by_count"`
-	InheritedBlockers []InheritedBlockerJSON `json:"inherited_blockers,omitempty"`
+	BlockedBy         []string                   `json:"blocked_by"`
+	BlockedByCount    int                        `json:"blocked_by_count"`
+	InheritedBlockers []InheritedBlockerShowJSON `json:"inherited_blockers,omitempty"`
 	CreatedAt         string                 `json:"created_at"`
 	CreatedBy         string                 `json:"created_by,omitempty"`
 	ID                string                 `json:"id"`
@@ -88,9 +82,9 @@ An issue is blocked if:
 					continue
 				}
 
-				var inheritedJSON []InheritedBlockerJSON
+				var inheritedJSON []InheritedBlockerShowJSON
 				for _, ib := range result.Inherited {
-					inheritedJSON = append(inheritedJSON, InheritedBlockerJSON{
+					inheritedJSON = append(inheritedJSON, InheritedBlockerShowJSON{
 						AncestorID: ib.AncestorID,
 						BlockerID:  ib.BlockerID,
 					})

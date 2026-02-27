@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"beads-lite/internal/graph"
 	"beads-lite/internal/issuestorage"
 
 	"github.com/spf13/cobra"
@@ -202,6 +203,25 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 		}
 	}
 
+	// --- Inherited Blocks (from parent cascade) ---
+	if cascade := cascadeEnabled(app); cascade && issue.Parent != "" {
+		closedSet, err := graph.BuildClosedSet(ctx, app.Storage)
+		if err == nil {
+			result, err := graph.EffectiveBlockers(ctx, getter, issue, closedSet, true)
+			if err == nil && len(result.Inherited) > 0 {
+				fmt.Fprintf(w, "\nInherited Blocks\n")
+				for _, ib := range result.Inherited {
+					blockerIssue, err := getter.Get(ctx, ib.BlockerID)
+					if err == nil {
+						fmt.Fprintf(w, "  ⚡ %s (via %s)\n", formatIssueLine(app, blockerIssue), ib.AncestorID)
+					} else {
+						fmt.Fprintf(w, "  ⚡ %s (via %s)\n", ib.BlockerID, ib.AncestorID)
+					}
+				}
+			}
+		}
+	}
+
 	// --- Comments ---
 	if len(issue.Comments) > 0 {
 		fmt.Fprintf(w, "\nComments (%d)\n", len(issue.Comments))
@@ -220,6 +240,24 @@ func outputIssue(app *App, ctx context.Context, issue *issuestorage.Issue) error
 // Returns an array with the single issue, with enriched dependencies.
 func outputIssueJSON(app *App, ctx context.Context, issue *issuestorage.Issue) error {
 	out := ToIssueJSON(ctx, app.Storage, issue, true, false)
+
+	// Add inherited blockers if cascade is enabled and issue has a parent
+	if cascade := cascadeEnabled(app); cascade && issue.Parent != "" {
+		closedSet, err := graph.BuildClosedSet(ctx, app.Storage)
+		if err == nil {
+			result, err := graph.EffectiveBlockers(ctx, app.Storage, issue, closedSet, true)
+			if err == nil && len(result.Inherited) > 0 {
+				out.InheritedBlockers = make([]InheritedBlockerShowJSON, len(result.Inherited))
+				for i, ib := range result.Inherited {
+					out.InheritedBlockers[i] = InheritedBlockerShowJSON{
+						AncestorID: ib.AncestorID,
+						BlockerID:  ib.BlockerID,
+					}
+				}
+			}
+		}
+	}
+
 	// Original beads returns an array for show
 	return json.NewEncoder(app.Out).Encode([]IssueJSON{out})
 }
