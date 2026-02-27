@@ -2,7 +2,7 @@
   "id": "bl-egx",
   "title": "Graph command and cascading parent blockers",
   "description": "Implement three related features: (1) bd graph command with tree+back-reference rendering, (2) cascading parent blocking deps via EffectiveBlockers, and (3) auto-close parent when all children close. See GRAPH_AND_CASCADE_DESIGN.md for full design.",
-  "status": "open",
+  "status": "closed",
   "priority": 2,
   "type": "epic",
   "dependents": [
@@ -53,5 +53,7 @@
     "project=graph-cascade"
   ],
   "created_at": "2026-02-27T12:39:00.252316-08:00",
-  "updated_at": "2026-02-27T12:39:00.252316-08:00"
+  "updated_at": "2026-02-27T14:16:54.671169-08:00",
+  "closed_at": "2026-02-27T14:16:54.671169-08:00",
+  "close_reason": "Closed"
 }

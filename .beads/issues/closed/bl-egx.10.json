@@ -2,7 +2,7 @@
   "id": "bl-egx.10",
   "title": "E2E golden file tests for graph and cascade features",
   "description": "New e2e reference test cases in e2etests/reference/:\n- case_NN_graph_basic.go: graph output for simple parent hierarchy with tree rendering\n- case_NN_graph_cross_parent.go: cross-parent blocking visualization with waves\n- case_NN_cascade_ready.go: ready command respecting inherited parent blocking (cascade=true vs false)\n- case_NN_auto_close.go: auto-close parent on last child close, multi-level recursion\n\nGenerate expected output with make update-e2e. Commit the expected/*.txt files. Validate with make test-e2e. See CLAUDE.md for golden file test conventions.",
-  "status": "open",
+  "status": "closed",
   "priority": 2,
   "type": "task",
   "parent": "bl-egx",
@@ -30,5 +30,7 @@
     "project=graph-cascade"
   ],
   "created_at": "2026-02-27T12:40:57.035206-08:00",
-  "updated_at": "2026-02-27T12:40:57.035206-08:00"
+  "updated_at": "2026-02-27T14:16:50.387155-08:00",
+  "closed_at": "2026-02-27T14:16:50.387155-08:00",
+  "close_reason": "Closed"
 }
