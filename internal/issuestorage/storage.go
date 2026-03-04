@@ -281,6 +281,8 @@ type ListFilter struct {
 	Priority        *Priority  // nil means any
 	Type            *IssueType // nil means any
 	MolType         *MolType   // nil means any
+	CreatedAfter    *time.Time // nil means any; inclusive lower bound
+	CreatedBefore   *time.Time // nil means any; inclusive upper bound
 	Parent          *string    // nil means any, empty string means root only
 	Labels          []string   // issues must have all these labels
 	Assignee        *string    // nil means any

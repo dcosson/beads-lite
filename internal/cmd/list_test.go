@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func TestListCommand_DefaultListsNonClosedIssues(t *testing.T) {
@@ -981,5 +982,253 @@ func TestListCommand_CustomLimit(t *testing.T) {
 	}
 	if len(issues) != 2 {
 		t.Errorf("expected 2 issues (custom limit), got %d", len(issues))
+	}
+}
+
+func TestListCommand_CreatedRangeDateOnly(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	rs := issueservice.New(nil, store)
+
+	olderID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Older", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create older issue: %v", err)
+	}
+	matchID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Match", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create matching issue: %v", err)
+	}
+	endDateID, err := rs.Create(ctx, &issuestorage.Issue{Title: "End date", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create end-date issue: %v", err)
+	}
+	newerID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Newer", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create newer issue: %v", err)
+	}
+
+	setCreatedAt := func(id string, createdAt time.Time) {
+		t.Helper()
+		if err := rs.Modify(ctx, id, func(i *issuestorage.Issue) error {
+			i.CreatedAt = createdAt
+			return nil
+		}); err != nil {
+			t.Fatalf("failed setting created_at for %s: %v", id, err)
+		}
+	}
+	setCreatedAt(olderID, time.Date(2026, 2, 28, 12, 0, 0, 0, time.Local))
+	setCreatedAt(matchID, time.Date(2026, 3, 15, 8, 0, 0, 0, time.Local))
+	setCreatedAt(endDateID, time.Date(2026, 3, 31, 12, 0, 0, 0, time.Local))
+	setCreatedAt(newerID, time.Date(2026, 4, 1, 9, 0, 0, 0, time.Local))
+
+	var out bytes.Buffer
+	app := &App{Storage: rs, Out: &out, JSON: true}
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--created-after", "2026-03-01", "--created-before", "2026-03-31", "--limit", "0"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 2 {
+		t.Fatalf("expected 2 issues in date range, got %d", len(issues))
+	}
+	got := map[string]bool{}
+	for _, issue := range issues {
+		got[issue.ID] = true
+	}
+	if !got[matchID] || !got[endDateID] {
+		t.Fatalf("expected issues %s and %s, got %+v", matchID, endDateID, got)
+	}
+}
+
+func TestListCommand_CreatedAfterAcceptsLocalDateTimeWithoutZone(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	rs := issueservice.New(nil, store)
+
+	earlyID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Early", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create early issue: %v", err)
+	}
+	lateID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Late", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create late issue: %v", err)
+	}
+
+	if err := rs.Modify(ctx, earlyID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Date(2026, 3, 1, 9, 0, 0, 0, time.Local)
+		return nil
+	}); err != nil {
+		t.Fatalf("failed setting created_at for early issue: %v", err)
+	}
+	if err := rs.Modify(ctx, lateID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Date(2026, 3, 1, 10, 0, 0, 0, time.Local)
+		return nil
+	}); err != nil {
+		t.Fatalf("failed setting created_at for late issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{Storage: rs, Out: &out, JSON: true}
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--created-after", "2026-03-01T09:30:00", "--limit", "0"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 1 {
+		t.Fatalf("expected 1 issue after local timestamp, got %d", len(issues))
+	}
+	if issues[0].ID != lateID {
+		t.Fatalf("expected issue %s, got %s", lateID, issues[0].ID)
+	}
+}
+
+func TestListCommand_CreatedRangeWithAllAndLimitZero(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	rs := issueservice.New(nil, store)
+
+	openID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Open in range", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create open issue: %v", err)
+	}
+	closedID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Closed in range", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create closed issue: %v", err)
+	}
+	outsideID, err := rs.Create(ctx, &issuestorage.Issue{Title: "Outside range", Priority: issuestorage.PriorityMedium})
+	if err != nil {
+		t.Fatalf("failed to create outside issue: %v", err)
+	}
+
+	if err := rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to close issue: %v", err)
+	}
+
+	// Explicit created_at values to make filtering deterministic.
+	if err := rs.Modify(ctx, openID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
+		return nil
+	}); err != nil {
+		t.Fatalf("failed setting created_at for open issue: %v", err)
+	}
+	if err := rs.Modify(ctx, closedID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Date(2026, 3, 20, 0, 0, 0, 0, time.UTC)
+		return nil
+	}); err != nil {
+		t.Fatalf("failed setting created_at for closed issue: %v", err)
+	}
+	if err := rs.Modify(ctx, outsideID, func(i *issuestorage.Issue) error {
+		i.CreatedAt = time.Date(2026, 4, 10, 0, 0, 0, 0, time.UTC)
+		return nil
+	}); err != nil {
+		t.Fatalf("failed setting created_at for outside issue: %v", err)
+	}
+
+	var out bytes.Buffer
+	app := &App{Storage: rs, Out: &out, JSON: true}
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--all", "--limit", "0", "--created-after", "2026-03-01", "--created-before", "2026-03-31"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("list command failed: %v", err)
+	}
+
+	var issues []IssueListJSON
+	if err := json.Unmarshal(out.Bytes(), &issues); err != nil {
+		t.Fatalf("failed to parse JSON: %v", err)
+	}
+	if len(issues) != 2 {
+		t.Fatalf("expected 2 issues in range with --all --limit 0, got %d", len(issues))
+	}
+
+	got := map[string]bool{}
+	for _, issue := range issues {
+		got[issue.ID] = true
+	}
+	if !got[openID] || !got[closedID] {
+		t.Fatalf("expected open %s and closed %s in output, got %+v", openID, closedID, got)
+	}
+	if got[outsideID] {
+		t.Fatalf("expected outside issue %s to be excluded", outsideID)
+	}
+}
+
+func TestListCommand_CreatedRangeRejectsInvalidInputs(t *testing.T) {
+	dir := t.TempDir()
+	store := filesystem.New(dir, "bd-")
+	ctx := context.Background()
+	if err := store.Init(ctx); err != nil {
+		t.Fatalf("failed to init storage: %v", err)
+	}
+	rs := issueservice.New(nil, store)
+
+	var out bytes.Buffer
+	app := &App{Storage: rs, Out: &out, JSON: false}
+
+	cmd := newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--created-after", "bad-date"})
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for invalid --created-after")
+	}
+	if !strings.Contains(err.Error(), "invalid --created-after value") {
+		t.Fatalf("expected invalid --created-after error, got: %v", err)
+	}
+
+	cmd = newListCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--created-after", "2026-03-02", "--created-before", "2026-03-01"})
+	err = cmd.Execute()
+	if err == nil {
+		t.Fatal("expected error for inverted date range")
+	}
+	if !strings.Contains(err.Error(), "--created-after must be earlier than or equal to --created-before") {
+		t.Fatalf("expected range ordering error, got: %v", err)
+	}
+}
+
+func TestParseListCreatedTime_DateOnlyUsesLocalTimezoneAndEndOfDayForUpperBound(t *testing.T) {
+	lower, err := parseListCreatedTime("2026-03-31", false)
+	if err != nil {
+		t.Fatalf("parse lower bound failed: %v", err)
+	}
+	upper, err := parseListCreatedTime("2026-03-31", true)
+	if err != nil {
+		t.Fatalf("parse upper bound failed: %v", err)
+	}
+
+	if lower.Location() != time.Local {
+		t.Fatalf("expected lower date-only location to be local, got %q", lower.Location())
+	}
+	if upper.Location() != time.Local {
+		t.Fatalf("expected upper date-only location to be local, got %q", upper.Location())
+	}
+
+	expectedNextDayStart := lower.AddDate(0, 0, 1)
+	if !upper.Add(time.Nanosecond).Equal(expectedNextDayStart) {
+		t.Fatalf("expected upper bound to be end-of-day before %v, got %v", expectedNextDayStart, upper)
 	}
 }

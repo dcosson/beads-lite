@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"beads-lite/internal/issuestorage"
 
@@ -14,18 +15,20 @@ import (
 // newListCmd creates the list command.
 func newListCmd(provider *AppProvider) *cobra.Command {
 	var (
-		status    string
-		priority  string
-		issueType string
-		molType   string
-		labels    []string
-		parent    string
-		assignee  string
-		all       bool
-		closed    bool
-		roots     bool
-		format    string
-		limit     int
+		status        string
+		priority      string
+		issueType     string
+		molType       string
+		labels        []string
+		parent        string
+		assignee      string
+		all           bool
+		closed        bool
+		roots         bool
+		format        string
+		limit         int
+		createdAfter  string
+		createdBefore string
 	)
 
 	cmd := &cobra.Command{
@@ -48,7 +51,10 @@ Examples:
   bd list --label=urgent,v2    # List issues with both labels
   bd list --parent=be-abc      # List children of issue be-abc
   bd list --roots              # List root issues (no parent)
-  bd list --assignee=alice     # List issues assigned to alice`,
+  bd list --assignee=alice     # List issues assigned to alice
+  bd list --created-after 2026-03-01
+  bd list --created-before 2026-03-31
+  bd list --created-after 2026-03-01T09:00:00 --created-before 2026-03-01T17:00:00`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -118,6 +124,23 @@ Examples:
 
 			if assignee != "" {
 				filter.Assignee = &assignee
+			}
+			if createdAfter != "" {
+				t, err := parseListCreatedTime(createdAfter, false)
+				if err != nil {
+					return fmt.Errorf("invalid --created-after value %q: %w", createdAfter, err)
+				}
+				filter.CreatedAfter = &t
+			}
+			if createdBefore != "" {
+				t, err := parseListCreatedTime(createdBefore, true)
+				if err != nil {
+					return fmt.Errorf("invalid --created-before value %q: %w", createdBefore, err)
+				}
+				filter.CreatedBefore = &t
+			}
+			if filter.CreatedAfter != nil && filter.CreatedBefore != nil && filter.CreatedAfter.After(*filter.CreatedBefore) {
+				return fmt.Errorf("--created-after must be earlier than or equal to --created-before")
 			}
 
 			if roots {
@@ -197,8 +220,34 @@ Examples:
 	cmd.Flags().BoolVar(&roots, "roots", false, "List only root issues (no parent)")
 	cmd.Flags().StringVarP(&format, "format", "f", "", "Output format (not implemented, accepts any value)")
 	cmd.Flags().IntVar(&limit, "limit", 50, "Maximum number of issues to return (0 for all)")
+	cmd.Flags().StringVar(&createdAfter, "created-after", "", "Filter by created_at >= this time (YYYY-MM-DD or RFC3339; timezone optional for local time)")
+	cmd.Flags().StringVar(&createdBefore, "created-before", "", "Filter by created_at <= this time (YYYY-MM-DD or RFC3339; timezone optional for local time)")
 
 	return cmd
+}
+
+func parseListCreatedTime(value string, isUpperBound bool) (time.Time, error) {
+	if t, err := time.ParseInLocation("2006-01-02", value, time.Local); err == nil {
+		if isUpperBound {
+			return t.AddDate(0, 0, 1).Add(-time.Nanosecond), nil
+		}
+		return t, nil
+	}
+	if t, err := time.Parse(time.RFC3339Nano, value); err == nil {
+		return t, nil
+	}
+
+	// Support local timestamps without timezone, e.g. 2026-03-01T09:30:00
+	for _, layout := range []string{
+		"2006-01-02T15:04:05.999999999",
+		"2006-01-02T15:04:05",
+	} {
+		if t, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+			return t, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("expected YYYY-MM-DD, RFC3339, or local RFC3339 without timezone")
 }
 
 // formatAlignedIssueLines formats a slice of issues with aligned columns.

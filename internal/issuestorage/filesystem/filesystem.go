@@ -27,10 +27,10 @@ const MaxIDRetries = 20
 // Directory structure constants. The filesystem storage creates these
 // directories under configDir/DataDirName/.
 const (
-	DataDirName  = "issues"   // subdirectory under configDir for issue data
-	DirOpen      = "open"     // open issues
-	DirClosed    = "closed"   // closed issues
-	DirDeleted   = "deleted"  // tombstoned/deleted issues
+	DataDirName  = "issues"    // subdirectory under configDir for issue data
+	DirOpen      = "open"      // open issues
+	DirClosed    = "closed"    // closed issues
+	DirDeleted   = "deleted"   // tombstoned/deleted issues
 	DirEphemeral = "ephemeral" // ephemeral issues (not exported)
 )
 
@@ -203,7 +203,6 @@ func (fs *FilesystemStorage) acquireLock(id string) (*issueLock, error) {
 
 	return &issueLock{file: f, path: lockPath}, nil
 }
-
 
 // countAllIssues returns the total number of JSON issue files across all directories.
 func (fs *FilesystemStorage) countAllIssues() (int, error) {
@@ -629,6 +628,12 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 			return false
 		}
 	}
+	if filter.CreatedAfter != nil && issue.CreatedAt.Before(*filter.CreatedAfter) {
+		return false
+	}
+	if filter.CreatedBefore != nil && issue.CreatedAt.After(*filter.CreatedBefore) {
+		return false
+	}
 	if filter.Assignee != nil && issue.Assignee != *filter.Assignee {
 		return false
 	}
@@ -915,4 +920,3 @@ func (fs *FilesystemStorage) GetNextChildID(ctx context.Context, parentID string
 
 	return idgen.ChildID(parentID, maxChild+1), nil
 }
-
