@@ -1,0 +1,19 @@
+{
+  "id": "bl-cv7.2",
+  "title": "task2",
+  "description": "this is a task again",
+  "status": "open",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-cv7",
+  "dependencies": [
+    {
+      "id": "bl-cv7",
+      "type": "parent-child"
+    }
+  ],
+  "created_by": "Danny Cosson",
+  "owner": "dcosson@gmail.com",
+  "created_at": "2026-03-03T09:59:03.927582-08:00",
+  "updated_at": "2026-03-03T09:59:03.927582-08:00"
+}
