@@ -22,9 +22,10 @@ import (
 //
 // When router is nil, all operations delegate straight to the local store.
 type IssueStore struct {
-	router *routing.Router
-	local  issuestorage.IssueStore
-	stores map[string]issuestorage.IssueStore // cache opened stores by prefix
+	router          *routing.Router
+	local           issuestorage.IssueStore
+	stores          map[string]issuestorage.IssueStore // cache opened stores by prefix
+	autoCloseParent bool
 }
 
 // NewIssueStore creates a routing-aware IssueStore. When router is nil,
@@ -33,10 +34,17 @@ type IssueStore struct {
 // all operations pass through to local with dependency validation only.
 func New(router *routing.Router, local issuestorage.IssueStore) *IssueStore {
 	return &IssueStore{
-		router: router,
-		local:  local,
-		stores: make(map[string]issuestorage.IssueStore),
+		router:          router,
+		local:           local,
+		stores:          make(map[string]issuestorage.IssueStore),
+		autoCloseParent: true,
 	}
+}
+
+// SetAutoCloseParent enables/disables parent lifecycle automation tied to
+// graph.auto_close_parent (auto-close on completion + auto-reopen on activity).
+func (s *IssueStore) SetAutoCloseParent(enabled bool) {
+	s.autoCloseParent = enabled
 }
 
 // storeFor returns the underlying IssueStore for the given issue ID.
@@ -80,19 +88,39 @@ func (s *IssueStore) Get(ctx context.Context, id string) (*issuestorage.Issue, e
 }
 
 func (s *IssueStore) Modify(ctx context.Context, id string, fn func(*issuestorage.Issue) error) error {
+	store := s.storeFor(id)
+	var oldStatus issuestorage.Status
+	var newStatus issuestorage.Status
+	statusCaptured := false
+
 	// Wrap fn to apply status defaults and update timestamp after user changes
 	wrappedFn := func(issue *issuestorage.Issue) error {
-		oldStatus := issue.Status
+		oldStatus = issue.Status
 		if err := fn(issue); err != nil {
 			return err
 		}
 		// Apply status transition side effects (ClosedAt, CloseReason)
 		applyStatusDefaults(oldStatus, issue)
+		newStatus = issue.Status
+		statusCaptured = true
 		// Update timestamp
 		issue.UpdatedAt = time.Now()
 		return nil
 	}
-	return s.storeFor(id).Modify(ctx, id, wrappedFn)
+	if err := store.Modify(ctx, id, wrappedFn); err != nil {
+		return err
+	}
+	if !s.autoCloseParent || !statusCaptured {
+		return nil
+	}
+
+	if oldStatus != issuestorage.StatusClosed && newStatus == issuestorage.StatusClosed {
+		_, _ = autoCloseAncestors(ctx, store, id)
+	}
+	if oldStatus == issuestorage.StatusClosed && newStatus != issuestorage.StatusClosed {
+		_, _ = autoReopenAncestors(ctx, store, id)
+	}
+	return nil
 }
 
 // applyStatusDefaults sets side-effect fields for status transitions.
@@ -223,12 +251,22 @@ func (s *IssueStore) addParentChildDep(ctx context.Context, childID, parentID st
 	}
 
 	// Add child to new parent's dependents
-	return store.Modify(ctx, parentID, func(parent *issuestorage.Issue) error {
+	if err := store.Modify(ctx, parentID, func(parent *issuestorage.Issue) error {
 		if !parent.HasDependent(childID) {
 			parent.Dependents = append(parent.Dependents, issuestorage.Dependency{ID: childID, Type: issuestorage.DepTypeParentChild})
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+
+	if s.autoCloseParent {
+		child, err := store.Get(ctx, childID)
+		if err == nil && child.Status != issuestorage.StatusClosed {
+			_, _ = autoReopenAncestors(ctx, store, childID)
+		}
+	}
+	return nil
 }
 
 // RemoveDependency removes a dependency relationship by ID from both sides.

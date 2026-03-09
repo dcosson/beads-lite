@@ -408,4 +408,3 @@ func resolveIssue(store issuestorage.IssueStore, ctx context.Context, idOrPrefix
 	// Try prefix matching
 	return findByPrefix(store, ctx, idOrPrefix)
 }
-

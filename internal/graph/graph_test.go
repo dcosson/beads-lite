@@ -18,7 +18,11 @@ func newStore(t *testing.T) *issueservice.IssueStore {
 	if err := s.Init(ctx); err != nil {
 		t.Fatalf("Init: %v", err)
 	}
-	return issueservice.New(nil, s)
+	store := issueservice.New(nil, s)
+	// Graph package tests exercise graph algorithms directly and should not
+	// have issueservice lifecycle side effects enabled.
+	store.SetAutoCloseParent(false)
+	return store
 }
 
 // createIssue is a test helper that creates an issue and fails the test on error.

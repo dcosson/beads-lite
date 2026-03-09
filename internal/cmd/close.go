@@ -59,19 +59,6 @@ Examples:
 			// Use local storage for molecule/dependent lookups
 			store := app.Storage
 
-			// Auto-close ancestors if enabled
-			autoCloseFlag := autoCloseEnabled(app)
-			var autoClosed []string
-			if autoCloseFlag {
-				for _, issueID := range closed {
-					ac, err := graph.AutoCloseAncestors(ctx, store, issueID, true)
-					if err != nil {
-						fmt.Fprintf(app.Err, "Warning: auto-close ancestors for %s: %v\n", issueID, err)
-					}
-					autoClosed = append(autoClosed, ac...)
-				}
-			}
-
 			// JSON output
 			if app.JSON {
 				var issues []IssueJSON
@@ -145,9 +132,6 @@ Examples:
 			// Text output
 			for _, id := range closed {
 				fmt.Fprintf(app.Out, "Closed %s\n", id)
-			}
-			for _, id := range autoClosed {
-				fmt.Fprintf(app.Out, "Auto-closed %s (all children closed)\n", id)
 			}
 
 			// --continue logic (text)
@@ -270,17 +254,4 @@ func findUnblockedDependents(ctx context.Context, app *App, store issuestorage.I
 		}
 	}
 	return unblocked
-}
-
-// autoCloseEnabled reads the graph.auto_close_parent config flag.
-// Returns true (the default) if the flag is not set or is "true".
-func autoCloseEnabled(app *App) bool {
-	if app.ConfigStore == nil {
-		return true
-	}
-	v, ok := app.ConfigStore.Get("graph.auto_close_parent")
-	if !ok {
-		return true
-	}
-	return v != "false"
 }

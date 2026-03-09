@@ -1268,3 +1268,59 @@ func TestCreateWithCustomID_TombstoneResurrection(t *testing.T) {
 		t.Errorf("expected status %q, got %q", issuestorage.StatusOpen, resurrected.Status)
 	}
 }
+
+func TestCreateWithParent_AutoReopensClosedAncestors(t *testing.T) {
+	app, store := setupTestApp(t)
+	ctx := context.Background()
+
+	grandparentID, err := store.Create(ctx, &issuestorage.Issue{
+		Title: "Grandparent",
+		Type:  issuestorage.TypeEpic,
+	})
+	if err != nil {
+		t.Fatalf("failed to create grandparent: %v", err)
+	}
+	parentID, err := store.Create(ctx, &issuestorage.Issue{
+		Title: "Parent",
+		Type:  issuestorage.TypeTask,
+	})
+	if err != nil {
+		t.Fatalf("failed to create parent: %v", err)
+	}
+	if err := store.AddDependency(ctx, parentID, grandparentID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to set parent->grandparent relationship: %v", err)
+	}
+	if err := store.Modify(ctx, parentID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to close parent: %v", err)
+	}
+	if err := store.Modify(ctx, grandparentID, func(i *issuestorage.Issue) error {
+		i.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
+		t.Fatalf("failed to close grandparent: %v", err)
+	}
+
+	cmd := newCreateCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"Child", "--parent", parentID})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("create with --parent failed: %v", err)
+	}
+
+	parent, err := store.Get(ctx, parentID)
+	if err != nil {
+		t.Fatalf("failed to get parent: %v", err)
+	}
+	if parent.Status != issuestorage.StatusOpen {
+		t.Fatalf("expected parent to be reopened, got status %s", parent.Status)
+	}
+	grandparent, err := store.Get(ctx, grandparentID)
+	if err != nil {
+		t.Fatalf("failed to get grandparent: %v", err)
+	}
+	if grandparent.Status != issuestorage.StatusOpen {
+		t.Fatalf("expected grandparent to be reopened, got status %s", grandparent.Status)
+	}
+}

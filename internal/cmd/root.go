@@ -102,6 +102,9 @@ func (p *AppProvider) init() (*App, error) {
 	}
 
 	routingStore := issueservice.New(router, store)
+	if v, ok := configStore.Get("graph.auto_close_parent"); ok && v == "false" {
+		routingStore.SetAutoCloseParent(false)
+	}
 
 	out := p.Out
 	if out == nil {
