@@ -46,8 +46,8 @@ func TestVersionCmd_JSON(t *testing.T) {
 	if result["version"] != Version {
 		t.Errorf("expected version %q, got %q", Version, result["version"])
 	}
-	if result["version"] != "0.49.1" {
-		t.Errorf("expected version \"0.49.1\", got %q", result["version"])
+	if result["version"] != "0.49.2" {
+		t.Errorf("expected version \"0.49.2\", got %q", result["version"])
 	}
 }
 

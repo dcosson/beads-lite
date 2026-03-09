@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func TestGateShowCommand(t *testing.T) {

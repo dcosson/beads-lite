@@ -588,19 +588,3 @@ func writeDefaultConfig(t *testing.T, path string) {
 		t.Fatal(err)
 	}
 }
-
-// writeFlatConfig writes a flat key-value YAML config file.
-func writeFlatConfig(t *testing.T, path string, values map[string]string) {
-	t.Helper()
-	var lines []string
-	for k, v := range values {
-		lines = append(lines, k+": "+v)
-	}
-	content := strings.Join(lines, "\n") + "\n"
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatal(err)
-	}
-}

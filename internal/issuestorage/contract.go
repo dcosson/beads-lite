@@ -677,13 +677,3 @@ func testTombstoneStatus(t *testing.T, s IssueStore) {
 		t.Error("ClosedAt should be nil (caller cleared it)")
 	}
 }
-
-// containsStr checks if a slice contains a specific string.
-func containsStr(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}

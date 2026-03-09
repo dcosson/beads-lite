@@ -9,9 +9,9 @@ import (
 	"runtime"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 // makeEditorScript creates a shell script that replaces temp file contents

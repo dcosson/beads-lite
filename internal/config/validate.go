@@ -9,12 +9,12 @@ import (
 // validValues maps known keys to their allowed values.
 // An empty slice means any non-empty string is accepted.
 var validValues = map[string][]string{
-	"defaults.priority":   {"0", "1", "2", "3", "4", "P0", "P1", "P2", "P3", "P4", "critical", "high", "medium", "low", "backlog"},
-	"defaults.type":       {"task", "bug", "feature", "epic", "chore"},
-	"issue_prefix":        {},
-	"actor":               {},
-	"project.name":        {},
-	"hierarchy.max_depth":            {},
+	"defaults.priority":             {"0", "1", "2", "3", "4", "P0", "P1", "P2", "P3", "P4", "critical", "high", "medium", "low", "backlog"},
+	"defaults.type":                 {"task", "bug", "feature", "epic", "chore"},
+	"issue_prefix":                  {},
+	"actor":                         {},
+	"project.name":                  {},
+	"hierarchy.max_depth":           {},
 	"graph.cascade_parent_blocking": {"true", "false"},
 	"graph.auto_close_parent":       {"true", "false"},
 	"types.custom":                  {},

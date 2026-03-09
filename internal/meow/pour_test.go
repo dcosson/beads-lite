@@ -6,9 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 // newTestStore returns an initialised routing IssueStore backed by a temp dir.

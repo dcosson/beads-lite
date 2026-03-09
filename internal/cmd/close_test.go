@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issueservice"
+	"beads-lite/internal/issuestorage"
 )
 
 func TestCloseBasic(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 	"testing"
 
 	"beads-lite/internal/agent"
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
 	kvfs "beads-lite/internal/kvstorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func setupAgentTestApp(t *testing.T) (*App, *issueservice.IssueStore) {

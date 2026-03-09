@@ -70,13 +70,12 @@ type RunResult struct {
 func (r *Runner) Run(sandbox string, args ...string) RunResult {
 	allArgs := append(r.ExtraArgs, args...)
 	cmd := exec.Command(r.BdCmd, allArgs...)
+	cmd.Env = os.Environ()
 	if sandbox != "" {
 		cmd.Dir = sandbox
-		cmd.Env = append(os.Environ(), "BEADS_DIR="+sandbox)
+		cmd.Env = append(cmd.Env, "BEADS_DIR="+sandbox)
 	}
-	for _, env := range r.ExtraEnv {
-		cmd.Env = append(cmd.Env, env)
-	}
+	cmd.Env = append(cmd.Env, r.ExtraEnv...)
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

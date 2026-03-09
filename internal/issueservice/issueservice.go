@@ -115,10 +115,10 @@ func (s *IssueStore) Modify(ctx context.Context, id string, fn func(*issuestorag
 	}
 
 	if oldStatus != issuestorage.StatusClosed && newStatus == issuestorage.StatusClosed {
-		_, _ = autoCloseAncestors(ctx, store, id)
+		_, _ = autoCloseAncestors(ctx, s, id)
 	}
 	if oldStatus == issuestorage.StatusClosed && newStatus != issuestorage.StatusClosed {
-		_, _ = autoReopenAncestors(ctx, store, id)
+		_, _ = autoReopenAncestors(ctx, s, id)
 	}
 	return nil
 }
@@ -261,9 +261,9 @@ func (s *IssueStore) addParentChildDep(ctx context.Context, childID, parentID st
 	}
 
 	if s.autoCloseParent {
-		child, err := store.Get(ctx, childID)
+		child, err := s.Get(ctx, childID)
 		if err == nil && child.Status != issuestorage.StatusClosed {
-			_, _ = autoReopenAncestors(ctx, store, childID)
+			_, _ = autoReopenAncestors(ctx, s, childID)
 		}
 	}
 	return nil

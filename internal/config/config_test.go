@@ -61,7 +61,7 @@ func TestApplyDefaults_AllPresent(t *testing.T) {
 	s := &memStore{data: map[string]string{
 		"defaults.priority": "high",
 		"defaults.type":     "bug",
-		"issue_prefix":         "x-",
+		"issue_prefix":      "x-",
 		"actor":             "bob",
 	}}
 

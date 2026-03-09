@@ -317,4 +317,3 @@ func (n *Normalizer) normalizeText(s string) string {
 	s = timestampPattern.ReplaceAllString(s, "TIMESTAMP")
 	return s
 }
-

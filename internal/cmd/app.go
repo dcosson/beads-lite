@@ -31,11 +31,11 @@ type App struct {
 // Color is enabled when stdout is a TTY or CLICOLOR_FORCE=1 is set,
 // and disabled when NO_COLOR is set.
 func (a *App) IsColor() bool {
-	if os.Getenv("NO_COLOR") != "" {
-		return false
-	}
 	if os.Getenv("CLICOLOR_FORCE") == "1" {
 		return true
+	}
+	if os.Getenv("NO_COLOR") != "" {
+		return false
 	}
 	if f, ok := a.Out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
 		return true

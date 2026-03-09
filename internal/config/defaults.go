@@ -15,13 +15,13 @@ const BeadsVariantValue = "beads-lite"
 // DefaultValues returns the default config map for the core keys.
 func DefaultValues() map[string]string {
 	return map[string]string{
-		BeadsVariantKey:              BeadsVariantValue,
-		"create.require-description": "false",
-		"defaults.priority":          "2",
-		"defaults.type":              "task",
-		"issue_prefix":               "bd",
-		"actor":                      "${USER}",
-		"hierarchy.max_depth":            strconv.Itoa(idgen.DefaultMaxHierarchyDepth),
+		BeadsVariantKey:                 BeadsVariantValue,
+		"create.require-description":    "false",
+		"defaults.priority":             "2",
+		"defaults.type":                 "task",
+		"issue_prefix":                  "bd",
+		"actor":                         "${USER}",
+		"hierarchy.max_depth":           strconv.Itoa(idgen.DefaultMaxHierarchyDepth),
 		"graph.cascade_parent_blocking": "true",
 		"graph.auto_close_parent":       "true",
 	}

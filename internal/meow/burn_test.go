@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"beads-lite/internal/issueservice"
 	"beads-lite/internal/issuestorage"
 	"beads-lite/internal/issuestorage/filesystem"
-	"beads-lite/internal/issueservice"
 )
 
 func newBurnStore(t *testing.T) *issueservice.IssueStore {

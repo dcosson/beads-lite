@@ -15,14 +15,14 @@ type BlockedIssueJSON struct {
 	BlockedBy         []string                   `json:"blocked_by"`
 	BlockedByCount    int                        `json:"blocked_by_count"`
 	InheritedBlockers []InheritedBlockerShowJSON `json:"inherited_blockers,omitempty"`
-	CreatedAt         string                 `json:"created_at"`
-	CreatedBy         string                 `json:"created_by,omitempty"`
-	ID                string                 `json:"id"`
-	IssueType         string                 `json:"issue_type"`
-	Priority          int                    `json:"priority"`
-	Status            string                 `json:"status"`
-	Title             string                 `json:"title"`
-	UpdatedAt         string                 `json:"updated_at"`
+	CreatedAt         string                     `json:"created_at"`
+	CreatedBy         string                     `json:"created_by,omitempty"`
+	ID                string                     `json:"id"`
+	IssueType         string                     `json:"issue_type"`
+	Priority          int                        `json:"priority"`
+	Status            string                     `json:"status"`
+	Title             string                     `json:"title"`
+	UpdatedAt         string                     `json:"updated_at"`
 }
 
 // newBlockedCmd creates the blocked command.
@@ -133,4 +133,3 @@ An issue is blocked if:
 
 	return cmd
 }
-

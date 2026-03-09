@@ -358,9 +358,7 @@ func (r *Runner) RunInDir(dir string, args ...string) RunResult {
 	cmd := exec.Command(r.BdCmd, allArgs...)
 	cmd.Dir = dir
 	cmd.Env = os.Environ()
-	for _, env := range r.ExtraEnv {
-		cmd.Env = append(cmd.Env, env)
-	}
+	cmd.Env = append(cmd.Env, r.ExtraEnv...)
 
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
@@ -388,9 +386,7 @@ func (r *Runner) RunWithBeadsDir(beadsDir string, args ...string) RunResult {
 	allArgs := append(r.ExtraArgs, args...)
 	cmd := exec.Command(r.BdCmd, allArgs...)
 	cmd.Env = append(os.Environ(), "BEADS_DIR="+beadsDir)
-	for _, env := range r.ExtraEnv {
-		cmd.Env = append(cmd.Env, env)
-	}
+	cmd.Env = append(cmd.Env, r.ExtraEnv...)
 
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
