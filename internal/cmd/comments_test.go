@@ -362,6 +362,149 @@ func TestCommentsListNoAuthor(t *testing.T) {
 	}
 }
 
+func TestCommentsShortcutAdd(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue for shortcut add",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	// bd comments <id> "message" should add a comment
+	cmd := newCommentsCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "Shortcut comment"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("comments shortcut add failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Added comment to "+id) {
+		t.Errorf("expected output to contain 'Added comment to %s', got %q", id, output)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if len(got.Comments) != 1 {
+		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
+	}
+	if got.Comments[0].Text != "Shortcut comment" {
+		t.Errorf("expected comment text %q, got %q", "Shortcut comment", got.Comments[0].Text)
+	}
+}
+
+func TestCommentsShortcutAddJSON(t *testing.T) {
+	app, store := setupTestApp(t)
+	app.JSON = true
+	out := app.Out.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue for shortcut JSON",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCommentsCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "JSON shortcut comment"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("comments shortcut add JSON failed: %v", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse JSON output: %v", err)
+	}
+	if result["issue_id"] != id {
+		t.Errorf("expected issue_id %q, got %q", id, result["issue_id"])
+	}
+	if result["text"] != "JSON shortcut comment" {
+		t.Errorf("expected text %q, got %q", "JSON shortcut comment", result["text"])
+	}
+}
+
+func TestCommentsShortcutAddEmptyMessage(t *testing.T) {
+	app, store := setupTestApp(t)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue for shortcut empty",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	cmd := newCommentsCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, ""})
+	err = cmd.Execute()
+	if err == nil {
+		t.Error("expected error for empty message")
+	}
+	if !strings.Contains(err.Error(), "cannot be empty") {
+		t.Errorf("expected error to mention 'cannot be empty', got %q", err.Error())
+	}
+}
+
+func TestCommentShortcutAddDeprecation(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	errOut := app.Err.(*bytes.Buffer)
+
+	issue := &issuestorage.Issue{
+		Title:    "Issue for deprecated shortcut",
+		Status:   issuestorage.StatusOpen,
+		Priority: issuestorage.PriorityMedium,
+		Type:     issuestorage.TypeTask,
+	}
+	id, err := store.Create(context.Background(), issue)
+	if err != nil {
+		t.Fatalf("failed to create issue: %v", err)
+	}
+
+	// bd comment <id> "message" should work with deprecation warning
+	cmd := newCommentCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{id, "Deprecated shortcut comment"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("comment shortcut add failed: %v", err)
+	}
+
+	errOutput := errOut.String()
+	if !strings.Contains(errOutput, `"comment" is deprecated`) {
+		t.Errorf("expected deprecation warning on stderr, got %q", errOutput)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Added comment to "+id) {
+		t.Errorf("expected output to contain 'Added comment to %s', got %q", id, output)
+	}
+
+	got, err := store.Get(context.Background(), id)
+	if err != nil {
+		t.Fatalf("failed to get issue: %v", err)
+	}
+	if len(got.Comments) != 1 {
+		t.Fatalf("expected 1 comment, got %d", len(got.Comments))
+	}
+	if got.Comments[0].Text != "Deprecated shortcut comment" {
+		t.Errorf("expected comment text %q, got %q", "Deprecated shortcut comment", got.Comments[0].Text)
+	}
+}
+
 func TestCommentsNoArgs(t *testing.T) {
 	app, _ := setupTestApp(t)
 

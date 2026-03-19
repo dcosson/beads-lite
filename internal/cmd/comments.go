@@ -41,17 +41,19 @@ func addComment(ctx context.Context, store issuestorage.IssueStore, issueID stri
 // `bd comments add <issue-id> <message>` adds a comment.
 func newCommentsCmd(provider *AppProvider) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "comments <issue-id>",
-		Short: "List comments on an issue",
+		Use:   "comments <issue-id> [message]",
+		Short: "List or add comments on an issue",
 		Long: `List or add comments on issues.
 
-When called with an issue ID, lists all comments on that issue.
-Use the 'add' subcommand to add a new comment.
+When called with just an issue ID, lists all comments on that issue.
+When called with an issue ID and a message, adds the message as a comment.
+Use the 'add' subcommand for additional options like --author or --file.
 
 Examples:
-  bd comments bd-a1b2
-  bd comments bd-a1b2 --json`,
-		Args: cobra.ExactArgs(1),
+  bd comments bd-a1b2                       # list comments
+  bd comments bd-a1b2 "This is a comment"   # add a comment
+  bd comments bd-a1b2 --json                # list comments as JSON`,
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			app, err := provider.Get()
 			if err != nil {
@@ -62,6 +64,43 @@ Examples:
 			issueID := args[0]
 
 			store := app.Storage
+
+			// If a second arg is provided, treat it as adding a comment
+			if len(args) == 2 {
+				message := args[1]
+				if message == "" {
+					return fmt.Errorf("comment message cannot be empty")
+				}
+
+				author, _ := resolveActor(app)
+
+				comment := &issuestorage.Comment{
+					Author:    author,
+					Text:      message,
+					CreatedAt: time.Now(),
+				}
+
+				if err := addComment(ctx, store, issueID, comment); err != nil {
+					if err == issuestorage.ErrNotFound {
+						return fmt.Errorf("issue %s not found", issueID)
+					}
+					return fmt.Errorf("adding comment: %w", err)
+				}
+
+				if app.JSON {
+					result := CommentJSON{
+						Author:    comment.Author,
+						CreatedAt: formatTime(comment.CreatedAt),
+						ID:        comment.ID,
+						IssueID:   issueID,
+						Text:      comment.Text,
+					}
+					return json.NewEncoder(app.Out).Encode(result)
+				}
+
+				fmt.Fprintf(app.Out, "Added comment to %s\n", issueID)
+				return nil
+			}
 
 			issue, err := store.Get(ctx, issueID)
 			if err != nil {
