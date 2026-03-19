@@ -1,9 +1,9 @@
 BD_LITE_CMD ?= ./bd
 BD_REF_CMD ?= /opt/homebrew/bin/bd
 
-.PHONY: test test-unit test-unit-coverage test-e2e test-e2e-reference bench-e2e bench-comparison-e2e update-e2e-reference update-e2e-lite build check check-ci fmt fmt-check vet staticcheck deps
+.PHONY: test test-unit test-unit-coverage test-e2e-reference test-e2e-all bench-e2e bench-comparison-e2e update-e2e-reference update-e2e-lite build check check-ci fmt fmt-check vet staticcheck deps
 
-test: test-unit test-e2e
+test: test-unit test-e2e-all
 
 test-unit:
 	go test -race ./internal/... ./cmd/... $(ARGS)
@@ -12,12 +12,6 @@ test-unit-coverage:
 	go test -race -coverprofile=coverage.out ./internal/... ./cmd/... $(ARGS)
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
-
-# Runs all e2e tests EXCEPT reference golden file comparison tests.
-# This includes: lite-only golden files, concurrency, pretty output, routing, benchmarks.
-test-e2e: build
-	@test -x "$(BD_LITE_CMD)" || (echo "error: bd binary not found at $(BD_LITE_CMD)" && echo "Run 'make build' first or set BD_LITE_CMD" && exit 1)
-	BD_CMD=$(realpath $(BD_LITE_CMD)) BD_ACTOR=testactor GIT_AUTHOR_EMAIL=testactor@example.com go test ./e2etests/... -skip TestGoldenReference $(ARGS)
 
 # Runs ONLY the reference golden file comparison tests (cases 01-14).
 # These compare beads-lite output against expected output from the original beads binary.

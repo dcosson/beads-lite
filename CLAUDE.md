@@ -9,9 +9,8 @@ See also: `AGENTS.md` for agent workflow instructions, `ARCHITECTURE.md` for pac
 - `make build` — build the `bd` binary
 - `make test` — run all tests (unit + e2e)
 - `make test-unit` — unit tests only
-- `make test-e2e` — e2e tests only (builds first)
+- `make test-e2e-all` — all e2e tests (builds first)
 - `make test-e2e-reference` — golden file comparison tests only
-- `make test-e2e-all` — all e2e tests including reference
 - `make check` — fmt + vet + staticcheck
 
 Pass `ARGS` to filter tests, e.g. `make test-unit ARGS='-run TestCreateWithLabels'`.
@@ -56,8 +55,8 @@ Commit the generated `.txt` files after updating.
 To validate beads-lite matches the expected output:
 ```
 # All cases
-make test-e2e
+make test-e2e-all
 
 # Single case
-make test-e2e ARGS='-run "TestE2E/01_create"'
+make test-e2e-all ARGS='-run "TestE2E/01_create"'
 ```

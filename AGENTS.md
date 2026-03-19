@@ -50,7 +50,7 @@ e2etests/               — end-to-end tests
 
 ### Testing
 - Write unit tests alongside implementation (TDD preferred)
-- `make test-unit` for fast iteration, `make test-e2e` before committing
+- `make test-unit` for fast iteration, `make test-e2e-all` before committing
 - Golden file tests in `e2etests/reference/` compare against the original beads binary — do NOT edit `expected/*.txt` files manually
 
 ### Committing

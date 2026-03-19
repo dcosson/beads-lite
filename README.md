@@ -154,15 +154,15 @@ This table tracks implementation status across major feature areas.
 ```bash
 make test          # run all tests (unit + e2e)
 make test-unit     # unit tests only
-make test-e2e      # e2e tests against local ./bd build
+make test-e2e-all  # e2e tests against local ./bd build
 make update-e2e    # regenerate expected e2e outputs from reference bd
-make bench-e2e     # benchmark beads-lite (also included in test-e2e)
+make bench-e2e     # benchmark beads-lite (also included in test-e2e-all)
 make bench-comparison-e2e  # benchmark against reference bd (requires bd in PATH)
 ```
 
 ### Benchmark
 
-`make test-e2e` includes a happy-path benchmark that exercises create, list, show,
+`make test-e2e-all` includes a happy-path benchmark that exercises create, list, show,
 update, and close across 20 issues, plus multi-repo routing tests. `make bench-comparison-e2e`
 runs the same workflow against the reference `bd` binary for a side-by-side comparison.
 

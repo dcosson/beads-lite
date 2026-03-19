@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on:
   push:
@@ -30,8 +30,5 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Build bd binary
-        run: make build
-
       - name: Run e2e tests
-        run: make test-e2e
+        run: make test-e2e-all

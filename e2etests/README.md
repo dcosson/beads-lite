@@ -61,7 +61,7 @@ The meow test case (`14_meow`) also uses the reference binary — the reference 
 2. Register it in `helpers.go`: `{"NN_name", caseName}`
 3. Add any new commands to `knownCommands` in `commands.go`
 4. Generate expected output (see above)
-5. Run `make test-e2e` to verify
+5. Run `make test-e2e-all` to verify
 
 ### Pattern for Dynamic IDs
 
