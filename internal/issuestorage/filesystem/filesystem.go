@@ -522,7 +522,9 @@ func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.List
 	if filter != nil && filter.Status != nil {
 		switch *filter.Status {
 		case issuestorage.StatusClosed:
-			scanOpen = false
+			// Closed ephemeral issues remain in ephemeral/, so a closed-status
+			// scan must include both closed/ and ephemeral/.
+			scanOpen = true
 			scanClosed = true
 		case issuestorage.StatusTombstone:
 			scanOpen = false

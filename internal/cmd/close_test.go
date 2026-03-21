@@ -736,3 +736,73 @@ func TestCloseContinueEndOfMolecule(t *testing.T) {
 		t.Errorf("expected output to contain 'No more steps', got %q", output)
 	}
 }
+
+func TestCloseContinueAdvancesNextStepForEphemeralMolecule(t *testing.T) {
+	app, store := setupTestApp(t)
+	out := app.Out.(*bytes.Buffer)
+	ctx := context.Background()
+
+	root := &issuestorage.Issue{
+		Title:     "Ephemeral molecule",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeEpic,
+		Ephemeral: true,
+	}
+	rootID, err := store.Create(ctx, root)
+	if err != nil {
+		t.Fatalf("failed to create root: %v", err)
+	}
+
+	stepA := &issuestorage.Issue{
+		Title:     "A",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeTask,
+		Ephemeral: true,
+	}
+	idA, err := store.Create(ctx, stepA)
+	if err != nil {
+		t.Fatalf("failed to create A: %v", err)
+	}
+	stepB := &issuestorage.Issue{
+		Title:     "B",
+		Status:    issuestorage.StatusOpen,
+		Priority:  issuestorage.PriorityMedium,
+		Type:      issuestorage.TypeTask,
+		Ephemeral: true,
+	}
+	idB, err := store.Create(ctx, stepB)
+	if err != nil {
+		t.Fatalf("failed to create B: %v", err)
+	}
+
+	if err := store.AddDependency(ctx, idA, rootID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child A->root: %v", err)
+	}
+	if err := store.AddDependency(ctx, idB, rootID, issuestorage.DepTypeParentChild); err != nil {
+		t.Fatalf("failed to add parent-child B->root: %v", err)
+	}
+	if err := store.AddDependency(ctx, idB, idA, issuestorage.DepTypeBlocks); err != nil {
+		t.Fatalf("failed to add blocks B->A: %v", err)
+	}
+
+	cmd := newCloseCmd(NewTestProvider(app))
+	cmd.SetArgs([]string{"--continue", idA})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("close --continue on ephemeral molecule failed: %v", err)
+	}
+
+	output := out.String()
+	if !strings.Contains(output, "Advanced to "+idB) {
+		t.Fatalf("expected output to contain 'Advanced to %s', got %q", idB, output)
+	}
+
+	got, err := store.Get(ctx, idB)
+	if err != nil {
+		t.Fatalf("failed to get step B: %v", err)
+	}
+	if got.Status != issuestorage.StatusInProgress {
+		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
+	}
+}

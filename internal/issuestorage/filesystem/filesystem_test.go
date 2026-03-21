@@ -1903,6 +1903,44 @@ func TestListIncludesEphemeral(t *testing.T) {
 	}
 }
 
+// TestListClosedIncludesEphemeralClosed verifies List(StatusClosed) includes
+// ephemeral issues that have been closed in-place under ephemeral/.
+func TestListClosedIncludesEphemeralClosed(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	id, err := s.Create(ctx, &issuestorage.Issue{
+		Title:     "Closed ephemeral",
+		Ephemeral: true,
+	})
+	if err != nil {
+		t.Fatalf("Create ephemeral failed: %v", err)
+	}
+
+	if err := s.Modify(ctx, id, func(issue *issuestorage.Issue) error {
+		issue.Status = issuestorage.StatusClosed
+		return nil
+	}); err != nil {
+		t.Fatalf("Modify to closed failed: %v", err)
+	}
+
+	status := issuestorage.StatusClosed
+	issues, err := s.List(ctx, &issuestorage.ListFilter{Status: &status})
+	if err != nil {
+		t.Fatalf("List closed failed: %v", err)
+	}
+
+	if len(issues) != 1 {
+		t.Fatalf("List(StatusClosed) should return 1 closed ephemeral issue, got %d", len(issues))
+	}
+	if issues[0].ID != id {
+		t.Errorf("List(StatusClosed) returned %q, want %q", issues[0].ID, id)
+	}
+	if !issues[0].Ephemeral {
+		t.Error("expected closed issue to remain ephemeral")
+	}
+}
+
 // TestDeleteEphemeral verifies Delete removes from ephemeral/.
 func TestDeleteEphemeral(t *testing.T) {
 	s := setupTestStorage(t)
