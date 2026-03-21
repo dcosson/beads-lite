@@ -1,0 +1,19 @@
+{
+  "id": "bl-wisp-muo.13",
+  "title": "Digest: run-plan-implementation",
+  "description": "- Verify Batch2 is ready for implementation\n- Verify implementation beads already exist\n- Create or correct missing implementation beads\n- Discover the working team for Batch2\n- Assign ready beads to pod coders\n- Monitor implementation commits and review coverage\n- Audit for stubs, mocks, wiring gaps, and unplanned compatibility behavior\n- Create and assign follow-up beads for bugs or review findings\n- Drive all implementation and follow-up beads to completion\n- Run plan-work-completion-signoff for Batch2\n- Run end-to-end wiring review\n- Run the validation harness",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "parent": "bl-wisp-muo",
+  "dependencies": [
+    {
+      "id": "bl-wisp-muo",
+      "type": "parent-child"
+    }
+  ],
+  "created_at": "2026-03-20T22:06:58.018356-07:00",
+  "updated_at": "2026-03-20T22:06:58.036641-07:00",
+  "closed_at": "2026-03-20T22:06:58.036641-07:00",
+  "close_reason": "Squashed from 12 wisps"
+}
