@@ -424,6 +424,9 @@ func configActorOverride(current string) string {
 	if actor := strings.TrimSpace(os.Getenv(config.EnvActor)); actor != "" {
 		return actor
 	}
+	if actor := strings.TrimSpace(os.Getenv(config.EnvH2Actor)); actor != "" {
+		return actor
+	}
 	return current
 }
 

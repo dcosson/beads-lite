@@ -8,16 +8,26 @@ import (
 
 // resolveActor determines the current actor identity (a name/identifier).
 // Resolution priority matches the reference beads implementation:
-//  1. BD_ACTOR env var (via config store, set by ApplyEnvOverrides)
-//  2. BEADS_ACTOR env var
-//  3. git config user.name
-//  4. $USER env var
-//  5. "unknown"
+//  1. Config "actor" (including BD_ACTOR/H2_ACTOR applied via ApplyEnvOverrides)
+//  2. BD_ACTOR env var
+//  3. H2_ACTOR env var
+//  4. BEADS_ACTOR env var
+//  5. git config user.name
+//  6. $USER env var
+//  7. "unknown"
 func resolveActor(app *App) (string, error) {
 	if app != nil && app.ConfigStore != nil {
 		if actor, ok := app.ConfigStore.Get("actor"); ok && actor != "" && actor != "${USER}" {
 			return actor, nil
 		}
+	}
+
+	if actor := os.Getenv("BD_ACTOR"); actor != "" {
+		return actor, nil
+	}
+
+	if actor := os.Getenv("H2_ACTOR"); actor != "" {
+		return actor, nil
 	}
 
 	if actor := os.Getenv("BEADS_ACTOR"); actor != "" {

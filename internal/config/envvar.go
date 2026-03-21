@@ -6,16 +6,19 @@ import "os"
 const (
 	EnvBeadsDir = "BEADS_DIR"  // Path to .beads directory
 	EnvActor    = "BD_ACTOR"   // Override actor name
+	EnvH2Actor  = "H2_ACTOR"   // Alternate actor name from h2 runtime
 	EnvProject  = "BD_PROJECT" // Override project name
 	EnvJSON     = "BD_JSON"    // Enable JSON output ("1" or "true")
 	EnvQuiet    = "BD_QUIET"   // Suppress non-error output ("1" or "true")
 )
 
-// ApplyEnvOverrides checks BD_ACTOR and BD_PROJECT env vars
+// ApplyEnvOverrides checks actor/project env vars
 // and overrides the corresponding config values in memory.
 // These overrides are not persisted to the config file.
 func ApplyEnvOverrides(s Store) {
 	if actor := os.Getenv(EnvActor); actor != "" {
+		s.SetInMemory("actor", actor)
+	} else if actor := os.Getenv(EnvH2Actor); actor != "" {
 		s.SetInMemory("actor", actor)
 	}
 	if project := os.Getenv(EnvProject); project != "" {

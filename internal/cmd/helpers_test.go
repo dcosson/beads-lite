@@ -35,6 +35,8 @@ func TestResolveActorSkipsDollarUSER(t *testing.T) {
 }
 
 func TestResolveActorFromBEADS_ACTOR(t *testing.T) {
+	t.Setenv("BD_ACTOR", "")
+	t.Setenv("H2_ACTOR", "")
 	t.Setenv("BEADS_ACTOR", "beads-actor-val")
 	app := &App{}
 	got, err := resolveActor(app)
@@ -46,9 +48,38 @@ func TestResolveActorFromBEADS_ACTOR(t *testing.T) {
 	}
 }
 
-func TestResolveActorFromGitConfig(t *testing.T) {
-	// Ensure BD_ACTOR and BEADS_ACTOR are unset so we fall through to git.
+func TestResolveActorFromH2Actor(t *testing.T) {
 	t.Setenv("BD_ACTOR", "")
+	t.Setenv("H2_ACTOR", "h2-actor-val")
+	t.Setenv("BEADS_ACTOR", "")
+	app := &App{}
+	got, err := resolveActor(app)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "h2-actor-val" {
+		t.Errorf("expected %q, got %q", "h2-actor-val", got)
+	}
+}
+
+func TestResolveActorBDActorBeatsH2Actor(t *testing.T) {
+	t.Setenv("BD_ACTOR", "bd-actor-val")
+	t.Setenv("H2_ACTOR", "h2-actor-val")
+	t.Setenv("BEADS_ACTOR", "")
+	app := &App{}
+	got, err := resolveActor(app)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "bd-actor-val" {
+		t.Errorf("expected %q, got %q", "bd-actor-val", got)
+	}
+}
+
+func TestResolveActorFromGitConfig(t *testing.T) {
+	// Ensure BD_ACTOR, H2_ACTOR, and BEADS_ACTOR are unset so we fall through to git.
+	t.Setenv("BD_ACTOR", "")
+	t.Setenv("H2_ACTOR", "")
 	t.Setenv("BEADS_ACTOR", "")
 
 	gitName, _ := exec.Command("git", "config", "user.name").Output()
@@ -70,6 +101,7 @@ func TestResolveActorFromGitConfig(t *testing.T) {
 func TestResolveActorFromUSER(t *testing.T) {
 	// Clear all higher-priority sources.
 	t.Setenv("BD_ACTOR", "")
+	t.Setenv("H2_ACTOR", "")
 	t.Setenv("BEADS_ACTOR", "")
 	// We can't easily unset git config, so we test with a nil app and
 	// rely on $USER being set in the test environment.
@@ -141,6 +173,7 @@ func TestResolveActorBD_ACTORViaCOnfigStore(t *testing.T) {
 	// BD_ACTOR is applied via config.ApplyEnvOverrides which sets "actor" in the config store.
 	// Simulate that here.
 	t.Setenv("BD_ACTOR", "bd-actor-val")
+	t.Setenv("H2_ACTOR", "")
 	app := &App{
 		ConfigStore: &mapConfigStore{data: map[string]string{"actor": "bd-actor-val"}},
 	}

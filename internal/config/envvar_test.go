@@ -15,6 +15,30 @@ func TestApplyEnvOverrides_Actor(t *testing.T) {
 	}
 }
 
+func TestApplyEnvOverrides_H2Actor(t *testing.T) {
+	t.Setenv(EnvActor, "")
+	t.Setenv(EnvH2Actor, "h2-actor")
+
+	s := &memStore{data: map[string]string{"actor": "${USER}"}}
+	ApplyEnvOverrides(s)
+
+	if v, _ := s.Get("actor"); v != "h2-actor" {
+		t.Errorf("actor = %q, want %q", v, "h2-actor")
+	}
+}
+
+func TestApplyEnvOverrides_BDActorBeatsH2Actor(t *testing.T) {
+	t.Setenv(EnvActor, "bd-actor")
+	t.Setenv(EnvH2Actor, "h2-actor")
+
+	s := &memStore{data: map[string]string{"actor": "${USER}"}}
+	ApplyEnvOverrides(s)
+
+	if v, _ := s.Get("actor"); v != "bd-actor" {
+		t.Errorf("actor = %q, want %q", v, "bd-actor")
+	}
+}
+
 func TestApplyEnvOverrides_Project(t *testing.T) {
 	t.Setenv(EnvProject, "test-project")
 
