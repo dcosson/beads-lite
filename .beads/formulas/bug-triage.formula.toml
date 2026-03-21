@@ -1,0 +1,30 @@
+formula = "bug-triage"
+description = "Example expansion formula for recurring bug triage work."
+version = 1
+type = "expansion"
+phase = "liquid"
+
+[vars]
+queue = "inbox"
+
+[vars.component]
+description = "Subsystem being triaged"
+default = "cli"
+
+[[template]]
+id = "reproduce"
+title = "Reproduce bug from {{queue}} for {{component}}"
+description = "Confirm the report, identify the failing path, and capture the exact repro steps."
+
+[[template]]
+id = "classify"
+title = "Classify severity and ownership"
+description = "Assign priority, candidate owner, and labels once the repro is confirmed."
+needs = ["reproduce"]
+
+[[template]]
+id = "next-action"
+title = "Decide fix, defer, or close"
+description = "Choose the next action and document the decision in the issue."
+needs = ["classify"]
+

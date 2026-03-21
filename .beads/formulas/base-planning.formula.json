@@ -1,0 +1,34 @@
+{
+  "formula": "base-planning",
+  "description": "Shared planning workflow scaffolding for plan-writing molecules.",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "vars": {
+    "project_name": {
+      "description": "Project or feature being planned",
+      "required": true
+    },
+    "input_doc": {
+      "description": "Path to the shaping, requirements, or exploration doc",
+      "required": true
+    },
+    "doc_root": {
+      "description": "Directory where planning docs live",
+      "default": "docs/plans"
+    }
+  },
+  "steps": [
+    {
+      "id": "assess-input",
+      "title": "Assess planning inputs for {{project_name}}",
+      "description": "Read {{input_doc}} and decide whether shaping, architecture, a plan index, or plan reviews already exist."
+    },
+    {
+      "id": "create-planning-epic",
+      "title": "Create planning epic and initial beads for {{project_name}}",
+      "description": "Create a planning epic plus any initial tracking tasks needed to coordinate planning work.",
+      "depends_on": ["assess-input"]
+    }
+  ]
+}

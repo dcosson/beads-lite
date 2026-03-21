@@ -1,0 +1,32 @@
+{
+  "formula": "security-review",
+  "description": "Example aspect formula for layering a security pass onto another workflow.",
+  "version": 1,
+  "type": "aspect",
+  "phase": "liquid",
+  "vars": {
+    "threat_model": {
+      "description": "Threat model or system boundary under review",
+      "default": "default-system"
+    }
+  },
+  "template": [
+    {
+      "id": "attack-surface",
+      "title": "Review attack surface for {{threat_model}}",
+      "description": "Enumerate externally reachable interfaces, trust boundaries, and privileged operations."
+    },
+    {
+      "id": "secrets-audit",
+      "title": "Audit credential and secret handling",
+      "description": "Verify secret storage, rotation, redaction, and access-control assumptions.",
+      "needs": ["attack-surface"]
+    },
+    {
+      "id": "hardening-actions",
+      "title": "Capture hardening actions",
+      "description": "Record mitigations, owners, and verification steps for security findings.",
+      "needs": ["secrets-audit"]
+    }
+  ]
+}

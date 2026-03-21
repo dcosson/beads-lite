@@ -1,0 +1,42 @@
+formula = "release-train"
+description = "Example release workflow showing TOML formulas, mixed var syntax, and needs-to-depends_on merging."
+version = 1
+type = "workflow"
+phase = "liquid"
+
+[vars]
+component = "core"
+
+[vars.version]
+description = "Semantic version being released"
+required = true
+pattern = "^v?\\d+\\.\\d+\\.\\d+$"
+
+[vars.environment]
+description = "Target environment"
+default = "staging"
+enum = ["staging", "production"]
+
+[[steps]]
+id = "cut-branch"
+title = "Cut release branch for {{component}} {{version}}"
+description = "Create or verify the release branch before any packaging work begins."
+
+[[steps]]
+id = "build"
+title = "Build {{component}} artifacts"
+description = "Produce release artifacts for {{environment}}."
+needs = ["cut-branch"]
+
+[[steps]]
+id = "smoke-test"
+title = "Run smoke tests in {{environment}}"
+description = "Validate the built artifacts in a representative environment."
+depends_on = ["build"]
+
+[[steps]]
+id = "announce"
+title = "Announce {{component}} {{version}} release"
+description = "Publish notes and notify downstream stakeholders."
+needs = ["smoke-test"]
+

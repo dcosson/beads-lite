@@ -1,0 +1,94 @@
+{
+  "formula": "plan-orchestrate",
+  "description": "Coordinate the full planning lifecycle from input assessment through sign-off, seam review, and bead decomposition.",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "extends": ["base-planning"],
+  "vars": {
+    "architecture_doc": {
+      "description": "Expected architecture document path",
+      "default": "docs/plans/00-architecture.md"
+    },
+    "plan_index_doc": {
+      "description": "Expected plan index path",
+      "default": "docs/plans/00-plan-index.md"
+    },
+    "implementation_guide_doc": {
+      "description": "Expected implementation guide path",
+      "default": "docs/plans/00-implementation-guide.md"
+    },
+    "review_mode": {
+      "description": "Initial review strategy",
+      "default": "deep",
+      "enum": ["deep", "batch", "full-corpus"]
+    },
+    "review_round_target": {
+      "description": "Expected number of review rounds before sign-off",
+      "default": "2",
+      "type": "int"
+    }
+  },
+  "steps": [
+    {
+      "id": "write-architecture",
+      "title": "Run plan-architect for {{project_name}}",
+      "description": "Create {{architecture_doc}} and, when needed, {{plan_index_doc}} from {{input_doc}}.",
+      "depends_on": ["create-planning-epic"]
+    },
+    {
+      "id": "draft-plan-docs",
+      "title": "Draft plan docs and test harness docs",
+      "description": "Assign plan-draft work by dependency batch from {{plan_index_doc}} so each component gets both a plan doc and a companion test harness.",
+      "depends_on": ["write-architecture"]
+    },
+    {
+      "id": "review-round-1",
+      "title": "Run review round 1 in {{review_mode}} mode",
+      "description": "Assign plan-review beads, collect independent findings, and keep reviewers isolated from one another.",
+      "depends_on": ["draft-plan-docs"]
+    },
+    {
+      "id": "incorporate-round-1",
+      "title": "Incorporate round 1 findings",
+      "description": "Run plan-incorporate on each reviewed plan and discuss any P0/P1 issues with reviewers before merging changes.",
+      "depends_on": ["review-round-1"]
+    },
+    {
+      "id": "summarize-round-1",
+      "title": "Summarize round 1 convergence",
+      "description": "Run plan-summarize and evaluate whether review findings are converging quickly enough.",
+      "depends_on": ["incorporate-round-1"]
+    },
+    {
+      "id": "review-rounds-n",
+      "title": "Repeat review and incorporation cycles until convergence",
+      "description": "Choose deep, batch, or full-corpus review for each additional round until the plans are ready for approval.",
+      "depends_on": ["summarize-round-1"]
+    },
+    {
+      "id": "planning-signoff",
+      "title": "Approve planning corpus for {{project_name}}",
+      "description": "Resolve all open questions, mark docs Approved, and append the plan review signoff section to each plan.",
+      "depends_on": ["review-rounds-n"]
+    },
+    {
+      "id": "seam-review",
+      "title": "Run seam review across approved plans",
+      "description": "Use plan-seam-review to verify adjacent plan docs agree on shared interfaces and fix any P0/P1 mismatches.",
+      "depends_on": ["planning-signoff"]
+    },
+    {
+      "id": "implementation-guide",
+      "title": "Generate {{implementation_guide_doc}}",
+      "description": "Synthesize seam findings, review themes, lifecycle invariants, config contracts, and common pitfalls into a guide every implementation agent must read.",
+      "depends_on": ["seam-review"]
+    },
+    {
+      "id": "plan-to-beads",
+      "title": "Decompose approved plans into implementation beads",
+      "description": "Run plan-to-beads after the implementation guide is in place so the implementation backlog respects reviewed dependencies.",
+      "depends_on": ["implementation-guide"]
+    }
+  ]
+}
