@@ -1,0 +1,128 @@
+{
+  "formula": "run-plan-review",
+  "description": "Run the post-draft planning review loop, drive convergence, complete seam review, update the implementation guide when warranted, and decompose the approved plans into beads.",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "vars": {
+    "project_name": {
+      "description": "Project or feature whose drafted plans are being reviewed",
+      "required": true
+    },
+    "scope": {
+      "description": "Plan batch, doc set, or corpus scope under review",
+      "required": true
+    },
+    "plans_dir": {
+      "description": "Directory containing the plan corpus",
+      "default": "docs/plans"
+    },
+    "plan_index_doc": {
+      "description": "Plan index used for corpus status and batching",
+      "default": "docs/plans/00-plan-index.md"
+    },
+    "summary_doc": {
+      "description": "Planning review summary path",
+      "default": "docs/plans/99-planning-review-summary.md"
+    },
+    "implementation_guide_doc": {
+      "description": "Implementation guide path",
+      "default": "docs/plans/00-implementation-guide.md"
+    },
+    "plan_count": {
+      "description": "Total number of plans in the broader project corpus",
+      "default": "1",
+      "type": "int"
+    },
+    "seam_mode": {
+      "description": "Primary seam review orientation for this corpus",
+      "default": "vertical",
+      "enum": ["vertical", "horizontal"]
+    }
+  },
+  "steps": [
+    {
+      "id": "catalog-drafted-plans",
+      "title": "Catalog drafted plans for {{project_name}} in {{scope}}",
+      "description": "Read {{plan_index_doc}} and verify the selected plans are drafted and ready to enter formal review."
+    },
+    {
+      "id": "round-1-deep-review",
+      "title": "Run deep review round for {{scope}}",
+      "description": "Assign independent plan-review work with one document per reviewer so fresh readers can inspect each drafted plan and its test harness deeply.",
+      "depends_on": ["catalog-drafted-plans"]
+    },
+    {
+      "id": "round-1-incorporate",
+      "title": "Incorporate deep review findings",
+      "description": "Run plan-incorporate for each reviewed plan, reach reviewer agreement on all P0 and P1 findings, and update both the plan docs and test harness docs.",
+      "depends_on": ["round-1-deep-review"]
+    },
+    {
+      "id": "round-1-summarize",
+      "title": "Summarize convergence after deep review",
+      "description": "Run plan-summarize into {{summary_doc}} and record finding totals, incorporation rates, and any implementation-guide-worthy cross-cutting issues.",
+      "depends_on": ["round-1-incorporate"]
+    },
+    {
+      "id": "round-2-batch-review",
+      "title": "Run batch review round for {{scope}}",
+      "description": "Rotate reviewers onto different plans and review batches of documents together to catch cross-doc inconsistencies and unresolved design gaps.",
+      "depends_on": ["round-1-summarize"]
+    },
+    {
+      "id": "round-2-incorporate",
+      "title": "Incorporate batch review findings",
+      "description": "Apply accepted Round 2 changes, update disposition tables, and keep any deferred or rejected findings documented with explicit rationale.",
+      "depends_on": ["round-2-batch-review"]
+    },
+    {
+      "id": "round-2-summarize",
+      "title": "Summarize convergence after batch review",
+      "description": "Update {{summary_doc}} and check whether the corpus is trending toward low-volume, high-signal findings.",
+      "depends_on": ["round-2-incorporate"]
+    },
+    {
+      "id": "full-corpus-review",
+      "title": "Run full-corpus review before signoff",
+      "description": "Have one reviewer read the full corpus to catch cross-plan contradictions that deep and batch review can miss.",
+      "depends_on": ["round-2-summarize"]
+    },
+    {
+      "id": "full-corpus-incorporate",
+      "title": "Incorporate full-corpus findings",
+      "description": "Resolve the remaining high-value cross-document findings and update the corpus so review decisions are reflected in the source docs.",
+      "depends_on": ["full-corpus-review"]
+    },
+    {
+      "id": "verify-convergence",
+      "title": "Verify review convergence for {{scope}}",
+      "description": "Use {{summary_doc}} to confirm the review loop has converged; if the corpus still has material unresolved issues, route it back into another review round instead of proceeding.",
+      "depends_on": ["full-corpus-incorporate"]
+    },
+    {
+      "id": "planning-signoff",
+      "title": "Approve and mark reviewed plans ready for seam review",
+      "description": "Update plan statuses to Approved only after convergence is verified and all open questions for this review loop are resolved.",
+      "depends_on": ["verify-convergence"]
+    },
+    {
+      "id": "seam-review",
+      "title": "Run {{seam_mode}} seam review for {{scope}}",
+      "description": "Use plan-seam-review after individual reviews converge, and loop affected plans back through focused review/incorporation if seam mismatches surface.",
+      "depends_on": ["planning-signoff"]
+    },
+    {
+      "id": "implementation-guide",
+      "title": "Update or conditionally create the implementation guide",
+      "description": "If {{implementation_guide_doc}} already exists, update it with review and seam-review invariants. If it does not exist, create it only when this scope belongs to a broader project corpus with more than three total plans.",
+      "depends_on": ["seam-review"]
+    },
+    {
+      "id": "plan-to-beads",
+      "title": "Run plan-to-beads for {{scope}}",
+      "description": "Decompose the seam-reviewed plans into implementation beads after the implementation guide decision is complete and capture any bead overlaps or missing work items before implementation begins.",
+      "depends_on": ["implementation-guide"]
+    }
+  ]
+}

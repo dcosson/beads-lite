@@ -1,0 +1,101 @@
+{
+  "formula": "run-plan-implementation",
+  "description": "Kick off implementation from reviewed plans, enforce per-commit code review and follow-up bead closure, then run completion signoff, wiring review, and validation harnesses until the corpus is fully signed off.",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "vars": {
+    "project_name": {
+      "description": "Project or feature being implemented",
+      "required": true
+    },
+    "scope": {
+      "description": "Plan batch, component group, or corpus scope being implemented",
+      "required": true
+    },
+    "plans_dir": {
+      "description": "Directory containing the reviewed plan docs",
+      "default": "docs/plans"
+    },
+    "codebase_path": {
+      "description": "Codebase root used for implementation and signoff checks",
+      "default": "."
+    },
+    "implementation_guide_doc": {
+      "description": "Implementation guide every coder must read",
+      "default": "docs/plans/00-implementation-guide.md"
+    },
+    "validation_harness": {
+      "description": "Primary validation harness or command set to run after wiring review",
+      "default": "project validation harness"
+    }
+  },
+  "steps": [
+    {
+      "id": "check-plan-status",
+      "title": "Verify {{scope}} is ready for implementation",
+      "description": "Confirm every plan in {{scope}} has completed the review stage and is at least Seam Reviewed. If any plan is still Draft, In Review, or otherwise not ready, abort implementation kickoff and send the scope back to run-plan-review.",
+      "type": "gate"
+    },
+    {
+      "id": "verify-beads",
+      "title": "Verify implementation beads already exist",
+      "description": "Check the beads created by run-plan-review, confirm they match the reviewed plans, and identify any missing, duplicate, or incorrectly sized implementation tasks.",
+      "depends_on": ["check-plan-status"]
+    },
+    {
+      "id": "repair-bead-graph",
+      "title": "Create or correct missing implementation beads",
+      "description": "If bead coverage is incomplete or wrong, run plan-to-beads or apply targeted bead fixes so the implementation epic and task graph accurately represent the reviewed plans before assignment begins.",
+      "depends_on": ["verify-beads"]
+    },
+    {
+      "id": "assign-coders",
+      "title": "Assign ready beads to pod coders",
+      "description": "Assign the ready implementation beads to coders in the pod and require each coder to request review as they commit work.",
+      "depends_on": ["repair-bead-graph"]
+    },
+    {
+      "id": "monitor-commits",
+      "title": "Monitor implementation commits and review coverage",
+      "description": "Track commits as they land, verify reviewers have reviewed each one, and keep implementation moving until all planned beads are either complete or converted into follow-up work.",
+      "depends_on": ["assign-coders"]
+    },
+    {
+      "id": "flag-red-flags",
+      "title": "Audit for stubs, mocks, wiring gaps, and unplanned compatibility behavior",
+      "description": "Inspect in-flight work for mocked or stubbed logic, missing wiring, or backwards-compatibility behavior that was not explicitly called for in the plans, and escalate these as implementation defects.",
+      "depends_on": ["monitor-commits"]
+    },
+    {
+      "id": "create-followup-beads",
+      "title": "Create and assign follow-up beads for bugs or review findings",
+      "description": "Create new beads under the same epic for bugs, review issues, or red flags discovered during implementation, then assign them alongside the planned work until nothing remains unresolved.",
+      "depends_on": ["flag-red-flags"]
+    },
+    {
+      "id": "close-implementation-work",
+      "title": "Drive all implementation and follow-up beads to completion",
+      "description": "Keep the implementation loop running until the original beads and every follow-up bead, including lower-priority work, are completed and reviewed.",
+      "depends_on": ["create-followup-beads"]
+    },
+    {
+      "id": "completion-signoff",
+      "title": "Run plan-work-completion-signoff for {{scope}}",
+      "description": "Use plan-work-completion-signoff against {{plans_dir}} and {{codebase_path}}, create any resulting signoff beads, and repeat until every plan in scope reaches Implementation Complete.",
+      "depends_on": ["close-implementation-work"]
+    },
+    {
+      "id": "e2e-wiring-review",
+      "title": "Run end-to-end wiring review",
+      "description": "Perform the post-implementation wiring review pass across integrated flows, create follow-up beads for any defects regardless of priority, and keep iterating until the wiring review is clean.",
+      "depends_on": ["completion-signoff"]
+    },
+    {
+      "id": "validation-harness",
+      "title": "Run {{validation_harness}}",
+      "description": "Execute the final validation harness only after implementation, signoff, wiring review, and all follow-up beads are complete.",
+      "depends_on": ["e2e-wiring-review"]
+    }
+  ]
+}
