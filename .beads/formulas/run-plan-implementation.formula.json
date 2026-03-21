@@ -37,10 +37,16 @@
       "depends_on": ["verify-beads"]
     },
     {
+      "id": "discover-team",
+      "title": "Discover the working team for {{scope}}",
+      "description": "Use h2 list and repo context to figure out who the implementation team is before assigning work. Look for pod membership, name prefixes or suffixes, active coder and reviewer agents, and any other context clues that indicate which agents belong to the same working group for this project.",
+      "depends_on": ["repair-bead-graph"]
+    },
+    {
       "id": "assign-coders",
       "title": "Assign ready beads to pod coders",
-      "description": "Assign the ready implementation beads to coders in the pod and require each coder to request review as they commit work.",
-      "depends_on": ["repair-bead-graph"]
+      "description": "Assign the ready implementation beads to the coders you identified for this pod or working team and require each coder to request review as they commit work.",
+      "depends_on": ["discover-team"]
     },
     {
       "id": "monitor-commits",
