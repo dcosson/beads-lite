@@ -12,6 +12,9 @@
     "scope": {
       "description": "Plan batch, component group, or corpus scope being implemented",
       "required": true
+    },
+    "bead_epic": {
+      "description": "Optional implementation epic to anchor bead verification and follow-up work"
     }
   },
   "steps": [
@@ -24,13 +27,13 @@
     {
       "id": "verify-beads",
       "title": "Verify implementation beads already exist",
-      "description": "Look for the implementation epic and task beads created from the reviewed plans, confirm they match the plan index and plan docs, and identify any missing, duplicate, or incorrectly sized implementation tasks.",
+      "description": "Look for the implementation epic and task beads created from the reviewed plans. If {{bead_epic}} is provided, start there; otherwise discover the right epic from the plan index and bead graph. Confirm the epic and tasks match the plan docs and identify any missing, duplicate, or incorrectly sized implementation tasks.",
       "depends_on": ["check-plan-status"]
     },
     {
       "id": "repair-bead-graph",
       "title": "Create or correct missing implementation beads",
-      "description": "If bead coverage is incomplete or wrong, re-read the plan index, plan docs, and implementation guide if present, then run plan-to-beads or apply targeted bead fixes so the implementation epic and task graph accurately represent the reviewed plans before assignment begins.",
+      "description": "If bead coverage is incomplete or wrong, re-read the plan index, plan docs, and implementation guide if present, then run plan-to-beads or apply targeted bead fixes so the implementation epic and task graph accurately represent the reviewed plans before assignment begins. Prefer attaching repairs to {{bead_epic}} when it is provided and correct.",
       "depends_on": ["verify-beads"]
     },
     {
@@ -54,7 +57,7 @@
     {
       "id": "create-followup-beads",
       "title": "Create and assign follow-up beads for bugs or review findings",
-      "description": "Create new beads under the same epic for bugs, review issues, or red flags discovered during implementation, then assign them alongside the planned work until nothing remains unresolved.",
+      "description": "Create new beads under the same implementation epic for bugs, review issues, or red flags discovered during implementation. If {{bead_epic}} is provided and valid, use it; otherwise use the discovered implementation epic. Assign the follow-up work alongside the planned work until nothing remains unresolved.",
       "depends_on": ["flag-red-flags"]
     },
     {
