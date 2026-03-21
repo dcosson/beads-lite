@@ -58,6 +58,13 @@ Examples:
 
 			// Use local storage for molecule/dependent lookups
 			store := app.Storage
+			var actor string
+			if continueFlag && !noAuto {
+				actor, err = resolveActor(app)
+				if err != nil {
+					return fmt.Errorf("resolving actor for continue: %w", err)
+				}
+			}
 
 			// JSON output
 			if app.JSON {
@@ -92,10 +99,15 @@ Examples:
 						autoAdvanced := false
 						if nextStep != nil && !noAuto {
 							store.Modify(ctx, nextStep.ID, func(i *issuestorage.Issue) error {
+								if i.Assignee != "" && i.Assignee != actor {
+									return fmt.Errorf("cannot auto-claim %s: already assigned to %q", nextStep.ID, i.Assignee)
+								}
+								i.Assignee = actor
 								i.Status = issuestorage.StatusInProgress
 								return nil
 							})
 							nextStep.Status = issuestorage.StatusInProgress
+							nextStep.Assignee = actor
 							autoAdvanced = true
 						}
 						var nextStepJSON *MolIssueJSON
@@ -146,6 +158,10 @@ Examples:
 						fmt.Fprintf(app.Out, "Next step: %s %s\n", nextStep.ID, nextStep.Title)
 					} else {
 						if err := store.Modify(ctx, nextStep.ID, func(i *issuestorage.Issue) error {
+							if i.Assignee != "" && i.Assignee != actor {
+								return fmt.Errorf("cannot auto-claim %s: already assigned to %q", nextStep.ID, i.Assignee)
+							}
+							i.Assignee = actor
 							i.Status = issuestorage.StatusInProgress
 							return nil
 						}); err != nil {

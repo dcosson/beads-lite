@@ -447,6 +447,7 @@ func setupMolecule(t *testing.T, store *issueservice.IssueStore) (string, string
 
 func TestCloseContinueAdvancesNextStep(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	out := app.Out.(*bytes.Buffer)
 	_, idA, idB, _ := setupMolecule(t, store)
 
@@ -472,10 +473,14 @@ func TestCloseContinueAdvancesNextStep(t *testing.T) {
 	if got.Status != issuestorage.StatusInProgress {
 		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
 	}
+	if got.Assignee != "test-agent" {
+		t.Errorf("expected step B assignee %q, got %q", "test-agent", got.Assignee)
+	}
 }
 
 func TestCloseContinueNoAuto(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	out := app.Out.(*bytes.Buffer)
 	_, idA, idB, _ := setupMolecule(t, store)
 
@@ -497,6 +502,9 @@ func TestCloseContinueNoAuto(t *testing.T) {
 	}
 	if got.Status != issuestorage.StatusOpen {
 		t.Errorf("expected step B status %q, got %q", issuestorage.StatusOpen, got.Status)
+	}
+	if got.Assignee != "" {
+		t.Errorf("expected step B assignee to remain empty, got %q", got.Assignee)
 	}
 }
 
@@ -551,6 +559,7 @@ func TestCloseContinueNonMolecule(t *testing.T) {
 
 func TestCloseContinueJSON(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 	_, idA, idB, _ := setupMolecule(t, store)
@@ -596,10 +605,14 @@ func TestCloseContinueJSON(t *testing.T) {
 	if got.Status != issuestorage.StatusInProgress {
 		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
 	}
+	if got.Assignee != "test-agent" {
+		t.Errorf("expected step B assignee %q, got %q", "test-agent", got.Assignee)
+	}
 }
 
 func TestCloseContinueNoAutoJSON(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	app.JSON = true
 	out := app.Out.(*bytes.Buffer)
 	_, idA, idB, _ := setupMolecule(t, store)
@@ -635,6 +648,9 @@ func TestCloseContinueNoAutoJSON(t *testing.T) {
 	}
 	if got.Status != issuestorage.StatusOpen {
 		t.Errorf("expected step B status %q, got %q", issuestorage.StatusOpen, got.Status)
+	}
+	if got.Assignee != "" {
+		t.Errorf("expected step B assignee to remain empty, got %q", got.Assignee)
 	}
 }
 
@@ -704,6 +720,7 @@ func TestCloseSuggestNextJSON(t *testing.T) {
 
 func TestCloseContinueEndOfMolecule(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	out := app.Out.(*bytes.Buffer)
 	ctx := context.Background()
 	_, idA, idB, idC := setupMolecule(t, store)
@@ -739,6 +756,7 @@ func TestCloseContinueEndOfMolecule(t *testing.T) {
 
 func TestCloseContinueAdvancesNextStepForEphemeralMolecule(t *testing.T) {
 	app, store := setupTestApp(t)
+	app.ConfigStore = &mapConfigStore{data: map[string]string{"actor": "test-agent"}}
 	out := app.Out.(*bytes.Buffer)
 	ctx := context.Background()
 
@@ -804,5 +822,8 @@ func TestCloseContinueAdvancesNextStepForEphemeralMolecule(t *testing.T) {
 	}
 	if got.Status != issuestorage.StatusInProgress {
 		t.Errorf("expected step B status %q, got %q", issuestorage.StatusInProgress, got.Status)
+	}
+	if got.Assignee != "test-agent" {
+		t.Errorf("expected step B assignee %q, got %q", "test-agent", got.Assignee)
 	}
 }
