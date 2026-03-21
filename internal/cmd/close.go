@@ -205,14 +205,16 @@ func findNextMoleculeStep(ctx context.Context, store issuestorage.IssueStore, is
 		return nil
 	}
 
-	closedSet, err := graph.BuildClosedSet(ctx, store)
+	ordered, err := graph.TopologicalOrder(children)
 	if err != nil {
 		return nil
 	}
 
-	ordered, err := graph.TopologicalOrder(children)
-	if err != nil {
-		return nil
+	closedSet := make(map[string]bool, len(children))
+	for _, child := range children {
+		if child.Status == issuestorage.StatusClosed {
+			closedSet[child.ID] = true
+		}
 	}
 
 	return graph.FindNextStep(ordered, issueID, closedSet)
