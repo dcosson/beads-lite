@@ -12,39 +12,13 @@
     "scope": {
       "description": "Plan batch, doc set, or corpus scope under review",
       "required": true
-    },
-    "plans_dir": {
-      "description": "Directory containing the plan corpus",
-      "default": "docs/plans"
-    },
-    "plan_index_doc": {
-      "description": "Plan index used for corpus status and batching",
-      "default": "docs/plans/00-plan-index.md"
-    },
-    "summary_doc": {
-      "description": "Planning review summary path",
-      "default": "docs/plans/99-planning-review-summary.md"
-    },
-    "implementation_guide_doc": {
-      "description": "Implementation guide path",
-      "default": "docs/plans/00-implementation-guide.md"
-    },
-    "plan_count": {
-      "description": "Total number of plans in the broader project corpus",
-      "default": "1",
-      "type": "int"
-    },
-    "seam_mode": {
-      "description": "Primary seam review orientation for this corpus",
-      "default": "vertical",
-      "enum": ["vertical", "horizontal"]
     }
   },
   "steps": [
     {
       "id": "catalog-drafted-plans",
       "title": "Catalog drafted plans for {{project_name}} in {{scope}}",
-      "description": "Read {{plan_index_doc}} and verify the selected plans are drafted and ready to enter formal review."
+      "description": "Look for the plan index, the relevant plan docs, and any existing review summary in the repo. Use those artifacts to identify the plans in {{scope}} and verify they are drafted and ready to enter formal review."
     },
     {
       "id": "round-1-deep-review",
@@ -61,7 +35,7 @@
     {
       "id": "round-1-summarize",
       "title": "Summarize convergence after deep review",
-      "description": "Run plan-summarize into {{summary_doc}} and record finding totals, incorporation rates, and any implementation-guide-worthy cross-cutting issues.",
+      "description": "Look for an existing planning review summary first. If one exists, update it; if not, create it. Record finding totals, incorporation rates, and any implementation-guide-worthy cross-cutting issues.",
       "depends_on": ["round-1-incorporate"]
     },
     {
@@ -79,7 +53,7 @@
     {
       "id": "round-2-summarize",
       "title": "Summarize convergence after batch review",
-      "description": "Update {{summary_doc}} and check whether the corpus is trending toward low-volume, high-signal findings.",
+      "description": "Update the planning review summary you found or created earlier and check whether the corpus is trending toward low-volume, high-signal findings.",
       "depends_on": ["round-2-incorporate"]
     },
     {
@@ -95,10 +69,16 @@
       "depends_on": ["full-corpus-review"]
     },
     {
+      "id": "round-n-review-loop",
+      "title": "Run additional review rounds as needed",
+      "description": "If convergence has not been reached after the initial deep, batch, and full-corpus passes, keep running more review rounds in whatever mix of deep, batch, and full-corpus review the corpus still needs. Update dispositions and the review summary after each additional round before checking convergence again.",
+      "depends_on": ["full-corpus-incorporate"]
+    },
+    {
       "id": "verify-convergence",
       "title": "Verify review convergence for {{scope}}",
-      "description": "Use {{summary_doc}} to confirm the review loop has converged; if the corpus still has material unresolved issues, route it back into another review round instead of proceeding.",
-      "depends_on": ["full-corpus-incorporate"]
+      "description": "Use the planning review summary to confirm the review loop has converged. If no summary exists yet, create or update one before deciding. If the corpus still has material unresolved issues, route it back into another review round instead of proceeding.",
+      "depends_on": ["round-n-review-loop"]
     },
     {
       "id": "planning-signoff",
@@ -108,20 +88,20 @@
     },
     {
       "id": "seam-review",
-      "title": "Run {{seam_mode}} seam review for {{scope}}",
-      "description": "Use plan-seam-review after individual reviews converge, and loop affected plans back through focused review/incorporation if seam mismatches surface.",
+      "title": "Run seam review for {{scope}}",
+      "description": "Look for the plan index, architecture doc, and connected plan docs, then use plan-seam-review after individual reviews converge. Choose the right vertical or horizontal seam coverage for the corpus and loop affected plans back through focused review/incorporation if seam mismatches surface.",
       "depends_on": ["planning-signoff"]
     },
     {
       "id": "implementation-guide",
       "title": "Update or conditionally create the implementation guide",
-      "description": "If {{implementation_guide_doc}} already exists, update it with review and seam-review invariants. If it does not exist, create it only when this scope belongs to a broader project corpus with more than three total plans.",
+      "description": "Look for an implementation guide in the repo. If it already exists, update it with review and seam-review invariants. If it does not exist, create it only when this scope belongs to a broader project corpus with more than three total plans.",
       "depends_on": ["seam-review"]
     },
     {
       "id": "plan-to-beads",
       "title": "Run plan-to-beads for {{scope}}",
-      "description": "Decompose the seam-reviewed plans into implementation beads after the implementation guide decision is complete and capture any bead overlaps or missing work items before implementation begins.",
+      "description": "Look for the plan index, the reviewed plan docs, any addenda, and the implementation guide if present. Then decompose the seam-reviewed plans into implementation beads and capture any bead overlaps or missing work items before implementation begins.",
       "depends_on": ["implementation-guide"]
     }
   ]
