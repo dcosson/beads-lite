@@ -15,13 +15,14 @@ import (
 // newListCmd creates the list command.
 func newListCmd(provider *AppProvider) *cobra.Command {
 	var (
-		status        string
+		statuses      []string
 		priority      string
-		issueType     string
+		issueTypes    []string
 		molType       string
 		labels        []string
+		labelsAll     []string
 		parent        string
-		assignee      string
+		assignees     []string
 		all           bool
 		closed        bool
 		roots         bool
@@ -69,32 +70,31 @@ Examples:
 			// Status handling
 			if all {
 				// No status filter - list everything
-				filter.Status = nil
 			} else if closed {
-				s := issuestorage.StatusClosed
-				filter.Status = &s
-			} else if status != "" {
-				// Allow tombstone as a valid filter for list (even though
-				// update rejects it — listing tombstones is an admin query)
-				if strings.ToLower(status) == "all" {
-					// --status=all behaves like --all: list open + closed, skip deleted
-					filter.Status = nil
-					all = true
-				} else if strings.ToLower(status) == "tombstone" {
-					s := issuestorage.StatusTombstone
-					filter.Status = &s
-				} else {
-					s, err := parseStatus(status, getCustomValues(app, "status.custom"))
-					if err != nil {
-						return err
+				filter.Statuses = []issuestorage.Status{issuestorage.StatusClosed}
+			} else if len(statuses) > 0 {
+				for _, status := range statuses {
+					// Allow tombstone as a valid filter for list (even though
+					// update rejects it — listing tombstones is an admin query)
+					if strings.ToLower(status) == "all" {
+						// --status=all behaves like --all: list open + closed, skip deleted
+						filter.Statuses = nil
+						all = true
+						break
+					} else if strings.ToLower(status) == "tombstone" {
+						filter.Statuses = append(filter.Statuses, issuestorage.StatusTombstone)
+					} else {
+						s, err := parseStatus(status, getCustomValues(app, "status.custom"))
+						if err != nil {
+							return err
+						}
+						filter.Statuses = append(filter.Statuses, s)
 					}
-					filter.Status = &s
 				}
 			} else {
 				// Default: list non-closed issues (open, in_progress, blocked, deferred, etc.)
-				// A nil status filter with scanOpen=true (the storage default) scans
+				// An empty Statuses filter with scanOpen=true (the storage default) scans
 				// the open/ and ephemeral/ directories, returning all statuses found there.
-				filter.Status = nil
 			}
 
 			if priority != "" {
@@ -105,9 +105,10 @@ Examples:
 				filter.Priority = &p
 			}
 
-			if issueType != "" {
-				t := issuestorage.IssueType(issueType)
-				filter.Type = &t
+			if len(issueTypes) > 0 {
+				for _, it := range issueTypes {
+					filter.Types = append(filter.Types, issuestorage.IssueType(it))
+				}
 			}
 
 			if molType != "" {
@@ -122,8 +123,12 @@ Examples:
 				filter.Labels = labels
 			}
 
-			if assignee != "" {
-				filter.Assignee = &assignee
+			if len(labelsAll) > 0 {
+				filter.LabelsAll = labelsAll
+			}
+
+			if len(assignees) > 0 {
+				filter.Assignees = assignees
 			}
 			if createdAfter != "" {
 				t, err := parseListCreatedTime(createdAfter, false)
@@ -158,11 +163,10 @@ Examples:
 			}
 
 			// If --all flag, we need to also get closed issues
-			if all && filter.Status == nil {
+			if all && len(filter.Statuses) == 0 {
 				// Get closed issues with same filters
 				closedFilter := *filter
-				closedStatus := issuestorage.StatusClosed
-				closedFilter.Status = &closedStatus
+				closedFilter.Statuses = []issuestorage.Status{issuestorage.StatusClosed}
 				closedIssues, err := app.Storage.List(ctx, &closedFilter)
 				if err != nil {
 					return fmt.Errorf("listing closed issues: %w", err)
@@ -208,13 +212,14 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVarP(&status, "status", "s", "", "Filter by status ("+statusNames(nil)+")")
+	cmd.Flags().StringSliceVarP(&statuses, "status", "s", nil, "Filter by status (comma-separated or repeated; "+statusNames(nil)+")")
 	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Filter by priority (0-4 or P0-P4)")
-	cmd.Flags().StringVarP(&issueType, "type", "t", "", "Filter by type (task, bug, feature, epic, chore)")
+	cmd.Flags().StringSliceVarP(&issueTypes, "type", "t", nil, "Filter by type (comma-separated or repeated; task, bug, feature, epic, chore)")
 	cmd.Flags().StringVar(&molType, "mol-type", "", "Filter by molecule type (swarm, patrol, work)")
-	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Filter by labels (comma-separated or repeated, must have all)")
+	cmd.Flags().StringSliceVarP(&labels, "label", "l", nil, "Filter by labels (comma-separated or repeated, OR semantics)")
+	cmd.Flags().StringSliceVar(&labelsAll, "label-all", nil, "Filter by labels (comma-separated or repeated, AND semantics — must have all)")
 	cmd.Flags().StringVar(&parent, "parent", "", "Filter by parent issue ID")
-	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee")
+	cmd.Flags().StringSliceVarP(&assignees, "assignee", "a", nil, "Filter by assignee (comma-separated or repeated)")
 	cmd.Flags().BoolVar(&all, "all", false, "List all issues (open and closed)")
 	cmd.Flags().BoolVar(&closed, "closed", false, "List only closed issues")
 	cmd.Flags().BoolVar(&roots, "roots", false, "List only root issues (no parent)")

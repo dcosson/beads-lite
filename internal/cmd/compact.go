@@ -70,8 +70,7 @@ Examples:
 			}
 
 			// Get all closed issues
-			closedStatus := issuestorage.StatusClosed
-			issues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
+			issues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 			if err != nil {
 				return fmt.Errorf("listing closed issues: %w", err)
 			}

@@ -137,18 +137,15 @@ Examples:
 
 			ctx := cmd.Context()
 
-			gateType := issuestorage.TypeGate
 			filter := &issuestorage.ListFilter{
-				Type: &gateType,
+				Types: []issuestorage.IssueType{issuestorage.TypeGate},
 			}
 
 			if all {
 				// No status filter - list all gates
-				filter.Status = nil
 			} else {
 				// Default: open gates only
-				s := issuestorage.StatusOpen
-				filter.Status = &s
+				filter.Statuses = []issuestorage.Status{issuestorage.StatusOpen}
 			}
 
 			issues, err := app.Storage.List(ctx, filter)
@@ -157,10 +154,9 @@ Examples:
 			}
 
 			// If --all, also get closed gates
-			if all && filter.Status == nil {
+			if all && len(filter.Statuses) == 0 {
 				closedFilter := *filter
-				closedStatus := issuestorage.StatusClosed
-				closedFilter.Status = &closedStatus
+				closedFilter.Statuses = []issuestorage.Status{issuestorage.StatusClosed}
 				closedIssues, err := app.Storage.List(ctx, &closedFilter)
 				if err != nil {
 					return fmt.Errorf("listing closed gates: %w", err)

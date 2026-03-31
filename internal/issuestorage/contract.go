@@ -292,8 +292,7 @@ func testList(t *testing.T, s IssueStore) {
 	// Actually, the interface says nil filter returns "all open issues" - need to verify what that means
 
 	// Filter by status
-	statusOpen := StatusOpen
-	issues, err = s.List(ctx, &ListFilter{Status: &statusOpen})
+	issues, err = s.List(ctx, &ListFilter{Statuses: []Status{StatusOpen}})
 	if err != nil {
 		t.Fatalf("List by status: %v", err)
 	}
@@ -312,8 +311,7 @@ func testList(t *testing.T, s IssueStore) {
 	}
 
 	// Filter by type
-	typeBug := TypeBug
-	issues, err = s.List(ctx, &ListFilter{Type: &typeBug})
+	issues, err = s.List(ctx, &ListFilter{Types: []IssueType{TypeBug}})
 	if err != nil {
 		t.Fatalf("List by type: %v", err)
 	}
@@ -330,8 +328,8 @@ func testList(t *testing.T, s IssueStore) {
 		t.Errorf("List by label frontend: got %d issues, want 2", len(issues))
 	}
 
-	// Filter by multiple labels (must have all)
-	issues, err = s.List(ctx, &ListFilter{Labels: []string{"frontend", "urgent"}})
+	// Filter by multiple labels with AND semantics (must have all)
+	issues, err = s.List(ctx, &ListFilter{LabelsAll: []string{"frontend", "urgent"}})
 	if err != nil {
 		t.Fatalf("List by multiple labels: %v", err)
 	}
@@ -613,8 +611,7 @@ func testTombstoneStatus(t *testing.T, s IssueStore) {
 	}
 
 	// List with StatusTombstone filter SHOULD include it
-	tombstoneStatus := StatusTombstone
-	tombstones, err := s.List(ctx, &ListFilter{Status: &tombstoneStatus})
+	tombstones, err := s.List(ctx, &ListFilter{Statuses: []Status{StatusTombstone}})
 	if err != nil {
 		t.Fatalf("List tombstones failed: %v", err)
 	}

@@ -70,8 +70,7 @@ Examples:
 			}
 
 			// Build global closed set for ready checks (ready can depend on issues outside selection).
-			closedStatus := issuestorage.StatusClosed
-			closedForReady, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
+			closedForReady, err := app.Storage.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 			if err != nil {
 				return fmt.Errorf("listing closed issues for ready checks: %w", err)
 			}
@@ -248,16 +247,14 @@ func listAllIssuesForStats(
 	}
 
 	closedFilter := *filter
-	closedStatus := issuestorage.StatusClosed
-	closedFilter.Status = &closedStatus
+	closedFilter.Statuses = []issuestorage.Status{issuestorage.StatusClosed}
 	closedIssues, err := store.List(ctx, &closedFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing closed issues: %w", err)
 	}
 
 	tombFilter := *filter
-	tombStatus := issuestorage.StatusTombstone
-	tombFilter.Status = &tombStatus
+	tombFilter.Statuses = []issuestorage.Status{issuestorage.StatusTombstone}
 	tombIssues, err := store.List(ctx, &tombFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing tombstoned issues: %w", err)

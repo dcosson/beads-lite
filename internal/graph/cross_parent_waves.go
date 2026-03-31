@@ -35,8 +35,7 @@ func TopologicalWavesAcrossParents(
 		}
 		allIssues = descendants
 	} else {
-		openStatus := issuestorage.StatusOpen
-		all, err := store.List(ctx, &issuestorage.ListFilter{Status: &openStatus})
+		all, err := store.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusOpen}})
 		if err != nil {
 			return nil, nil, fmt.Errorf("listing open issues: %w", err)
 		}

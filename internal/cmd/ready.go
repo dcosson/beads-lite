@@ -42,9 +42,8 @@ are shown, along with parallel group info.`,
 			ctx := cmd.Context()
 
 			// List all open issues
-			openStatus := issuestorage.StatusOpen
 			filter := &issuestorage.ListFilter{
-				Status: &openStatus,
+				Statuses: []issuestorage.Status{issuestorage.StatusOpen},
 			}
 
 			// Apply priority filter if specified
@@ -58,7 +57,7 @@ are shown, along with parallel group info.`,
 
 			// Apply assignee filter if specified
 			if assignee != "" {
-				filter.Assignee = &assignee
+				filter.Assignees = []string{assignee}
 			}
 
 			// Apply mol-type filter if specified
@@ -81,9 +80,8 @@ are shown, along with parallel group info.`,
 			}
 
 			// Get closed issues to check dependency resolution
-			closedStatus := issuestorage.StatusClosed
 			closedFilter := &issuestorage.ListFilter{
-				Status: &closedStatus,
+				Statuses: []issuestorage.Status{issuestorage.StatusClosed},
 			}
 			closedIssues, err := app.Storage.List(ctx, closedFilter)
 			if err != nil {

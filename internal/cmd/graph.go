@@ -164,8 +164,7 @@ func collectGraphIssues(ctx context.Context, store issuestorage.IssueStore, root
 		return out, nil
 	}
 
-	open := issuestorage.StatusOpen
-	issues, err := store.List(ctx, &issuestorage.ListFilter{Status: &open})
+	issues, err := store.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusOpen}})
 	if err != nil {
 		return nil, fmt.Errorf("list open issues: %w", err)
 	}

@@ -44,9 +44,8 @@ An issue is blocked if:
 			ctx := cmd.Context()
 
 			// List all open issues
-			openStatus := issuestorage.StatusOpen
 			filter := &issuestorage.ListFilter{
-				Status: &openStatus,
+				Statuses: []issuestorage.Status{issuestorage.StatusOpen},
 			}
 
 			issues, err := app.Storage.List(ctx, filter)
@@ -55,9 +54,8 @@ An issue is blocked if:
 			}
 
 			// Get closed issues to check dependency status
-			closedStatus := issuestorage.StatusClosed
 			closedFilter := &issuestorage.ListFilter{
-				Status: &closedStatus,
+				Statuses: []issuestorage.Status{issuestorage.StatusClosed},
 			}
 			closedIssues, err := app.Storage.List(ctx, closedFilter)
 			if err != nil {

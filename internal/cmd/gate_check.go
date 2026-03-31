@@ -68,11 +68,9 @@ Examples:
 			ctx := cmd.Context()
 
 			// List all open gates
-			gateType := issuestorage.TypeGate
-			openStatus := issuestorage.StatusOpen
 			filter := &issuestorage.ListFilter{
-				Type:   &gateType,
-				Status: &openStatus,
+				Types:    []issuestorage.IssueType{issuestorage.TypeGate},
+				Statuses: []issuestorage.Status{issuestorage.StatusOpen},
 			}
 
 			gates, err := app.Storage.List(ctx, filter)

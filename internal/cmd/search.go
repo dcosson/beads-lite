@@ -42,7 +42,7 @@ Use --title-only to search only in titles.`,
 				if err != nil {
 					return err
 				}
-				filter := &issuestorage.ListFilter{Status: &s}
+				filter := &issuestorage.ListFilter{Statuses: []issuestorage.Status{s}}
 				issues, err = app.Storage.List(ctx, filter)
 				if err != nil {
 					return fmt.Errorf("listing issues: %w", err)
@@ -54,8 +54,7 @@ Use --title-only to search only in titles.`,
 				}
 				issues = append(issues, openIssues...)
 
-				closedStatus := issuestorage.StatusClosed
-				closedIssues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
+				closedIssues, err := app.Storage.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 				if err != nil {
 					return fmt.Errorf("listing closed issues: %w", err)
 				}

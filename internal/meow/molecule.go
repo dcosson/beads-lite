@@ -224,10 +224,9 @@ func InferMolecule(ctx context.Context, store issuestorage.IssueStore, actor str
 // findInProgressMolecules looks for in_progress issues assigned to the actor,
 // walks each up to its molecule root, and returns the first root found.
 func findInProgressMolecules(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
-	status := issuestorage.StatusInProgress
 	issues, err := store.List(ctx, &issuestorage.ListFilter{
-		Status:   &status,
-		Assignee: &actor,
+		Statuses:  []issuestorage.Status{issuestorage.StatusInProgress},
+		Assignees: []string{actor},
 	})
 	if err != nil {
 		return "", fmt.Errorf("list in_progress issues for %s: %w", actor, err)
@@ -251,10 +250,9 @@ func findInProgressMolecules(ctx context.Context, store issuestorage.IssueStore,
 // findHookedMolecules looks for hooked issues assigned to the actor, checks
 // their blocks dependencies to find molecule roots.
 func findHookedMolecules(ctx context.Context, store issuestorage.IssueStore, actor string) (string, error) {
-	status := issuestorage.StatusHooked
 	issues, err := store.List(ctx, &issuestorage.ListFilter{
-		Status:   &status,
-		Assignee: &actor,
+		Statuses:  []issuestorage.Status{issuestorage.StatusHooked},
+		Assignees: []string{actor},
 	})
 	if err != nil {
 		return "", fmt.Errorf("list hooked issues for %s: %w", actor, err)

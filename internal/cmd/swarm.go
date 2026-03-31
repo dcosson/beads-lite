@@ -524,10 +524,9 @@ Examples:
 			}
 
 			ctx := cmd.Context()
-			molType := issuestorage.TypeMolecule
 			swarmMolType := issuestorage.MolTypeSwarm
 			filter := &issuestorage.ListFilter{
-				Type:    &molType,
+				Types:   []issuestorage.IssueType{issuestorage.TypeMolecule},
 				MolType: &swarmMolType,
 			}
 

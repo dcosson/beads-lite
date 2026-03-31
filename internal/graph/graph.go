@@ -332,8 +332,7 @@ func TopologicalWaves(children []*issuestorage.Issue) ([][]string, error) {
 
 // BuildClosedSet queries all closed issues and returns their IDs as a set.
 func BuildClosedSet(ctx context.Context, store issuestorage.IssueStore) (map[string]bool, error) {
-	status := issuestorage.StatusClosed
-	closed, err := store.List(ctx, &issuestorage.ListFilter{Status: &status})
+	closed, err := store.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 	if err != nil {
 		return nil, fmt.Errorf("list closed issues: %w", err)
 	}

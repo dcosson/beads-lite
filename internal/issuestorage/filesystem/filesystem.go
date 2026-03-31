@@ -538,19 +538,23 @@ func (fs *FilesystemStorage) Delete(ctx context.Context, id string) error {
 func (fs *FilesystemStorage) List(ctx context.Context, filter *issuestorage.ListFilter) ([]*issuestorage.Issue, error) {
 	var issues []*issuestorage.Issue
 
-	// Determine which directories to scan
+	// Determine which directories to scan based on requested statuses.
 	scanOpen := true
 	scanClosed := false
 	scanDeleted := false
 
-	if filter != nil && filter.Status != nil {
-		switch *filter.Status {
-		case issuestorage.StatusClosed:
-			scanOpen = false
-			scanClosed = true
-		case issuestorage.StatusTombstone:
-			scanOpen = false
-			scanDeleted = true
+	if filter != nil && len(filter.Statuses) > 0 {
+		// Only scan directories that could contain the requested statuses.
+		scanOpen = false
+		for _, s := range filter.Statuses {
+			switch s {
+			case issuestorage.StatusClosed:
+				scanClosed = true
+			case issuestorage.StatusTombstone:
+				scanDeleted = true
+			default:
+				scanOpen = true
+			}
 		}
 	}
 
@@ -640,13 +644,13 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 		return true
 	}
 
-	if filter.Status != nil && issue.Status != *filter.Status {
+	if len(filter.Statuses) > 0 && !containsStatus(filter.Statuses, issue.Status) {
 		return false
 	}
 	if filter.Priority != nil && issue.Priority != *filter.Priority {
 		return false
 	}
-	if filter.Type != nil && issue.Type != *filter.Type {
+	if len(filter.Types) > 0 && !containsType(filter.Types, issue.Type) {
 		return false
 	}
 	if filter.MolType != nil {
@@ -667,7 +671,7 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 	if filter.CreatedBefore != nil && issue.CreatedAt.After(*filter.CreatedBefore) {
 		return false
 	}
-	if filter.Assignee != nil && issue.Assignee != *filter.Assignee {
+	if len(filter.Assignees) > 0 && !containsString(filter.Assignees, issue.Assignee) {
 		return false
 	}
 	if filter.Parent != nil {
@@ -678,8 +682,22 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 		}
 	}
 
-	// Check labels (must have all)
-	for _, label := range filter.Labels {
+	// Labels (OR): issue must have at least one of the specified labels.
+	if len(filter.Labels) > 0 {
+		found := false
+		for _, issueLabel := range issue.Labels {
+			if containsString(filter.Labels, issueLabel) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+
+	// LabelsAll (AND): issue must have all of the specified labels.
+	for _, label := range filter.LabelsAll {
 		found := false
 		for _, issueLabel := range issue.Labels {
 			if issueLabel == label {
@@ -693,6 +711,33 @@ func (fs *FilesystemStorage) matchesFilter(issue *issuestorage.Issue, filter *is
 	}
 
 	return true
+}
+
+func containsStatus(ss []issuestorage.Status, s issuestorage.Status) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func containsType(ts []issuestorage.IssueType, t issuestorage.IssueType) bool {
+	for _, v := range ts {
+		if v == t {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(ss []string, s string) bool {
+	for _, v := range ss {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // Doctor checks for and optionally fixes inconsistencies.

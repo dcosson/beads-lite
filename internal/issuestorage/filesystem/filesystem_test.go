@@ -771,8 +771,7 @@ func TestListClosedFilter(t *testing.T) {
 	}
 
 	// List with closed filter
-	status := issuestorage.StatusClosed
-	issues, err := s.List(ctx, &issuestorage.ListFilter{Status: &status})
+	issues, err := s.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 	if err != nil {
 		t.Fatalf("List failed: %v", err)
 	}

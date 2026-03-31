@@ -322,8 +322,7 @@ func findByPrefix(store issuestorage.IssueStore, ctx context.Context, prefix str
 		return nil, err
 	}
 
-	closedStatus := issuestorage.StatusClosed
-	closedIssues, err := store.List(ctx, &issuestorage.ListFilter{Status: &closedStatus})
+	closedIssues, err := store.List(ctx, &issuestorage.ListFilter{Statuses: []issuestorage.Status{issuestorage.StatusClosed}})
 	if err != nil {
 		return nil, err
 	}
