@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -1974,5 +1975,88 @@ func TestInitCreatesEphemeralDir(t *testing.T) {
 	}
 	if !info.IsDir() {
 		t.Fatal("ephemeral path is not a directory")
+	}
+}
+
+// TestSelfHealClosedIssueInOpenDir verifies that when an issue's JSON file
+// has status "closed" but sits in open/, Get and List relocate it to closed/.
+func TestSelfHealClosedIssueInOpenDir(t *testing.T) {
+	s := setupTestStorage(t)
+	ctx := context.Background()
+
+	// Create an open issue normally.
+	issue := &issuestorage.Issue{Title: "Will be closed externally"}
+	id, err := s.Create(ctx, issue)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Simulate an external tool editing the JSON directly — set status to
+	// closed without moving the file out of open/.
+	openPath := filepath.Join(s.root, DirOpen, id+".json")
+	data, err := os.ReadFile(openPath)
+	if err != nil {
+		t.Fatalf("reading issue file: %v", err)
+	}
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("parsing issue: %v", err)
+	}
+	raw["status"] = "closed"
+	patched, _ := json.MarshalIndent(raw, "", "  ")
+	if err := os.WriteFile(openPath, patched, 0644); err != nil {
+		t.Fatalf("writing patched issue: %v", err)
+	}
+
+	closedPath := filepath.Join(s.root, DirClosed, id+".json")
+
+	// --- Test Get self-heals ---
+	got, err := s.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("Get failed: %v", err)
+	}
+	if got.Status != issuestorage.StatusClosed {
+		t.Errorf("Get returned status %q, want closed", got.Status)
+	}
+	if fileExists(openPath) {
+		t.Error("after Get, file should no longer be in open/")
+	}
+	if !fileExists(closedPath) {
+		t.Error("after Get, file should be in closed/")
+	}
+
+	// --- Test List self-heals ---
+	// Create another issue and externally close it.
+	issue2 := &issuestorage.Issue{Title: "Another external close"}
+	id2, err := s.Create(ctx, issue2)
+	if err != nil {
+		t.Fatalf("Create 2 failed: %v", err)
+	}
+	openPath2 := filepath.Join(s.root, DirOpen, id2+".json")
+	data2, _ := os.ReadFile(openPath2)
+	var raw2 map[string]interface{}
+	json.Unmarshal(data2, &raw2)
+	raw2["status"] = "closed"
+	patched2, _ := json.MarshalIndent(raw2, "", "  ")
+	os.WriteFile(openPath2, patched2, 0644)
+
+	closedPath2 := filepath.Join(s.root, DirClosed, id2+".json")
+
+	// List with nil filter (scans open + ephemeral) should NOT return the
+	// closed issue, and should relocate it.
+	issues, err := s.List(ctx, nil)
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	for _, iss := range issues {
+		if iss.ID == id2 {
+			t.Errorf("List returned relocated issue %s; it should have been skipped", id2)
+		}
+	}
+	if fileExists(openPath2) {
+		t.Error("after List, file should no longer be in open/")
+	}
+	if !fileExists(closedPath2) {
+		t.Error("after List, file should be in closed/")
 	}
 }

@@ -34,6 +34,25 @@ const (
 	DirEphemeral = "ephemeral" // ephemeral issues (not exported)
 )
 
+// relocateIfNeeded checks whether an issue file is in the wrong directory
+// (e.g., a closed issue sitting in open/) and moves it to the correct one.
+// This handles the case where external tools edit issue JSON directly without
+// going through storage.Modify(). It is best-effort: errors are silently
+// ignored so reads are never blocked by a failed relocation.
+func (fs *FilesystemStorage) relocateIfNeeded(issue *issuestorage.Issue, currentDir string) {
+	correctDir := dirForIssue(issue)
+	if currentDir == correctDir {
+		return
+	}
+	oldPath := fs.issuePathInDir(issue.ID, currentDir)
+	newPath := fs.issuePathInDir(issue.ID, correctDir)
+	// Atomic: write to new location, then remove old.
+	if err := atomicWriteJSON(newPath, issue); err != nil {
+		return
+	}
+	os.Remove(oldPath)
+}
+
 // dirForStatus returns the directory name for the given issue status.
 func dirForStatus(status issuestorage.Status) string {
 	switch status {
@@ -367,10 +386,12 @@ func readFileSharedLock(path string) ([]byte, error) {
 func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.Issue, error) {
 	// Search order: open → ephemeral → closed → deleted
 	var data []byte
+	var foundDir string
 	var err error
 	for _, dir := range []string{DirOpen, DirEphemeral, DirClosed, DirDeleted} {
 		data, err = readFileSharedLock(fs.issuePathInDir(id, dir))
 		if !os.IsNotExist(err) {
+			foundDir = dir
 			break
 		}
 	}
@@ -385,6 +406,9 @@ func (fs *FilesystemStorage) Get(ctx context.Context, id string) (*issuestorage.
 	if err := json.Unmarshal(data, &issue); err != nil {
 		return nil, err
 	}
+
+	// Self-heal: relocate if the file is in the wrong directory.
+	fs.relocateIfNeeded(&issue, foundDir)
 
 	return &issue, nil
 }
@@ -577,6 +601,8 @@ func (fs *FilesystemStorage) listDir(dir string, filter *issuestorage.ListFilter
 		return nil, err
 	}
 
+	currentDir := filepath.Base(dir)
+
 	var issues []*issuestorage.Issue
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
@@ -591,6 +617,13 @@ func (fs *FilesystemStorage) listDir(dir string, filter *issuestorage.ListFilter
 
 		var issue issuestorage.Issue
 		if err := json.Unmarshal(data, &issue); err != nil {
+			continue
+		}
+
+		// Self-heal: if the issue's status doesn't match this directory,
+		// move it to the correct one and skip it from these results.
+		if dirForIssue(&issue) != currentDir {
+			fs.relocateIfNeeded(&issue, currentDir)
 			continue
 		}
 
