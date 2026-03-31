@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.50.0
+
+### Features
+- **Multi-value OR filters on `bd list`** — `--status`, `--type`, and `--assignee` now accept comma-separated or repeated values with OR semantics (e.g. `bd list --status open,in-progress`)
+- **`--label-all` flag** — AND semantics for label filtering (must have all specified labels); `--label` now uses OR semantics
+- **Self-healing misplaced issue files** — `bd list` and `bd show` detect issues whose status doesn't match their directory (e.g. closed issue in `open/`) and relocate them automatically
+- **`bd comments` shorthand** — `bd comments <id> "message"` as shortcut for add
+- **`bd list` date range filters** — `--created-after` and `--created-before` flags
+- **`bd stats` created range and recursive ID filters**
+- **MEOW formulas** — plan review, implementation, and team discovery formulas
+- **`--continue` fix for closed wisp steps** — `bd close --continue` works correctly for closed steps
+- **Auto-claim next step on continue**
+- **H2_ACTOR environment variable** — override actor identity via env var
+
+### Refactoring
+- Centralize parent auto-close and auto-reopen lifecycle into `issueservice`
+- Drop `test-e2e` target; use `test-e2e-all` everywhere
+
+### Docs
+- Add `AGENTS.md` and expand `CLAUDE.md`
+- Add `CHANGELOG.md` and document release process
+- Workflow digest shaping doc and test harness
+
 ## v0.49.2
 
 ### Features
