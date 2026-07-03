@@ -65,6 +65,9 @@ func (p *AppProvider) init() (*App, error) {
 		return nil, err
 	}
 	config.ApplyDefaults(configStore)
+	if err := configservice.ApplyOverlay(configStore, paths.OverlayConfigFile); err != nil {
+		return nil, err
+	}
 	config.ApplyEnvOverrides(configStore)
 
 	var fsOpts []filesystem.Option

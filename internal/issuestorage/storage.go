@@ -279,17 +279,17 @@ func ValidateMolType(s string) bool {
 // Slice fields (Statuses, Assignees, Labels) use OR semantics: an issue
 // matches if it matches any value in the slice. LabelsAll uses AND semantics.
 type ListFilter struct {
-	Statuses      []Status   // empty means any; OR across values
-	Priority      *Priority  // nil means any
-	Types         []IssueType // empty means any; OR across values
-	MolType       *MolType   // nil means any
-	CreatedAfter  *time.Time // nil means any; inclusive lower bound
-	CreatedBefore *time.Time // nil means any; inclusive upper bound
-	Parent        *string    // nil means any, empty string means root only
-	Labels        []string   // OR: issue must have at least one of these labels
-	LabelsAll     []string   // AND: issue must have all of these labels
-	Assignees     []string   // empty means any; OR across values
-	IncludeChildren bool     // if true, include descendants of matching issues
+	Statuses        []Status    // empty means any; OR across values
+	Priority        *Priority   // nil means any
+	Types           []IssueType // empty means any; OR across values
+	MolType         *MolType    // nil means any
+	CreatedAfter    *time.Time  // nil means any; inclusive lower bound
+	CreatedBefore   *time.Time  // nil means any; inclusive upper bound
+	Parent          *string     // nil means any, empty string means root only
+	Labels          []string    // OR: issue must have at least one of these labels
+	LabelsAll       []string    // AND: issue must have all of these labels
+	Assignees       []string    // empty means any; OR across values
+	IncludeChildren bool        // if true, include descendants of matching issues
 }
 
 // CreateOpts provides optional parameters for Create.

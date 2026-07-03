@@ -1,0 +1,23 @@
+{
+  "id": "bl-k63",
+  "title": "Redirect overlay: local .beads config overrides redirect target; bare redirect files work",
+  "description": "Two changes to .beads/redirect handling: (1) discovery follows a redirect file even when the redirecting .beads has no config.yaml (currently findConfigUpward requires config.yaml before checking redirect); (2) when the redirecting .beads DOES have a config.yaml, its keys override the redirect target's config in memory (e.g. per-repo issue_prefix writing into a shared beads-holder dir). Overlay precedence: env \u003e local overlay \u003e target config \u003e defaults. bd config set still writes to the target.",
+  "status": "closed",
+  "priority": 2,
+  "type": "task",
+  "created_by": "clear-flint",
+  "owner": "danny@zocomputer.com",
+  "assignee": "clear-flint",
+  "comments": [
+    {
+      "id": 1,
+      "author": "clear-flint",
+      "text": "Implemented interactively with user (dcosson): OverlayConfigFile on config.Paths, redirect-first discovery in findConfigUpward, ApplyOverlay in configservice, wired in AppProvider.init. Unit tests in internal/configservice, e2e in e2etests/redirect_test.go. Full make test green. Closing — user-supervised session in lieu of separate reviewer.",
+      "created_at": "2026-07-03T16:07:29.499053-07:00"
+    }
+  ],
+  "created_at": "2026-07-03T16:01:02.283323-07:00",
+  "updated_at": "2026-07-03T16:07:29.508116-07:00",
+  "closed_at": "2026-07-03T16:07:29.508116-07:00",
+  "close_reason": "Closed"
+}

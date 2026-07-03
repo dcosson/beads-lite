@@ -32,7 +32,7 @@ func ResolvePaths() (config.Paths, error) {
 		return config.Paths{}, fmt.Errorf("cannot get current directory: %w", err)
 	}
 
-	configDir, configFile, found, err := findConfigUpward(cwd)
+	paths, found, err := findConfigUpward(cwd)
 	if err != nil {
 		return config.Paths{}, err
 	}
@@ -41,7 +41,7 @@ func ResolvePaths() (config.Paths, error) {
 	if !found {
 		worktreeRoot, wtErr := findGitWorktreeRoot(cwd)
 		if wtErr == nil && worktreeRoot != "" {
-			configDir, configFile, found, err = findConfigUpward(worktreeRoot)
+			paths, found, err = findConfigUpward(worktreeRoot)
 			if err != nil {
 				return config.Paths{}, err
 			}
@@ -49,8 +49,8 @@ func ResolvePaths() (config.Paths, error) {
 	}
 
 	if !found {
-		configDir = filepath.Join(cwd, ".beads")
-		configFile = filepath.Join(configDir, "config.yaml")
+		configDir := filepath.Join(cwd, ".beads")
+		configFile := filepath.Join(configDir, "config.yaml")
 		if _, err := os.Stat(configFile); err != nil {
 			// Check if a .beads dir exists but isn't valid beads-lite
 			if _, dirErr := os.Stat(configDir); dirErr == nil {
@@ -60,20 +60,24 @@ func ResolvePaths() (config.Paths, error) {
 			}
 			return config.Paths{}, missingConfigErr(configFile)
 		}
+		paths = config.Paths{ConfigDir: configDir, ConfigFile: configFile}
 	}
 
-	return buildPaths(configDir, configFile)
+	return paths, nil
 }
 
 // ResolveFromBase resolves Paths from a known .beads directory path.
-// Follows redirect files and reads project.name from config.yaml.
+// Follows redirect files; when the redirecting directory has its own
+// config.yaml, that file is recorded as OverlayConfigFile.
 func ResolveFromBase(basePath string) (config.Paths, error) {
 	// Check for redirect
 	redirected, err := ReadRedirect(basePath)
 	if err != nil {
 		return config.Paths{}, err
 	}
+	overlayFile := ""
 	if redirected != "" {
+		overlayFile = overlayConfigFile(basePath)
 		basePath = redirected
 	}
 
@@ -97,15 +101,40 @@ func ResolveFromBase(basePath string) (config.Paths, error) {
 		return config.Paths{}, missingConfigErr(configFile)
 	}
 
-	return buildPaths(basePath, configFile)
+	return config.Paths{
+		ConfigDir:         basePath,
+		ConfigFile:        configFile,
+		OverlayConfigFile: overlayFile,
+	}, nil
 }
 
-// buildPaths constructs Paths from the config directory and file.
-func buildPaths(configDir, configFile string) (config.Paths, error) {
-	return config.Paths{
-		ConfigDir:  configDir,
-		ConfigFile: configFile,
-	}, nil
+// overlayConfigFile returns the path to config.yaml in a redirecting .beads
+// directory if one exists, or "" otherwise.
+func overlayConfigFile(beadsDir string) string {
+	configFile := filepath.Join(beadsDir, "config.yaml")
+	if info, err := os.Stat(configFile); err == nil && !info.IsDir() {
+		return configFile
+	}
+	return ""
+}
+
+// ApplyOverlay loads the given overlay config file and applies its keys as
+// in-memory overrides on the store, without persisting them. This gives a
+// redirecting .beads directory's config.yaml precedence over the redirect
+// target's config (e.g. a per-repo issue_prefix over a shared beads
+// directory). No-op when overlayFile is empty.
+func ApplyOverlay(s config.Store, overlayFile string) error {
+	if overlayFile == "" {
+		return nil
+	}
+	overlay, err := yamlstore.New(overlayFile)
+	if err != nil {
+		return fmt.Errorf("loading redirect overlay config %s: %w", overlayFile, err)
+	}
+	for k, v := range overlay.All() {
+		s.SetInMemory(k, v)
+	}
+	return nil
 }
 
 func normalizeBasePath(path string) (string, error) {
@@ -119,43 +148,49 @@ func normalizeBasePath(path string) (string, error) {
 	return absPath, nil
 }
 
-// findConfigUpward walks from start toward the filesystem root looking for .beads/config.yaml.
-// It stops at the git repository root (if inside a git repo) to avoid escaping the repo boundary.
-// At each .beads/ found, it checks for a redirect file.
-func findConfigUpward(start string) (string, string, bool, error) {
+// findConfigUpward walks from start toward the filesystem root looking for a
+// .beads directory containing either a redirect file or a config.yaml.
+// It stops at the git repository root (if inside a git repo) to avoid escaping
+// the repo boundary. A redirect file takes precedence and does not require a
+// config.yaml alongside it; when one is present it becomes OverlayConfigFile.
+func findConfigUpward(start string) (config.Paths, bool, error) {
 	gitRoot, _ := FindGitRoot(start)
 
 	dir := start
 	for {
 		configDir := filepath.Join(dir, ".beads")
 		configFile := filepath.Join(configDir, "config.yaml")
+
+		redirected, rErr := ReadRedirect(configDir)
+		if rErr != nil {
+			return config.Paths{}, false, rErr
+		}
+		if redirected != "" {
+			targetConfigFile := filepath.Join(redirected, "config.yaml")
+			if _, err := os.Stat(targetConfigFile); err != nil {
+				return config.Paths{}, false, fmt.Errorf("redirect target has no config.yaml: %s", redirected)
+			}
+			return config.Paths{
+				ConfigDir:         redirected,
+				ConfigFile:        targetConfigFile,
+				OverlayConfigFile: overlayConfigFile(configDir),
+			}, true, nil
+		}
+
 		if info, err := os.Stat(configFile); err == nil && !info.IsDir() {
-			// Check for redirect
-			redirected, rErr := ReadRedirect(configDir)
-			if rErr != nil {
-				return "", "", false, rErr
-			}
-			if redirected != "" {
-				configDir = redirected
-				configFile = filepath.Join(configDir, "config.yaml")
-				// Validate the redirected config exists
-				if _, err := os.Stat(configFile); err != nil {
-					return "", "", false, fmt.Errorf("redirect target has no config.yaml: %s", configDir)
-				}
-			}
-			return configDir, configFile, true, nil
+			return config.Paths{ConfigDir: configDir, ConfigFile: configFile}, true, nil
 		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return "", "", false, fmt.Errorf("checking config: %w", err)
+			return config.Paths{}, false, fmt.Errorf("checking config: %w", err)
 		}
 
 		// Stop at git root boundary
 		if gitRoot != "" && dir == gitRoot {
-			return "", "", false, nil
+			return config.Paths{}, false, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", "", false, nil
+			return config.Paths{}, false, nil
 		}
 		dir = parent
 	}

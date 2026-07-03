@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"beads-lite/internal/config"
+	"beads-lite/internal/config/yamlstore"
 )
 
 func TestResolvePaths_BEADS_DIR_Explicit(t *testing.T) {
@@ -284,6 +285,211 @@ func TestResolvePaths_RedirectRelativePath(t *testing.T) {
 	wantConfig := resolvePath(externalBeads)
 	if gotConfig != wantConfig {
 		t.Errorf("ConfigDir = %q, want %q (should follow relative redirect)", gotConfig, wantConfig)
+	}
+}
+
+func TestResolvePaths_RedirectWithoutConfigYaml(t *testing.T) {
+	// A .beads dir containing ONLY a redirect file (no config.yaml) should
+	// still be followed during upward discovery.
+	externalDir := t.TempDir()
+	externalBeads := setupBeadsDir(t, externalDir)
+
+	localDir := t.TempDir()
+	localBeads := filepath.Join(localDir, ".beads")
+	if err := os.MkdirAll(localBeads, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte(externalBeads+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origDir)
+	if err := os.Chdir(localDir); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := ResolvePaths()
+	if err != nil {
+		t.Fatalf("ResolvePaths error: %v", err)
+	}
+
+	gotConfig := resolvePath(paths.ConfigDir)
+	wantConfig := resolvePath(externalBeads)
+	if gotConfig != wantConfig {
+		t.Errorf("ConfigDir = %q, want %q (should follow redirect without local config.yaml)", gotConfig, wantConfig)
+	}
+	if paths.OverlayConfigFile != "" {
+		t.Errorf("OverlayConfigFile = %q, want empty (no local config.yaml)", paths.OverlayConfigFile)
+	}
+}
+
+func TestResolvePaths_RedirectSetsOverlayConfigFile(t *testing.T) {
+	// When the redirecting .beads dir has its own config.yaml, its path is
+	// exposed as OverlayConfigFile so its keys can override the target config.
+	externalDir := t.TempDir()
+	externalBeads := setupBeadsDir(t, externalDir)
+
+	localDir := t.TempDir()
+	localBeads := filepath.Join(localDir, ".beads")
+	if err := os.MkdirAll(localBeads, 0755); err != nil {
+		t.Fatal(err)
+	}
+	localConfig := filepath.Join(localBeads, "config.yaml")
+	if err := os.WriteFile(localConfig, []byte("issue_prefix: zv\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte(externalBeads+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(origDir)
+	if err := os.Chdir(localDir); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := ResolvePaths()
+	if err != nil {
+		t.Fatalf("ResolvePaths error: %v", err)
+	}
+
+	gotConfig := resolvePath(paths.ConfigDir)
+	wantConfig := resolvePath(externalBeads)
+	if gotConfig != wantConfig {
+		t.Errorf("ConfigDir = %q, want %q (should follow redirect)", gotConfig, wantConfig)
+	}
+	gotOverlay := resolvePath(paths.OverlayConfigFile)
+	wantOverlay := resolvePath(localConfig)
+	if gotOverlay != wantOverlay {
+		t.Errorf("OverlayConfigFile = %q, want %q", paths.OverlayConfigFile, localConfig)
+	}
+}
+
+func TestResolveFromBase_RedirectWithoutConfigYaml(t *testing.T) {
+	// BEADS_DIR pointing at a .beads dir with only a redirect file.
+	externalDir := t.TempDir()
+	externalBeads := setupBeadsDir(t, externalDir)
+
+	localDir := t.TempDir()
+	localBeads := filepath.Join(localDir, ".beads")
+	if err := os.MkdirAll(localBeads, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte(externalBeads+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := ResolveFromBase(localBeads)
+	if err != nil {
+		t.Fatalf("ResolveFromBase error: %v", err)
+	}
+	gotConfig := resolvePath(paths.ConfigDir)
+	wantConfig := resolvePath(externalBeads)
+	if gotConfig != wantConfig {
+		t.Errorf("ConfigDir = %q, want %q", gotConfig, wantConfig)
+	}
+	if paths.OverlayConfigFile != "" {
+		t.Errorf("OverlayConfigFile = %q, want empty", paths.OverlayConfigFile)
+	}
+}
+
+func TestResolveFromBase_RedirectSetsOverlayConfigFile(t *testing.T) {
+	externalDir := t.TempDir()
+	externalBeads := setupBeadsDir(t, externalDir)
+
+	localDir := t.TempDir()
+	localBeads := filepath.Join(localDir, ".beads")
+	if err := os.MkdirAll(localBeads, 0755); err != nil {
+		t.Fatal(err)
+	}
+	localConfig := filepath.Join(localBeads, "config.yaml")
+	if err := os.WriteFile(localConfig, []byte("issue_prefix: zv\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(localBeads, "redirect"), []byte(externalBeads+"\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := ResolveFromBase(localBeads)
+	if err != nil {
+		t.Fatalf("ResolveFromBase error: %v", err)
+	}
+	gotOverlay := resolvePath(paths.OverlayConfigFile)
+	wantOverlay := resolvePath(localConfig)
+	if gotOverlay != wantOverlay {
+		t.Errorf("OverlayConfigFile = %q, want %q", paths.OverlayConfigFile, localConfig)
+	}
+}
+
+func TestResolveFromBase_NoRedirectNoOverlay(t *testing.T) {
+	// A normal (non-redirecting) .beads dir never sets OverlayConfigFile.
+	tmpDir := t.TempDir()
+	beadsDir := setupBeadsDir(t, tmpDir)
+
+	paths, err := ResolveFromBase(beadsDir)
+	if err != nil {
+		t.Fatalf("ResolveFromBase error: %v", err)
+	}
+	if paths.OverlayConfigFile != "" {
+		t.Errorf("OverlayConfigFile = %q, want empty", paths.OverlayConfigFile)
+	}
+}
+
+func TestApplyOverlay(t *testing.T) {
+	// Overlay keys override existing store values; other keys are preserved.
+	tmpDir := t.TempDir()
+	overlayFile := filepath.Join(tmpDir, "config.yaml")
+	if err := os.WriteFile(overlayFile, []byte("issue_prefix: zv\ndefaults.type: bug\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	storeFile := filepath.Join(tmpDir, "target-config.yaml")
+	if err := os.WriteFile(storeFile, []byte("issue_prefix: zo\nactor: someone\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := yamlstore.New(storeFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ApplyOverlay(store, overlayFile); err != nil {
+		t.Fatalf("ApplyOverlay error: %v", err)
+	}
+
+	if v, _ := store.Get("issue_prefix"); v != "zv" {
+		t.Errorf("issue_prefix = %q, want %q (overlay should override)", v, "zv")
+	}
+	if v, _ := store.Get("defaults.type"); v != "bug" {
+		t.Errorf("defaults.type = %q, want %q (overlay should add)", v, "bug")
+	}
+	if v, _ := store.Get("actor"); v != "someone" {
+		t.Errorf("actor = %q, want %q (non-overlay keys preserved)", v, "someone")
+	}
+
+	// Overlay must not be persisted to the target file on disk.
+	reloaded, err := yamlstore.New(storeFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := reloaded.Get("issue_prefix"); v != "zo" {
+		t.Errorf("on-disk issue_prefix = %q, want %q (overlay must be in-memory only)", v, "zo")
+	}
+}
+
+func TestApplyOverlay_EmptyPath(t *testing.T) {
+	store, err := yamlstore.New(filepath.Join(t.TempDir(), "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyOverlay(store, ""); err != nil {
+		t.Fatalf("ApplyOverlay with empty path should be a no-op, got: %v", err)
 	}
 }
 

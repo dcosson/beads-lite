@@ -176,7 +176,9 @@ These are obscure configurations. For typical usage (normal repos, worktrees, su
 
 ### Redirect Files
 
-A `.beads/redirect` file can point to a different `.beads` directory. This is followed during discovery (one level only). Used for shared beads directories across multiple repos.
+A `.beads/redirect` file can point to a different `.beads` directory (absolute path, or relative to the `.beads` dir containing the redirect file). This is followed during discovery (one level only). Used for shared beads directories across multiple repos: gitignore `.beads/` in each source repo and point its redirect at one shared holder directory.
+
+A redirecting `.beads` directory needs nothing besides the `redirect` file itself. If it *also* contains a `config.yaml`, that file's keys override the redirect target's config in memory (precedence: env vars > redirecting repo's config.yaml > target config.yaml > built-in defaults). The main use is a per-repo `issue_prefix`, so several repos can share one holder directory with distinct ID prefixes — the storage layer only uses the prefix for generating new IDs, so mixed-prefix issues coexist in one directory. `bd config set` always persists to the redirect target's config.yaml; the overlay file is never written by bd.
 
 ### Future: Configurable Discovery Mode
 
